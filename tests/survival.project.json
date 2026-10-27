@@ -1,0 +1,53 @@
+{
+  "name": "SurvivalIntegrationTests",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "../src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "../src/server"
+      },
+      "SurvivalTests": {
+        "$path": "survival/Runner.server.luau"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "GameSettingsAvatar": "R15"
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "../src/client"
+        },
+        "SurvivalDriver": {
+          "$path": "survival/Driver.client.luau"
+        }
+      }
+    },
+    "Workspace": {
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Size": [
+            512,
+            1,
+            512
+          ],
+          "Position": [
+            0,
+            -0.5,
+            0
+          ]
+        }
+      },
+      "UserObject": {
+        "$className": "Folder"
+      }
+    }
+  }
+}

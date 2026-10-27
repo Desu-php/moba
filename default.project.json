@@ -1,0 +1,27 @@
+{
+  "name": "anime_fight",
+  "serveAddress": "127.0.0.1",
+  "servePort": 34872,
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+    "ReplicatedStorage": {
+      "$ignoreUnknownInstances": true,
+      "Shared": { "$path": "src/shared" }
+    },
+    "ServerScriptService": {
+      "$ignoreUnknownInstances": true,
+      "Server": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$ignoreUnknownInstances": true,
+        "Client": { "$path": "src/client" }
+      }
+    },
+    "Workspace": {
+      "$ignoreUnknownInstances": true
+    }
+  }
+}

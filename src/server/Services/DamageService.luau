@@ -1,0 +1,37 @@
+--!strict
+local Teams = require(script.Parent.TeamService)
+local Stats = require(script.Parent.CharacterStatsService)
+local Life = require(script.Parent.CombatLifeService)
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Rules = require(Shared.Game.ProgressionRules).configure(require(Shared.Config.ProgressionConfig), require(Shared.Config.ItemConfig).Items)
+local DamageService = { Applied = Instance.new("BindableEvent") }
+local enabled = true
+function DamageService.SetEnabled(value: boolean) enabled = value end
+function DamageService.CanAct(model: Model): boolean
+	if not enabled or model:GetAttribute("CombatDisabled") == true or not model:IsDescendantOf(workspace) then return false end
+	local state = Teams.GetState()
+	if state and (state.phase ~= "InProgress" or not Teams.IsActive(Teams.GetId(model))) then return false end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
+end
+function DamageService.CanDamage(attacker: Model, target: Model): boolean
+	return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
+		and target:GetAttribute("IsDestroyed") ~= true
+end
+function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number): number
+	local target = humanoid.Parent
+	if not target or not target:IsA("Model") or not DamageService.CanDamage(attacker, target) then return 0 end
+	if amount ~= amount or amount <= 0 or amount == math.huge then return 0 end
+	local before = humanoid.Health
+	local stats = Stats.GetForModel(target)
+	if stats then amount = Rules.mitigate(amount, stats.Defense) end
+	Life.Register(target)
+	humanoid:TakeDamage(math.min(amount, before))
+	local dealt = math.max(0, before - humanoid.Health)
+	if dealt > 0 then
+		Life.Record(attacker, target)
+		DamageService.Applied:Fire(attacker, target, dealt)
+	end
+	return dealt
+end
+return DamageService

@@ -1,0 +1,46 @@
+2026-10-27T17:19:13.016Z,5.016112,43b4,6,Info [FLog::CreatorOutput] [M1Tests] Waiting for Server & Clients with 2 players...
+2026-10-27T17:19:20.962Z,12.962014,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: two R15 players
+2026-10-27T17:19:22.519Z,14.519638,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: windup delays damage
+2026-10-27T17:19:22.636Z,14.636799,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: step 1 damage and stun
+2026-10-27T17:19:22.636Z,14.636799,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: attacker combo step 1
+2026-10-27T17:19:23.053Z,15.053129,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: step 2 damage and stun
+2026-10-27T17:19:23.053Z,15.053129,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: attacker combo step 2
+2026-10-27T17:19:23.503Z,15.503426,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: step 3 damage and stun
+2026-10-27T17:19:23.503Z,15.503426,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: attacker combo step 3
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: step 4 damage and stun
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: attacker combo step 4
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: finisher has bounded server knockback
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: finisher resets victim combo
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: finisher owns victim physics on server
+2026-10-27T17:19:23.970Z,15.970929,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: complete combo damage 27
+2026-10-27T17:19:24.920Z,16.920771,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: next combo starts at step 1
+2026-10-27T17:19:26.621Z,18.621161,3834,6,Info [FLog::CreatorOutput] [M1Tests] PASS: reciprocal PvP damage
+2026-10-27T17:19:26.637Z,18.637154,43b4,6,Info [FLog::CreatorOutput] [M1Tests] PASS: remote attack does not advance observer combo
+2026-10-27T17:19:26.637Z,18.637154,43b4,6,Info [FLog::CreatorOutput] [M1Tests] PASS: both clients receive confirmed combat events
+2026-10-27T17:19:28.787Z,20.787182,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: remote flood cannot skip steps or damage repeatedly
+2026-10-27T17:19:28.787Z,20.787182,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: stun expires and movement restores
+2026-10-27T17:19:30.752Z,22.752975,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: forged damage, extra payload, nil, NaN and infinity rejected
+2026-10-27T17:19:32.837Z,24.837175,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: replayed request cannot start an extra attack
+2026-10-27T17:19:34.603Z,26.603687,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: prediction confirms without replay
+2026-10-27T17:19:36.668Z,28.668932,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: early click buffers exactly one next attack
+2026-10-27T17:19:37.186Z,29.186985,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: buffer does not auto-chain a third attack
+2026-10-27T17:19:39.070Z,31.070152,66ac,6,Info [FLog::CreatorOutput] [M1Tests] PASS: stunned player cannot start an attack
+2026-10-27T17:19:40.571Z,32.571411,43b4,6,Info [FLog::CreatorOutput] [M1Tests] PASS: pause restarts at first damage step
+2026-10-27T17:19:42.635Z,34.635517,43b4,6,Info [FLog::CreatorOutput] [M1Tests] PASS: first impact interrupts victim windup
+2026-10-27T17:19:44.570Z,36.570457,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: behind target outside permitted direction
+2026-10-27T17:19:46.486Z,38.486671,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: out of range and empty swing safe
+2026-10-27T17:19:48.402Z,40.402824,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: impact samples current facing after windup
+2026-10-27T17:19:50.320Z,42.320293,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: solid wall prevents hits
+2026-10-27T17:19:51.919Z,43.919720,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: near wall reduces knockback without crossing wall
+2026-10-27T17:19:53.835Z,45.835625,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: ForceField prevents damage and stun
+2026-10-27T17:19:55.518Z,47.518593,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: one swing hits multiple unique humanoids
+2026-10-27T17:19:57.186Z,49.186192,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: stun immobilizes real player with server ownership
+2026-10-27T17:19:57.502Z,49.502811,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: old stun deadline does not release overlapping stun
+2026-10-27T17:19:57.769Z,49.769207,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: overlap ends and ownership restores
+2026-10-27T17:19:59.619Z,51.619751,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: death cancels pending damage
+2026-10-27T17:19:59.868Z,51.868843,290c,6,Info [FLog::CreatorOutput] [M1Tests] PASS: dead requests rejected
+2026-10-27T17:20:02.002Z,54.002174,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: respawn resets combo and client prediction
+2026-10-27T17:20:02.036Z,54.036034,3834,6,Info [FLog::CreatorOutput] [M1Tests] PASS: VFX has a hard concurrent cap
+2026-10-27T17:20:02.469Z,54.469345,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: temporary VFX cleaned up
+2026-10-27T17:20:03.501Z,55.501801,4810,6,Info [FLog::CreatorOutput] [M1Tests] PASS: departure removes fighter and pending work
+2026-10-27T17:20:03.501Z,55.501801,4810,6,Info [FLog::CreatorOutput] [M1Tests] ALL PASS: 44 integration checks

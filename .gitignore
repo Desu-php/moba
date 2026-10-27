@@ -1,0 +1,12 @@
+# Project place file
+/anime_fight.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+sourcemap.json
+
+# Generated builds and verification tools; source places elsewhere stay visible.
+/build/
+/.tools/
