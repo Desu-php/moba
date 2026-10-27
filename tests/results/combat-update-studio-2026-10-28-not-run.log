@@ -1,0 +1,7 @@
+Date: 2026-10-28 Asia/Dushanbe
+Studio runtime and visual verification: NOT RUN
+Attempt: initialize node_repl for Windows UI automation.
+Result: node_repl kernel exited unexpectedly, exited(code=1).
+Diagnostic: windows sandbox failed: CreateProcessWithLogonW failed: 2
+No engine PASS, screenshot, animation playback, or multiplayer damage result is claimed.
+Updated integration scene: build/hero-tests.rbxlx (Server & Clients, 2 clients).

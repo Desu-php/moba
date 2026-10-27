@@ -7,6 +7,7 @@ local Fighters = require(script.Parent.FighterStateService)
 local Damage = require(script.Parent.DamageService)
 local Teams = require(script.Parent.TeamService)
 local Bases = require(script.Parent.BaseService)
+local Structures = require(script.Parent.StructureService)
 export type Minion = {
 	model: Model, humanoid: Humanoid, root: BasePart, teamId: string, kind: string, lane: string,
 	stats: Config.Stats, route: { Vector3 }, waypoint: number, target: Model?, mode: string,
@@ -104,6 +105,15 @@ local function selectTarget(npc: Minion): Model?
 	if nearestNPC then return nearestNPC end
 	if nearestHero then return nearestHero end
 	local selected: Model? = nil; local distance = math.huge
+	for model, tower in Structures.GetAll() do
+		if tower.kind ~= "Tower" or not Structures.Alive(tower) then continue end
+		local separation = (tower.root.Position - origin).Magnitude
+		local sameLane = tower.lane == npc.lane
+		if separation <= (if sameLane then npc.stats.DetectionRange else npc.stats.AttackRange)
+			and (separation < distance or (separation == distance and selected ~= nil and model.Name < selected.Name))
+			and Damage.CanDamage(npc.model, model) then selected = model; distance = separation end
+	end
+	if selected then return selected end
 	for _, base in Bases.GetAll() do
 		local separation = (base.root.Position - origin).Magnitude
 		if separation <= npc.stats.AttackRange and separation < distance and Damage.CanDamage(npc.model, base.model) then
@@ -114,8 +124,20 @@ local function selectTarget(npc: Minion): Model?
 end
 local function baseGoal(npc: Minion): Vector3?
 	local selected: Vector3? = nil; local nearest = math.huge
+	-- Once the lane route is complete, help another lane if its towers still shield the core.
+	-- Own-lane towers always take precedence; the outer route keeps cross-lane travel away from rocks.
+	local ownLane = false
+	for model, tower in Structures.GetAll() do
+		if tower.kind ~= "Tower" or not Structures.Alive(tower) or not Damage.CanDamage(npc.model, model) then continue end
+		local sameLane = tower.lane == npc.lane
+		local distance = (tower.root.Position - npc.root.Position).Magnitude
+		if (sameLane and not ownLane) or (sameLane == ownLane and distance < nearest) then
+			selected = tower.root.Position; nearest = distance; ownLane = sameLane
+		end
+	end
+	if selected then return selected end
 	for _, base in Bases.GetAll() do
-		if Teams.IsActive(base.teamId) and base.teamId ~= npc.teamId then
+		if Teams.IsActive(base.teamId) and base.teamId ~= npc.teamId and Structures.CanReceive(base.model) then
 			local distance = (base.root.Position - npc.root.Position).Magnitude
 			if distance < nearest then selected = base.root.Position; nearest = distance end
 		end

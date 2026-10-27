@@ -1,0 +1,10 @@
+Iteration: Towers, 2026-10-28 Asia/Dushanbe
+Studio runtime, two clients, screenshots, PC/mobile visual review: NOT RUN
+Attempt 1: node_repl initialize @oai/sky (Computer Use skill).
+Kernel PID 18768 exited(code=1) before Studio could be selected.
+Attempt 2: fallback cua.getState().
+Kernel PID 14684 exited(code=1) before any window state was returned.
+Both diagnostics: windows sandbox failed: CreateProcessWithLogonW failed: 2
+No screenshots were captured. No runtime PASS is claimed.
+Reproduce: build/tower-tests.rbxlx -> Server & Clients -> 2 -> Play/F7.
+Expected fresh server log: [TowerTests] ALL PASS; see docs/TOWERS.md for all regressions and manual checks.

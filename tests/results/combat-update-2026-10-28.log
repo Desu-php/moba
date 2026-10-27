@@ -1,0 +1,304 @@
+Building project 'anime_fight'
+Built project to anime-battlegrounds.rbxlx
+Building project 'AnimeBattlegroundsCombatTests'
+Built project to combat-regression-stage3.rbxlx
+Building project 'SurvivalIntegrationTests'
+Built project to survival-tests.rbxlx
+Building project 'AnimeProgressionTests'
+Built project to progression-tests.rbxlx
+Building project 'OrangeNinjaTests'
+Built project to hero-tests.rbxlx
+Created sourcemap at build/hero-sourcemap.json
+Created sourcemap at build/progression-sourcemap.json
+Created sourcemap at build/survival-sourcemap.json
+Created sourcemap at build/sourcemap.json
+Created sourcemap at build/test-sourcemap.json
+PASS Rojo build, source mapping, entrypoint classes and scene separation
+PASS production contains no test remotes
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 5 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 5 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 12 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 8 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 6 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 6 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 10 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 3 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 3 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 6 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 3 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 5 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 3 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 6 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 5 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 8 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 3 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 0 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 7 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 4 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 23 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 20 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 2 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 14 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 1 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+Compiled 0 KLOC into 14 KB bytecode (read 0.00s, parse 0.00s, compile 0.00s)
+PASS RequestLimiter: burst, flood, fractional refill, clock rollback, cap, player isolation, sustained limit
+PASS CombatState: start step 1
+PASS CombatState: windup prevents early damage 1
+PASS CombatState: one impact only 1
+PASS CombatState: start step 2
+PASS CombatState: windup prevents early damage 2
+PASS CombatState: one impact only 2
+PASS CombatState: start step 3
+PASS CombatState: windup prevents early damage 3
+PASS CombatState: one impact only 3
+PASS CombatState: start step 4
+PASS CombatState: windup prevents early damage 4
+PASS CombatState: one impact only 4
+PASS CombatState: full combo damage is 27
+PASS CombatState: finisher recovery
+PASS CombatState: finisher resets next step
+PASS CombatState: idle timeout resets combo
+PASS CombatState: spam cannot advance step
+PASS CombatState: early input buffered
+PASS CombatState: one buffer slot
+PASS CombatState: buffer cannot fire early
+PASS CombatState: buffer starts exactly next step
+PASS CombatState: stun interrupts pending impact
+PASS CombatState: stunned cannot attack
+PASS CombatState: old stun deadline cannot release new stun
+PASS CombatState: stun always expires
+PASS CombatState: finisher resets victim combo
+PASS CombatState: attack after stun starts at first step
+PASS CombatState: death clears queued and active attacks
+PASS CombatState: dead never recovers through clock
+PASS CombatState: fresh character has fresh state
+PASS CombatState: other fighters remain independent
+PASS CombatState: lag cannot retain stale buffered inputs
+PASS CombatState: late impact is discarded
+ALL PASS: 33 pure combo/state checks
+PASS MatchState: waiting initially
+PASS MatchState: two active bases
+PASS MatchState: balanced first team
+PASS MatchState: balanced second team
+PASS MatchState: rejoin keeps team
+PASS MatchState: enemy allowed
+PASS MatchState: ally denied
+PASS MatchState: unknown and missing team denied
+PASS MatchState: not enough players
+PASS MatchState: prepare on second player
+PASS MatchState: leaving cancels preparation
+PASS MatchState: preparation not early
+PASS MatchState: start at deadline
+PASS MatchState: first wave waits five seconds
+PASS MatchState: first wave on schedule
+PASS MatchState: no duplicate wave
+PASS MatchState: twenty second interval
+PASS MatchState: no catch-up storm
+PASS MatchState: departure does not kill base or end active match
+PASS MatchState: ordinary death does not affect teams
+PASS MatchState: base elimination accepted once
+PASS MatchState: winner is surviving team
+PASS MatchState: repeat destruction ignored
+PASS MatchState: waves stopped
+PASS MatchState: finished match rejects joining combat
+PASS MatchState: eliminated side cannot deal damage
+PASS MatchState: four-team start
+PASS MatchState: three survivors is not victory
+PASS MatchState: eliminated reconnect cannot switch
+PASS MatchState: two survivors is not victory
+PASS MatchState: arbitrary last team wins
+PASS MatchState: post finish elimination blocked
+PASS MatchState: solo retains opposing NPC side
+PASS MatchState: at least two teams enforced
+PASS MatchState: duplicate team IDs refused
+ALL PASS: 35 match/team/wave checks
+PASS Progression: initial profile
+PASS Progression: thresholds
+PASS Progression: below threshold
+PASS Progression: exact threshold
+PASS Progression: overflow
+PASS Progression: multiple levels
+PASS Progression: level five stats
+PASS Progression: level leaves speed and defense
+PASS Progression: max level cap
+PASS Progression: no XP at cap
+PASS Progression: level ten stats
+PASS Progression: equipment health
+PASS Progression: equipment speed
+PASS Progression: additive base damage bonuses
+PASS Progression: idempotent recalculation
+PASS Progression: unknown ownership ignored
+PASS Progression: defense mitigation
+PASS Progression: invalid amount 1
+PASS Progression: invalid XP no mutation 1
+PASS Progression: invalid gold no mutation 1
+PASS Progression: invalid amount 2
+PASS Progression: invalid XP no mutation 2
+PASS Progression: invalid gold no mutation 2
+PASS Progression: invalid amount 3
+PASS Progression: invalid XP no mutation 3
+PASS Progression: invalid gold no mutation 3
+PASS Progression: invalid amount 4
+PASS Progression: invalid XP no mutation 4
+PASS Progression: invalid gold no mutation 4
+PASS Progression: invalid amount 5
+PASS Progression: invalid XP no mutation 5
+PASS Progression: invalid gold no mutation 5
+PASS Progression: invalid amount 6
+PASS Progression: invalid XP no mutation 6
+PASS Progression: invalid gold no mutation 6
+PASS Progression: gold add
+PASS Progression: gold cap
+PASS Progression: spend exact balance
+PASS Progression: cannot overspend
+PASS Progression: zero safe
+PASS Progression: second spend refused
+PASS Progression: equipment duplicate refused
+PASS Progression: unknown item refused
+PASS Progression: poor player refused
+PASS Progression: full health potion refused
+PASS Progression: injured potion accepted
+PASS Progression: equipment accepted
+PASS Progression: reset profile removes equipment
+PASS Progression: last hit attribution
+PASS Progression: assistant deduplicated
+PASS Progression: ledger cleared
+PASS Progression: death consumed once
+PASS Progression: friendly kill no attribution
+PASS Progression: expired assist excluded
+PASS Progression: knockback death within window
+PASS Progression: expired killer excluded
+PASS Progression: NPC last hit has no player gold recipient
+PASS Progression: NPC hero kill permits player assist
+PASS Progression: departure forgets contribution
+PASS Progression: new life has no stale credit
+ALL PASS: 60 progression/economy/attribution checks
+PASS Rewards: melee last hit
+PASS Rewards: full XP each nearby ally
+PASS Rewards: enemy gets nothing
+PASS Rewards: dead hero excluded from nearby XP
+PASS Rewards: distant hero excluded from nearby XP
+PASS Rewards: inactive team excluded
+PASS Rewards: ranged last hit
+PASS Rewards: NPC kill shares XP
+PASS Rewards: NPC kill has no gold or hero last hit count
+PASS Rewards: hero killer bounty
+PASS Rewards: assistant bounty once
+PASS Rewards: killer is not assistant
+PASS Rewards: victim death count
+PASS Rewards: nonparticipants not paid
+PASS Rewards: finished match no rewards or counters
+PASS Rewards: friendly death gives no bounty
+PASS Rewards: base has no bounty
+PASS Rewards: NPC hero kill still rewards eligible assistant
+PASS Rewards: unattributed death only counts death
+PASS Rewards: inactive assistant excluded
+PASS Rewards: team changed since hit excludes killer
+ALL PASS: 21 reward allocation checks
+PASS Abilities: accepted exactly at M1 recovery boundary
+PASS Abilities: cooldown starts on acceptance
+PASS Abilities: one active cast
+PASS Abilities: cannot claim before contact
+PASS Abilities: claim contact once
+PASS Abilities: second contact rejected
+PASS Abilities: not finished before recovery
+PASS Abilities: finished at recovery boundary
+PASS Abilities: finished cast cannot impact
+PASS Abilities: cooldown before boundary
+PASS Abilities: remaining exact
+PASS Abilities: cooldown boundary accepted
+PASS Abilities: old cast cannot claim new action
+PASS Abilities: stun cancellation invalidates impact
+PASS Abilities: interrupt does not refund cooldown
+PASS Abilities: cancel frees active action
+PASS Abilities: stun cannot cast
+PASS Abilities: dead cannot cast
+PASS Abilities: inactive match cannot cast
+PASS Abilities: active M1 blocks ability
+PASS Abilities: M1 recovery blocks ability
+PASS Abilities: wind cannot hit during preparation
+PASS Abilities: wind hits after preparation
+PASS Abilities: respawn clears action
+PASS Abilities: respawn rejects old life
+PASS Abilities: respawn preserves cooldown
+PASS Abilities: remaining is clamped
+PASS Abilities: actual CombatState begins M1
+PASS Abilities: ability uses actual CombatState exclusion
+PASS Abilities: recovery survives pose ending
+PASS Abilities: late frame cannot deliver expired impact
+PASS Abilities: new match resets cooldowns
+PASS Abilities: Idle finite non-neutral pose
+PASS Abilities: Run finite non-neutral pose
+PASS Abilities: Punch1 finite non-neutral pose
+PASS Abilities: Punch2 finite non-neutral pose
+PASS Abilities: Punch3 finite non-neutral pose
+PASS Abilities: HeavyPunch finite non-neutral pose
+PASS Abilities: ShadowClones finite non-neutral pose
+PASS Abilities: SpiralSphere finite non-neutral pose
+PASS Abilities: WindPalm finite non-neutral pose
+PASS Abilities: Stun finite non-neutral pose
+PASS Abilities: running legs move over time
+PASS Abilities: running arms point backwards
+PASS Abilities: M1 alternates arms
+PASS Abilities: sphere preparation differs from contact
+PASS Abilities: contact closed before windup
+PASS Abilities: contact opens at windup
+PASS Abilities: contact remains open for moving target
+PASS Abilities: contact closes during recovery
+PASS Abilities: contact can claim once
+PASS Abilities: claimed contact closes immediately
+PASS Abilities: removed dash absent from config and order
+PASS Abilities: clone seal brings both hands inward
+PASS Abilities: wind strike extends both palms
+ALL PASS: 55 ability state and pose checks
+PASS Luau syntax (72 files), pure logic types and unit tests
+PASS full Roblox-aware source type check (Luau new solver)
+Engine tests: build/combat-regression-stage3.rbxlx and build/survival-tests.rbxlx, Server & Clients, 2 clients.
+Stage 4: build/progression-tests.rbxlx, Server & Clients, 3 clients.
+Stage 5: build/hero-tests.rbxlx, Server & Clients, 2 clients.

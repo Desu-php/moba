@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.CombatConfig)
 local AnimationIds = require(Shared.Config.AnimationIds)
+local Motion = require(script.Parent.HeroMotionController)
 
 type Loaded = { track: AnimationTrack, animation: Animation, marker: RBXScriptConnection }
 local AnimationController = {}
@@ -24,6 +25,7 @@ local started = false
 
 function AnimationController.Stop(requestId: number?)
 	if requestId and requestId ~= currentRequest then return end
+	Motion.StopPrediction(requestId)
 	if current then current:Stop(Config.AnimationFadeTime) end
 	current = nil
 	currentRequest = 0
@@ -57,7 +59,6 @@ local function loadTrack(profile: Config.AttackProfile, step: number): Animation
 	local set = AnimationIds[profile.AnimationSet]
 	local assetId = if set then set[animationKey] else nil
 	if not assetId or not string.match(assetId, "^rbxassetid://[1-9]%d*$") then
-		warnOnce(key, key .. " has no published asset ID. Combat remains active; see docs/ANIMATIONS.md.")
 		return nil
 	end
 	local owner = animator
@@ -109,18 +110,29 @@ function AnimationController.Play(requestId: number, step: number, profile: Conf
 	local now = workspace:GetServerTimeNow()
 	local elapsed = math.max(0, now - startedAt)
 	if elapsed >= profile.AttackDurationByComboStep[step] then return false end
-	if currentRequest == requestId and currentStep == step and currentSet == profile.AnimationSet then
+	if currentRequest == requestId and currentStep == step then
 		-- Confirm the prediction without replaying the track from frame zero.
+		if currentSet ~= profile.AnimationSet then
+			if current then current:Stop(Config.AnimationFadeTime) end
+			currentSet = profile.AnimationSet
+			current = loadTrack(profile, step)
+			if current then
+				current:Play(Config.AnimationFadeTime)
+				if current.Length > 0 then current.TimePosition = math.min(elapsed, current.Length) end
+			end
+		end
 		if current and current.Length > 0 and math.abs(current.TimePosition - elapsed) > Config.AnimationCorrectionThreshold then
 			current.TimePosition = math.min(elapsed, current.Length)
 		end
 		endsAt = startedAt + profile.AttackDurationByComboStep[step]
+		Motion.Predict(requestId, profile.AnimationKeys[step], startedAt, profile.AttackDurationByComboStep[step])
 		return false
 	end
 	AnimationController.Stop()
 	currentRequest, currentStep, currentSet = requestId, step, profile.AnimationSet
 	endsAt = startedAt + profile.AttackDurationByComboStep[step]
 	logicalPlayCount += 1
+	Motion.Predict(requestId, profile.AnimationKeys[step], startedAt, profile.AttackDurationByComboStep[step])
 	local track = loadTrack(profile, step)
 	if track then
 		current = track
@@ -137,6 +149,7 @@ end
 function AnimationController.Start(onMarker: () -> ())
 	if started then return end
 	started = true
+	Motion.Start()
 	markerCallback = onMarker
 	Players.LocalPlayer.CharacterAdded:Connect(bindCharacter)
 	Players.LocalPlayer.CharacterRemoving:Connect(clearCharacter)

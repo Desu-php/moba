@@ -125,6 +125,11 @@ local ok, failure = xpcall(function()
 	local _, newHumanoid, newRoot = body(bluePlayer)
 	check("hero respawns at living base", newHumanoid.Health > 0 and newRoot.Position.X < -140 and Teams.IsActive("Blue"))
 	local base = Bases.Get("Red") :: Bases.Base
+	-- New match prerequisite: open the core through confirmed structure damage, then retain the original base assertions.
+	for _, tower in require(services.TowerService).GetAll() do
+		if tower.structure.teamId == "Red" then Damage.Apply(bluePlayer.Character :: Model, tower.structure.humanoid, 9999) end
+	end
+	task.wait(0.2)
 	arrange(bluePlayer, base.root.Position + Vector3.new(-4.5, 0, 0), base.root.Position)
 	task.wait(1.3); local before = base.humanoid.Health; command(bluePlayer, "attack")
 	check("hero M1 damages enemy base", base.humanoid.Health == before - 5)

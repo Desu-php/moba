@@ -183,6 +183,11 @@ local ok, failure = xpcall(function()
  local _, floodReason = buy(hero, "IronBlade")
  check("malformed flood rate limited", floodReason == "RateLimited")
  local base = Bases.Get("Red"); assert(base)
+ -- Open the core before the unchanged blade/base regression; tower rewards have their own suite.
+ for _, tower in require(services.TowerService).GetAll() do
+  if tower.structure.teamId == "Red" then Damage.Apply(heroModel, tower.structure.humanoid, 9999) end
+ end
+ task.wait(0.2)
  arrange(hero, base.root.Position + Vector3.new(-4.5, 0, 0), base.root.Position)
  task.wait(1.3); local hp = base.humanoid.Health; command(hero, "attack")
  check("real M1 uses blade multiplier", math.abs(base.humanoid.Health - (hp - 5.75)) < 0.01)

@@ -1,7 +1,7 @@
 --!strict
 
 -- Plain Luau data: the same timing profile can be tested without Roblox.
-local defaultProfile = table.freeze({
+local profileValues = {
 	ComboResetTime = 1.2,
 	AttackCooldown = 0.35,
 	FinisherCooldown = 0.8,
@@ -25,10 +25,14 @@ local defaultProfile = table.freeze({
 	KnockbackProbeSize = table.freeze({ X = 1.5, Y = 2, Z = 1.5 }),
 	AnimationSet = "Default",
 	AnimationKeys = table.freeze({ "Punch1", "Punch2", "Punch3", "HeavyPunch" }),
-})
+}
+local defaultProfile = table.freeze(table.clone(profileValues))
 
 export type AttackProfile = typeof(defaultProfile)
 local profiles: { [string]: AttackProfile } = { Default = defaultProfile }
+local ninja = table.clone(profileValues)
+ninja.AnimationSet = "OrangeNinja"
+profiles.OrangeNinja = table.freeze(ninja)
 
 return table.freeze({
 	DefaultProfile = "Default",

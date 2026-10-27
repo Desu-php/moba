@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Ledger = require(Shared.Game.RewardLedger)
 local Config = require(Shared.Config.ProgressionConfig)
+local Structures = require(Shared.Game.StructureRules)
 export type Death = { lifeId: number, model: Model, victimUserId: number?, teamId: string, kind: string, minionType: string,
  position: Vector3, killer: Ledger.Actor?, assists: { Ledger.Actor } }
 type Life = { id: number, model: Model, humanoid: Humanoid, ledger: Ledger.Ledger, scheduled: boolean, connections: { RBXScriptConnection } }
@@ -15,7 +16,7 @@ function LifeService.Remove(model: Model)
  lives[model] = nil
 end
 function LifeService.Register(model: Model)
- if lives[model] or model:GetAttribute("EntityKind") == "Base" then return end
+	if lives[model] or Structures.isStructure(model:GetAttribute("EntityKind")) or model:GetAttribute("EntityKind") == "Summon" then return end
  local humanoid = model:FindFirstChildOfClass("Humanoid"); if not humanoid then return end
  serial += 1
  local life: Life = { id = serial, model = model, humanoid = humanoid, ledger = Ledger.new(), scheduled = false, connections = {} }

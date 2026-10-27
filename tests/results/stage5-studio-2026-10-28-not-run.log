@@ -1,0 +1,22 @@
+Stage 5 / 2026-10-28 / Asia/Dushanbe
+Status: NOT RUN
+
+Attempt 1: node_repl, import @oai/sky, sky.list_windows()
+Result: trusted Node process exited unexpectedly; kernel reset, rerun your request
+
+Attempt 2: repeat initialization and sky.list_windows()
+Result: node_repl kernel exited unexpectedly
+Diagnostics: windows sandbox failed: CreateProcessWithLogonW failed: 2
+
+Fallback: cua.getState()
+Result: node_repl kernel exited unexpectedly
+Diagnostics: windows sandbox failed: CreateProcessWithLogonW failed: 2
+
+No Studio test session was started through these tools.
+M1 (2 clients): NOT RUN
+Survival (2 clients): NOT RUN
+Progression (3 clients): NOT RUN
+Hero (2 clients): NOT RUN
+Visual movement / second client / Device Emulator: NOT RUN
+Screenshots: none captured
+See docs/STAGE5_TESTING.md for exact reproduction steps.

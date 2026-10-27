@@ -1,0 +1,12 @@
+{
+ "name": "TowerTests",
+ "tree": {
+  "$className": "DataModel",
+  "ReplicatedStorage": { "Shared": { "$path": "../src/shared" } },
+  "ServerScriptService": { "Server": { "$path": "../src/server" }, "TowerTests": { "$path": "towers/Runner.server.luau" } },
+  "StarterPlayer": {
+   "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false },
+   "StarterPlayerScripts": { "Client": { "$path": "../src/client" }, "TowerDriver": { "$path": "towers/Driver.client.luau" } }
+  }
+ }
+}

@@ -23,6 +23,7 @@ local queuedUntil = 0
 local currentProfile = Config.Profiles[Config.DefaultProfile]
 local seenStarted: { [Model]: number } = setmetatable({}, { __mode = "k" })
 local seenHits: { [Model]: number } = setmetatable({}, { __mode = "k" })
+local abilityConnection: RBXScriptConnection? = nil
 
 function CombatController.NextRequestId(): number
 	requestSerial += 1
@@ -116,10 +117,14 @@ function CombatController.TryAttack(): boolean
 	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
 	if not remote or not character or not humanoid or humanoid.Health <= 0 then return false end
 	if character:GetAttribute("CombatDisabled") == true then return false end
+	if character:GetAttribute("AbilityId") and character:GetAttribute("AbilityId") ~= "" then return false end
 	local match = ReplicatedStorage:FindFirstChild("SurvivalState")
 	if match and match:GetAttribute("Phase") ~= "InProgress" then return false end
 	local now = workspace:GetServerTimeNow()
 	local authoritative = snapshot
+	if not authoritative then
+		currentProfile = Config.Profiles[tostring(character:GetAttribute("CombatProfileId"))] or currentProfile
+	end
 	if authoritative and (authoritative.mode == "Dead" or (authoritative.mode == "Stunned" and now < authoritative.stunUntil)) then return false end
 	if not authoritative and character:GetAttribute("CombatState") == "Stunned" then return false end
 	if pending then
@@ -167,6 +172,18 @@ function CombatController.Start()
 	end)
 	Players.LocalPlayer.CharacterAdded:Connect(reset)
 	Players.LocalPlayer.CharacterRemoving:Connect(reset)
+	local function bindAbilities(character: Model)
+		if abilityConnection then abilityConnection:Disconnect() end
+		abilityConnection = character:GetAttributeChangedSignal("AbilityId"):Connect(function()
+			if character ~= Players.LocalPlayer.Character then return end
+			if character:GetAttribute("AbilityId") ~= "" then Animations.Stop(); pending = nil; queuedUntil = 0 end
+		end)
+	end
+	Players.LocalPlayer.CharacterAdded:Connect(bindAbilities)
+	Players.LocalPlayer.CharacterRemoving:Connect(function()
+		if abilityConnection then abilityConnection:Disconnect(); abilityConnection = nil end
+	end)
+	if Players.LocalPlayer.Character then bindAbilities(Players.LocalPlayer.Character) end
 	events.OnClientEvent:Connect(onEvent)
 	RunService.Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()

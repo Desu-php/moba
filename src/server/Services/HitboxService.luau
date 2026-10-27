@@ -15,6 +15,7 @@ function HitboxService.IsFiniteCFrame(frame: CFrame): boolean
 end
 
 local function findHumanoid(part: BasePart): Humanoid?
+	if part:GetAttribute("HeroCosmetic") == true or part:GetAttribute("StructureCosmetic") == true then return nil end
 	-- Accessories and held weapons must not extend the victim's hurtbox.
 	if part:FindFirstAncestorWhichIsA("Accessory") or part:FindFirstAncestorWhichIsA("Tool") then
 		return nil

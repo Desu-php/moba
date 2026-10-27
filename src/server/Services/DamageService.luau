@@ -2,6 +2,8 @@
 local Teams = require(script.Parent.TeamService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Life = require(script.Parent.CombatLifeService)
+local Structures = require(script.Parent.StructureService)
+local TowerRewards = require(script.Parent.TowerRewardService)
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Rules = require(Shared.Game.ProgressionRules).configure(require(Shared.Config.ProgressionConfig), require(Shared.Config.ItemConfig).Items)
 local DamageService = { Applied = Instance.new("BindableEvent") }
@@ -16,7 +18,9 @@ function DamageService.CanAct(model: Model): boolean
 end
 function DamageService.CanDamage(attacker: Model, target: Model): boolean
 	return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
+		and target:GetAttribute("EntityKind") ~= "Summon"
 		and target:GetAttribute("IsDestroyed") ~= true
+		and Structures.CanReceive(target)
 end
 function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number): number
 	local target = humanoid.Parent
@@ -29,6 +33,7 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 	humanoid:TakeDamage(math.min(amount, before))
 	local dealt = math.max(0, before - humanoid.Health)
 	if dealt > 0 then
+		TowerRewards.Confirmed(attacker, target)
 		Life.Record(attacker, target)
 		DamageService.Applied:Fire(attacker, target, dealt)
 	end

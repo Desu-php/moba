@@ -3,6 +3,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.MapConfig)
 local Mode = require(Shared.Config.GameModeConfig)
 local Progression = require(Shared.Config.ProgressionConfig)
+local TowerFactory = require(script.Parent.TowerFactory)
 local MapBuilder = {}
 function MapBuilder.EnsureShops(map: Folder)
 	local existing = map:FindFirstChild("Shops")
@@ -38,6 +39,7 @@ function MapBuilder.Build(): Folder
 		assert(existing:IsA("Folder") and (existing:GetAttribute("SurvivalMapVersion") == Config.Version or existing:GetAttribute("AuthoredSurvivalMap") == true),
 			"Workspace.Map is not a supported survival map; rename your existing container or supply an authored map")
 		MapBuilder.EnsureShops(existing)
+		TowerFactory.Build(existing)
 		return existing
 	end
 	assert(Config.Generated, "Generated map disabled: provide Workspace.Map with AuthoredSurvivalMap=true")
@@ -92,6 +94,7 @@ function MapBuilder.Build(): Folder
 	end
 	map.Parent = workspace
 	MapBuilder.EnsureShops(map)
+	TowerFactory.Build(map)
 	return map
 end
 function MapBuilder.Route(map: Folder, lane: string, reverse: boolean): { Vector3 }

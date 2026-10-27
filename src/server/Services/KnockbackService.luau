@@ -2,12 +2,14 @@
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.CombatConfig)
+local Structures = require(Shared.Game.StructureRules)
 local Workspace = game:GetService("Workspace")
 local KnockbackService = {}
 
 -- Stun acquires temporary server ownership before this impulse is applied.
-function KnockbackService.Apply(attacker: BasePart, target: BasePart, profile: Config.AttackProfile)
+function KnockbackService.Apply(attacker: BasePart, target: BasePart, profile: Config.AttackProfile, speedOverride: number?, upOverride: number?)
 	if target.Anchored or not target.Parent then return end
+	if Structures.isStructure(target.Parent:GetAttribute("EntityKind")) then return end
 	local delta = target.Position - attacker.Position
 	local horizontal = Vector3.new(delta.X, 0, delta.Z)
 	if horizontal.Magnitude < Config.PositionEpsilon then
@@ -16,7 +18,7 @@ function KnockbackService.Apply(attacker: BasePart, target: BasePart, profile: C
 	end
 	if horizontal.Magnitude < Config.PositionEpsilon then return end
 	local direction = horizontal.Unit
-	local speed = profile.KnockbackVelocity
+	local speed = speedOverride or profile.KnockbackVelocity
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { attacker.Parent :: Instance, target.Parent :: Instance }
@@ -26,7 +28,7 @@ function KnockbackService.Apply(attacker: BasePart, target: BasePart, profile: C
 	if wall then
 		speed = math.min(speed, math.max(0, wall.Distance - profile.KnockbackWallPadding) / profile.KnockbackWallProbeTime)
 	end
-	local desired = direction * speed + Vector3.new(0, profile.KnockbackUpVelocity, 0)
+	local desired = direction * speed + Vector3.new(0, upOverride or profile.KnockbackUpVelocity, 0)
 	if desired.Magnitude > profile.MaxKnockbackSpeed then desired = desired.Unit * profile.MaxKnockbackSpeed end
 	local mass = target.AssemblyMass
 	if mass <= 0 or mass == math.huge or mass ~= mass then return end

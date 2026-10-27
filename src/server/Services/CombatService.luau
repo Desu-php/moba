@@ -15,6 +15,7 @@ local Knockback = require(script.Parent.KnockbackService)
 local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
 local Stats = require(script.Parent.CharacterStatsService)
+local Structures = require(Shared.Game.StructureRules)
 
 type Session = { bucket: RequestLimiter.Bucket, lastRequestId: number, lastRejectAt: number }
 local CombatService = {}
@@ -52,6 +53,7 @@ end
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
 		and Damage.CanAct(fighter.character)
+		and (fighter.character:GetAttribute("AbilityId") == nil or fighter.character:GetAttribute("AbilityId") == "")
 		and fighter.humanoid.Health > 0
 		and fighter.humanoid:GetState() ~= Enum.HumanoidStateType.Dead
 		and fighter.root:IsDescendantOf(fighter.character)
@@ -126,9 +128,9 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 	for _, humanoid in targets do
 		local character = humanoid.Parent
 		if not character or not character:IsA("Model") then continue end
-		local isBase = character:GetAttribute("EntityKind") == "Base"
-		local victim = if isBase then nil else Fighters.GetOrCreate(character)
-		if not isBase and not victim then continue end
+		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
+		local victim = if isStructure then nil else Fighters.GetOrCreate(character)
+		if not isStructure and not victim then continue end
 		local dealt = Damage.Apply(fighter.character, humanoid, profile.DamageByComboStep[attack.step] * multiplier)
 		-- ForceField-protected targets must not be stunned or pushed.
 		if dealt <= 0 then continue end

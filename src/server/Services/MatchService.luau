@@ -17,14 +17,20 @@ local Progression = require(script.Parent.HeroProgressionService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Rewards = require(script.Parent.RewardService)
 local Shop = require(script.Parent.ItemShopService)
+local Towers = require(script.Parent.TowerService)
+local Structures = require(script.Parent.StructureService)
+local TowerConfig = require(Shared.Config.TowerConfig)
+local MapConfig = require(Shared.Config.MapConfig)
 local MatchService = {}
 local state: Rules.State? = nil
 local folder: Folder? = nil
 local nextAI, nextSnapshot, nextDiagnostics = 0, 0, 0
+local nextTower = 0
 function MatchService.GetState(): Rules.State? return state end
 function MatchService.ResetProgression()
 	assert(not state or state.phase ~= "InProgress", "Reset progression only between matches")
 	Progression.ResetMatch(); Rewards.Reset(); Shop.ResetSessions()
+	require(script.Parent.AbilityService).Reset()
 end
 function MatchService.Publish()
 	local current, replicated = state, folder
@@ -39,6 +45,9 @@ function MatchService.Publish()
 		if item and base then
 			item:SetAttribute("Active", team.active); item:SetAttribute("Health", base.humanoid.Health)
 			item:SetAttribute("MaxHealth", base.humanoid.MaxHealth)
+			local remaining = Structures.Remaining(id)
+			item:SetAttribute("TowersRemaining", remaining); item:SetAttribute("TowersTotal", #MapConfig.LaneOrder)
+			item:SetAttribute("BaseProtected", remaining > 0); base.model:SetAttribute("ProtectedByTowers", remaining > 0)
 		end
 	end
 end
@@ -47,7 +56,7 @@ local function eliminate(id: string)
 	if not Rules.eliminate(current, id, workspace:GetServerTimeNow()) then return end
 	Teams.Eliminate(id); AI.RemoveTeam(id)
 	if current.phase == "Finished" then
-		Damage.SetEnabled(false); AI.SetRunning(false); Teams.Finish()
+		Damage.SetEnabled(false); AI.SetRunning(false); Towers.CancelAll(); Teams.Finish()
 		print("[Match] Winner: " .. (current.winner or "Draw"))
 	end
 	MatchService.Publish()
@@ -62,6 +71,7 @@ function MatchService.Start()
 	local initial = Rules.new(Mode.TeamIds()); state = initial
 	Progression.Start(); Stats.Start(); Rewards.Start()
 	Teams.Start(initial, arena); Bases.Start(arena); Spawner.Start(arena)
+	Towers.Start(arena)
 	Shop.Start(arena)
 	local replicated = Instance.new("Folder"); replicated.Name = "SurvivalState"
 	for _, definition in Config.Teams do
@@ -69,6 +79,11 @@ function MatchService.Start()
 		item:SetAttribute("Color", definition.Color); item.Parent = replicated
 	end
 	local shots = Instance.new("RemoteEvent"); shots.Name = "MinionShot"; shots.Parent = replicated
+	local towerEvents = Instance.new("RemoteEvent"); towerEvents.Name = "TowerEvent"; towerEvents.Parent = replicated
+	Towers.Event.Event:Connect(function(kind: string, model: Model, origin: Vector3, destination: Vector3, teamId: string, lane: string)
+		towerEvents:FireAllClients(kind, model, origin, destination, teamId, lane)
+		if kind == "Destroyed" then MatchService.Publish() end
+	end)
 	AI.Shot.Event:Connect(function(origin: Vector3, target: Vector3, kind: string, id: string, model: Model)
 		shots:FireAllClients(origin, target, kind, id, model)
 	end)
@@ -91,6 +106,7 @@ function MatchService.Start()
 		end
 		if now >= nextSnapshot then nextSnapshot = now + Config.SnapshotInterval; MatchService.Publish() end
 		Rewards.Update(now)
+		if now >= nextTower then nextTower = now + TowerConfig.UpdateInterval; Towers.Update(now) end
 		if MinionConfig.DebugPerformance and now >= nextDiagnostics then
 			nextDiagnostics = now + MinionConfig.DiagnosticInterval
 			print(string.format("[Minions] active=%d cap=%d updateMs=%.2f", AI.GetCount(), MinionConfig.MaxActiveNPCs, workspace:GetAttribute("SurvivalAIUpdateMs") :: number))

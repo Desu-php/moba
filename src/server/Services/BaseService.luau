@@ -1,5 +1,6 @@
 --!strict
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.GameModeConfig)
+local Structures = require(script.Parent.StructureService)
 export type Base = { model: Model, humanoid: Humanoid, root: BasePart, teamId: string, destroyed: boolean }
 local BaseService = { Destroyed = Instance.new("BindableEvent") }
 local bases: { [string]: Base } = {}
@@ -7,7 +8,7 @@ local connections: { RBXScriptConnection } = {}
 function BaseService.GetAll(): { [string]: Base } return bases end
 function BaseService.Get(id: string): Base? return bases[id] end
 function BaseService.Start(map: Folder)
-	assert(next(bases) == nil, "BaseService already started")
+	if next(bases) ~= nil then return end
 	for _, definition in Config.Teams do
 		local container = map:FindFirstChild("Bases"); assert(container, "Bases missing")
 		local model = container:FindFirstChild(definition.Id .. "Base")
@@ -19,8 +20,9 @@ function BaseService.Start(map: Folder)
 		humanoid.MaxHealth = Config.BaseHealth; humanoid.Health = Config.BaseHealth
 		local base: Base = { model = model, humanoid = humanoid, root = root, teamId = definition.Id, destroyed = false }
 		bases[definition.Id] = base
+		Structures.Register(model)
 		local billboard = Instance.new("BillboardGui"); billboard.Name = "BaseHealth"
-		billboard.Size = UDim2.fromOffset(180, 48); billboard.StudsOffset = Vector3.new(0, 6, 0)
+		billboard.Size = UDim2.fromOffset(200, 68); billboard.StudsOffset = Vector3.new(0, 6, 0)
 		billboard.AlwaysOnTop = true; billboard.MaxDistance = 240; billboard.Parent = root
 		local label = Instance.new("TextLabel"); label.Size = UDim2.fromScale(1, 0.65)
 		label.BackgroundTransparency = 1; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.4
@@ -30,7 +32,8 @@ function BaseService.Start(map: Folder)
 		local fill = Instance.new("Frame"); fill.BackgroundColor3 = definition.Color; fill.BorderSizePixel = 0; fill.Parent = track
 		local function update()
 			model:SetAttribute("MaxHealth", humanoid.MaxHealth); model:SetAttribute("CurrentHealth", humanoid.Health)
-			label.Text = definition.Id .. " CORE  " .. math.ceil(humanoid.Health) .. "/" .. humanoid.MaxHealth
+			label.Text = definition.Id .. " CORE  " .. math.ceil(humanoid.Health) .. "/" .. humanoid.MaxHealth .. "\n"
+				.. (if model:GetAttribute("ProtectedByTowers") == true then "Защищена башнями" else "База уязвима")
 			fill.Size = UDim2.fromScale(math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1), 1)
 			if humanoid.Health <= 0 and not base.destroyed then
 				base.destroyed = true; model:SetAttribute("IsDestroyed", true)
@@ -41,6 +44,7 @@ function BaseService.Start(map: Folder)
 		end
 		model:SetAttribute("IsDestroyed", false); update()
 		table.insert(connections, humanoid.HealthChanged:Connect(update))
+		table.insert(connections, model:GetAttributeChangedSignal("ProtectedByTowers"):Connect(update))
 	end
 end
 return BaseService

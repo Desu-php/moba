@@ -55,7 +55,7 @@ function HUD.Start()
   local xp = label(hero, "XP", "", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(12, 64), 12); xp.TextColor3 = colors.Muted
   local xpTrack = frame(hero, "XPTrack", UDim2.new(1, -24, 0, 4), UDim2.fromOffset(12, 87)); xpTrack.BackgroundColor3 = colors.Card
   local xpFill = frame(xpTrack, "Fill", UDim2.fromScale(0, 1), UDim2.new()); xpFill.BackgroundColor3 = colors.Blue
-  local toast = label(gui, "RewardNotice", "", UDim2.fromOffset(360, 50), UDim2.new(0.5, 0, 1, -190), 18)
+  local toast = label(gui, "RewardNotice", "", UDim2.fromOffset(360, 50), UDim2.new(0.5, 0, 1, -235), 18)
   toast.AnchorPoint = Vector2.new(0.5, 1); toast.TextXAlignment = Enum.TextXAlignment.Center
   toast.TextColor3 = colors.Gold; toast.TextStrokeTransparency = 0.4; toast.TextWrapped = true
   local shade = frame(gui, "Shop", UDim2.fromScale(1, 1), UDim2.new()); shade.Visible = false
@@ -143,6 +143,12 @@ function HUD.Start()
   local function resize()
    local camera = workspace.CurrentCamera; if not camera then return end
    scale.Scale = math.clamp(math.min((camera.ViewportSize.X - 32) / 380, camera.ViewportSize.Y / 500), 0.7, 1)
+   local viewport = camera.ViewportSize
+   toast.Size = UDim2.fromOffset(math.min(360, viewport.X - 24), 50)
+   toast.TextSize = if viewport.Y < 500 then 14 else 18
+   toast.Position = if viewport.Y > viewport.X then UDim2.new(0.5, 0, 0, 325)
+    elseif viewport.Y < 500 then UDim2.new(0.5, 0, 0, if viewport.Y < 350 then 120 else 145)
+    else UDim2.new(0.5, 0, 1, -235)
   end
   local function cameraChanged()
    if cameraConnection then cameraConnection:Disconnect() end

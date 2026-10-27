@@ -7,6 +7,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.CombatConfig)
 local State = require(Shared.Combat.CombatState)
 local Life = require(script.Parent.CombatLifeService)
+local Heroes = require(Shared.Config.HeroConfig)
+local Structures = require(Shared.Game.StructureRules)
 
 type Movement = {
 	walkSpeed: number, jumpPower: number, jumpHeight: number, autoRotate: boolean,
@@ -58,6 +60,10 @@ function FighterStateService.Publish(fighter: Fighter)
 	fighter.character:SetAttribute("ComboStep", fighter.logic.comboStep)
 	fighter.character:SetAttribute("CombatNextAttackAt", fighter.logic.nextAttackAt)
 	fighter.character:SetAttribute("CombatStunUntil", fighter.logic.stunUntil)
+	fighter.character:SetAttribute("CombatProfileId", fighter.profileId)
+	fighter.character:SetAttribute("CombatLastAttackAt", fighter.logic.lastAttackAt)
+	fighter.character:SetAttribute("CombatAttackEndsAt", if fighter.logic.active then fighter.logic.active.endsAt else 0)
+	fighter.character:SetAttribute("CombatAttackSerial", fighter.logic.attackSerial)
 	FighterStateService.Changed:Fire(fighter)
 end
 
@@ -85,6 +91,7 @@ function FighterStateService.SetWalkSpeed(character: Model, speed: number)
 end
 
 function FighterStateService.GetOrCreate(character: Model): Fighter?
+	if Structures.isStructure(character:GetAttribute("EntityKind")) then return nil end
 	if fighters[character] then return fighters[character] end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = character:FindFirstChild("HumanoidRootPart")
@@ -97,6 +104,12 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 		logic = State.new(), profileId = Config.DefaultProfile, profile = Config.Profiles[Config.DefaultProfile],
 		revision = 0, connections = {}, movement = nil,
 	}
+	local heroId = character:GetAttribute("HeroId")
+	local hero = if typeof(heroId) == "string" then Heroes.Heroes[heroId] else nil
+	if fighter.player and hero then
+		fighter.profileId = hero.Profile
+		fighter.profile = Config.Profiles[hero.Profile] or Config.Profiles[Config.DefaultProfile]
+	end
 	fighters[character] = fighter
 	Life.Register(character)
 	table.insert(fighter.connections, humanoid.Died:Connect(function()

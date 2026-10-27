@@ -16,6 +16,13 @@ function InputController.Start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			local playerGui = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
+			local abilityGui = if playerGui then playerGui:FindFirstChild("AbilityHUD") else nil
+			if playerGui and abilityGui then
+				for _, object in playerGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y) do
+					if object:IsDescendantOf(abilityGui) then return end
+				end
+			end
 			CombatController.TryAttack()
 		end
 	end)
