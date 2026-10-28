@@ -43,6 +43,11 @@ function HUD.Start()
 			fill.BackgroundColor3 = team:GetAttribute("Color") :: Color3; fill.Parent = track
 			rows[team.Name] = { text = text, towers = towerText, fill = fill }
 		end
+		local function displayName(id: any): string
+			if typeof(id) ~= "string" then return "Наблюдатель" end
+			local team = state:FindFirstChild(id)
+			return if team then tostring(team:GetAttribute("DisplayName") or id) else id
+		end
 		local notice = label(panel, "TowerNotice", UDim2.new(0, 0, 1, 4), UDim2.new(1, 0, 0, 27), 15)
 		notice.BackgroundColor3 = Color3.fromRGB(17, 24, 35); notice.BackgroundTransparency = 0.1; notice.Visible = false
 		local noticeUntil = 0
@@ -50,7 +55,7 @@ function HUD.Start()
 		local towerEvents = state:WaitForChild("TowerEvent") :: RemoteEvent
 		towerEvents.OnClientEvent:Connect(function(kind: string, _model: Model, _origin: Vector3, _destination: Vector3, id: string, lane: string, roundId: number)
 			if not Rounds.Accepts(roundId) then return end
-			if kind == "Destroyed" then notice.Text = "Пала башня " .. id .. " • " .. lane; noticeUntil = os.clock() + 4; notice.Visible = true end
+			if kind == "Destroyed" then notice.Text = "Пала башня " .. displayName(id) .. " • " .. lane; noticeUntil = os.clock() + 4; notice.Visible = true end
 		end)
 		local ending = Instance.new("Frame"); ending.Name = "Result"; ending.AnchorPoint = Vector2.new(0.5, 0.5)
 		ending.Position = UDim2.fromScale(0.5, 0.45); ending.Size = UDim2.fromOffset(360, 130)
@@ -75,8 +80,9 @@ function HUD.Start()
 			local finishedAt = (state:GetAttribute("FinishedAt") or 0) :: number
 			local elapsed = if startedAt > 0 then math.max(0, (if between then finishedAt else now) - startedAt) else 0
 			local remaining = math.max(0, math.ceil(((state:GetAttribute("IntermissionEnds") or 0) :: number) - now))
-			title.Text = "РАУНД " .. round .. "  •  " .. (if typeof(teamId) == "string" then teamId else "Наблюдатель")
-			local status = if phase == "WaitingForPlayers" then "Ожидание игроков (" .. tostring(state:GetAttribute("MinimumPlayers")) .. ")"
+			title.Text = "РАУНД " .. round .. "  •  " .. displayName(teamId)
+			local status = if player:GetAttribute("Spectating") == true and not between then "Ожидание свободного места / следующего раунда"
+				elseif phase == "WaitingForPlayers" then "Ожидание игроков (" .. tostring(state:GetAttribute("MinimumPlayers")) .. ")"
 				elseif phase == "Preparing" then "Подготовка " .. math.max(0, math.ceil((state:GetAttribute("PreparationEnds") :: number) - now)) .. " с"
 				elseif between then "Следующий раунд через " .. remaining .. " с" else "Бой"
 			details.Text = string.format("%s  •  %02d:%02d  •  Волна %d  •  Мобы %d", status, math.floor(elapsed / 60), math.floor(elapsed % 60),
@@ -85,22 +91,23 @@ function HUD.Start()
 				local health = (team:GetAttribute("Health") or 0) :: number
 				local maximum = (team:GetAttribute("MaxHealth") or 1) :: number
 				local row = rows[team.Name]
-				row.text.Text = (if compact then "" elseif team.Name == teamId then "ВАША БАЗА • " else "БАЗА • ") .. team.Name .. "  " .. math.ceil(health) .. "/" .. maximum
+				row.text.Text = (if compact then "" elseif team.Name == teamId then "ВАША БАЗА • " else "БАЗА • ") .. displayName(team.Name) .. " " .. tostring(team:GetAttribute("PlayerCount") or 0) .. "/" .. tostring(team:GetAttribute("Capacity") or 5) .. "  " .. math.ceil(health) .. "/" .. maximum
 				row.fill.Size = UDim2.fromScale(math.clamp(health / maximum, 0, 1), 1)
 				row.towers.Text = string.format("Башни %d/%d • %s", (team:GetAttribute("TowersRemaining") or 0) :: number,
 					(team:GetAttribute("TowersTotal") or 3) :: number, if team:GetAttribute("BaseProtected") == true then "Защита" else "Уязвима")
 			end
 			local eliminated = player:GetAttribute("Eliminated") == true
+			local spectator = player:GetAttribute("Spectating") == true
 			ending.Visible = between or eliminated
 			local winner = state:GetAttribute("Winner")
-			result.Text = if between and winner == teamId then "ПОБЕДА" elseif eliminated or (between and winner ~= "") then "ПОРАЖЕНИЕ" else "РАУНД ЗАВЕРШЁН"
-			explanation.Text = if between then "Победитель: " .. tostring(winner) .. "\nСледующий раунд через " .. remaining .. " с" else "Ваша база уничтожена. Команда выбыла."
+			result.Text = if between and winner == teamId then "ПОБЕДА" elseif not spectator and (eliminated or (between and winner ~= "")) then "ПОРАЖЕНИЕ" else "РАУНД ЗАВЕРШЁН"
+			explanation.Text = if between then "Победитель: " .. displayName(winner) .. "\nСледующий раунд через " .. remaining .. " с" else "Ваша база уничтожена. Команда выбыла."
 			if camera then
 				local viewport = camera.ViewportSize
 				scale.Scale = if viewport.Y < 350 then 0.85 else 1
 				panel.Size = UDim2.fromOffset(math.min(580, viewport.X - 24), 122)
 				if compact then
-					title.Text = "РАУНД " .. round .. " • " .. tostring(teamId or "Наблюдатель")
+					title.Text = "РАУНД " .. round .. " • " .. displayName(teamId)
 					details.Text = string.format("%s • %02d:%02d • Волна %d", status, math.floor(elapsed / 60), math.floor(elapsed % 60), (state:GetAttribute("Wave") or 0) :: number)
 				end
 				panel.AnchorPoint = Vector2.new(0.5, 0)

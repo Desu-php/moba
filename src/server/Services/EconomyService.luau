@@ -10,7 +10,7 @@ function Economy.IsEligible(player: Player): boolean
  local state = Teams.GetState()
  local id = player:GetAttribute("TeamId")
  return player.Parent == game:GetService("Players") and state ~= nil and state.phase == "InProgress"
-  and typeof(id) == "string" and Teams.IsActive(id) and player:GetAttribute("Eliminated") ~= true
+  and Teams.IsParticipant(player) and typeof(id) == "string" and Teams.IsActive(id) and player:GetAttribute("Eliminated") ~= true
 end
 function Economy.GetGold(player: Player): number return balances[player] or 0 end
 function Economy.ResetPlayerEconomy(player: Player)

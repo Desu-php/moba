@@ -1,5 +1,4 @@
 --!strict
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -48,6 +47,7 @@ function MatchService.Publish()
 		local item = replicated:FindFirstChild(id)
 		local base = Bases.Get(id)
 		if item and base then
+			item:SetAttribute("PlayerCount", team.count); item:SetAttribute("Capacity", Config.TeamCapacity)
 			item:SetAttribute("Active", team.active); item:SetAttribute("Health", base.humanoid.Health)
 			item:SetAttribute("MaxHealth", base.humanoid.MaxHealth)
 			local remaining = Structures.Remaining(id)
@@ -94,6 +94,7 @@ function MatchService.Start()
 	local replicated = Instance.new("Folder"); replicated.Name = "SurvivalState"
 	for _, definition in Config.Teams do
 		local item = Instance.new("Folder"); item.Name = definition.Id
+		item:SetAttribute("DisplayName", definition.DisplayName)
 		item:SetAttribute("Color", definition.Color); item.Parent = replicated
 	end
 	local shots = Instance.new("RemoteEvent"); shots.Name = "MinionShot"; shots.Parent = replicated
@@ -116,8 +117,10 @@ function MatchService.Start()
 		if Rules.intermission(current, now, RoundConfig.ResultDisplayTime) then MatchService.Publish() end
 		if current.phase == "Intermission" and now >= current.intermissionEnds then MatchService.ResetRound(current.roundId) end
 		Teams.Update(now)
-		if Rules.advance(current, now, #Players:GetPlayers(), Mode.MinimumPlayers(), Config.PreparationTime, MinionConfig.FirstWaveDelay) then
-			if current.phase == "InProgress" then Damage.SetEnabled(true); AI.SetRunning(true) end
+		local ready = if Mode.IsSoloTest() then Teams.Count() >= 1 else Teams.Ready(Mode.MinimumPerTeam())
+		local eligible = if ready then Teams.Count() else 0
+		if Rules.advance(current, now, eligible, Mode.MinimumPlayers(), Config.PreparationTime, MinionConfig.FirstWaveDelay) then
+			if current.phase == "InProgress" then Teams.LockRoster(); Damage.SetEnabled(true); AI.SetRunning(true) end
 			MatchService.Publish()
 		end
 		if Rules.waveDue(current, now, MinionConfig.WaveInterval) then Spawner.Wave(current.wave); MatchService.Publish() end

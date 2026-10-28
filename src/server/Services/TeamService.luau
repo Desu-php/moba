@@ -5,11 +5,12 @@ local Physics = game:GetService("PhysicsService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.GameModeConfig)
 local Rules = require(Shared.Game.MatchState)
+local Roster = require(Shared.Game.MatchRoster)
 local TeamService = {}
 local state: Rules.State? = nil
 local map: Folder? = nil
 local teams: { [string]: Team } = {}
-local roster: { [number]: string } = {}
+local roster: Roster.State? = nil
 local connections: { [Player]: { RBXScriptConnection } } = {}
 local deaths: { [Player]: RBXScriptConnection } = {}
 local descendants: { [Player]: RBXScriptConnection } = {}
@@ -34,6 +35,26 @@ function TeamService.GetActiveTeams(): { string }
 	return if state then Rules.active(state) else {}
 end
 function TeamService.GetState(): Rules.State? return state end
+function TeamService.IsParticipant(player: Player): boolean
+	local current, members = state, roster
+	return current ~= nil and members ~= nil and Roster.teamOf(members, player.UserId) ~= nil
+		and player.Parent == Players and player:GetAttribute("Spectating") ~= true
+end
+function TeamService.Count(): number
+	return if roster then Roster.connectedCount(roster) else 0
+end
+function TeamService.Ready(minimumPerTeam: number): boolean
+	return roster ~= nil and Roster.ready(roster, minimumPerTeam)
+end
+function TeamService.LockRoster()
+	if roster then Roster.lock(roster) end
+end
+local function syncCounts()
+	local current, members = state, roster
+	if not current or not members then return end
+	local counts = Roster.counts(members)
+	for id, team in current.teams do team.count = counts[id] or 0 end
+end
 local function invalidateCharacter(player: Player)
 	pending[player] = nil
 	local character = player.Character
@@ -47,7 +68,7 @@ local function canSpawn(player: Player): boolean
 	local current = state
 	local id = player:GetAttribute("TeamId")
 	return player.Parent == Players and current ~= nil and current.phase ~= "Finished" and current.phase ~= "Intermission"
-		and typeof(id) == "string" and TeamService.IsActive(id)
+		and TeamService.IsParticipant(player) and typeof(id) == "string" and TeamService.IsActive(id)
 end
 local function characterAdded(player: Player, character: Model)
 	local current = state; if not current then return end
@@ -80,10 +101,14 @@ local function add(player: Player)
 	local current, arena = state, map
 	assert(current and arena)
 	player:SetAttribute("RoundId", current.roundId)
-	local id = Rules.assign(current, roster[player.UserId])
+	local members = roster; assert(members)
+	local id: string? = if current.phase ~= "Finished" and current.phase ~= "Intermission" then Roster.join(members, player.UserId) else nil
+	local eliminated = id ~= nil and not TeamService.IsActive(id)
+	if eliminated then id = nil end
+	syncCounts()
 	player.Neutral = true
 	if id then
-		roster[player.UserId] = id; current.teams[id].count += 1
+		player:SetAttribute("Spectating", false)
 		player.Team = teams[id]; player.Neutral = false
 		player:SetAttribute("TeamId", id); player:SetAttribute("Eliminated", false)
 		local points = arena:FindFirstChild("SpawnPoints"); assert(points)
@@ -93,8 +118,12 @@ local function add(player: Player)
 		player.RespawnLocation = spawn
 		pending[player] = workspace:GetServerTimeNow()
 	else
-		player:SetAttribute("TeamId", roster[player.UserId])
-		player:SetAttribute("Eliminated", true)
+		-- Roblox permits clearing these object references; the API definitions omit nil.
+		player.Team = nil :: any; player.RespawnLocation = nil :: any
+		player:SetAttribute("TeamId", nil)
+		player:SetAttribute("Spectating", true)
+		player:SetAttribute("Eliminated", eliminated)
+		invalidateCharacter(player)
 	end
 	if not connections[player] then connections[player] = {
 		player.CharacterAdded:Connect(function(character) characterAdded(player, character) end),
@@ -125,6 +154,16 @@ function TeamService.Finish()
 end
 function TeamService.Update(now: number)
 	local current = state; if not current then return end
+	-- Fill vacated lobby slots deterministically. A locked round accepts only its
+	-- original members on reconnect; new arrivals wait until the next round.
+	if current.phase == "WaitingForPlayers" or current.phase == "Preparing" then
+		local waiting = Players:GetPlayers()
+		table.sort(waiting, function(a: Player, b: Player) return a.UserId < b.UserId end)
+		for _, player in waiting do
+			if TeamService.Count() >= #current.order * Config.TeamCapacity then break end
+			if player:GetAttribute("Spectating") == true then add(player) end
+		end
+	end
 	for player, due in pending do
 		if now >= due and not loading[player] then
 			pending[player] = nil
@@ -147,6 +186,7 @@ function TeamService.Update(now: number)
 end
 function TeamService.Start(match: Rules.State, arena: Folder)
 	if state then return end; state = match; map = arena; resetRound = match.roundId
+	roster = Roster.new(match.order, Config.TeamCapacity)
 	Players.CharacterAutoLoads = false
 	for _, name in { "SurvivalHeroes", "SurvivalMinions" } do
 		if not Physics:IsCollisionGroupRegistered(name) then Physics:RegisterCollisionGroup(name) end
@@ -161,10 +201,12 @@ function TeamService.Start(match: Rules.State, arena: Folder)
 	end
 	Players.PlayerAdded:Connect(add)
 	Players.PlayerRemoving:Connect(function(player)
-		local id = player:GetAttribute("TeamId")
-		if typeof(id) == "string" and match.teams[id] and not player:GetAttribute("Eliminated") then
-			match.teams[id].count = math.max(0, match.teams[id].count - 1)
+		local wasAssigned = roster ~= nil and Roster.teamOf(roster, player.UserId) ~= nil
+		if roster then Roster.leave(roster, player.UserId) end
+		if wasAssigned and match.phase == "Preparing" then
+			match.phase = "WaitingForPlayers"; match.preparationEnds = 0
 		end
+		syncCounts()
 		pending[player] = nil
 		if deaths[player] then deaths[player]:Disconnect(); deaths[player] = nil end
 		if descendants[player] then descendants[player]:Disconnect(); descendants[player] = nil end
@@ -176,7 +218,7 @@ end
 function TeamService.Reset(roundId: number)
 	local current = state; assert(current and current.roundId == roundId)
 	if roundId <= resetRound then return end; resetRound = roundId
-	table.clear(pending); table.clear(roster)
+	table.clear(pending); roster = Roster.new(current.order, Config.TeamCapacity)
 	for _, team in current.teams do team.count = 0 end
 	local players = Players:GetPlayers()
 	table.sort(players, function(a: Player, b: Player) return a.UserId < b.UserId end)

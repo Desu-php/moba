@@ -75,7 +75,7 @@ try {
             & $compiler --null $file.FullName
             if ($LASTEXITCODE -ne 0) { throw "Luau compile failed: $($file.FullName)" }
         }
-        & $analyzer src/server/Services/RequestLimiter.luau src/shared/Combat/CombatState.luau src/shared/Config/CombatConfig.luau src/shared/Game/MatchState.luau src/shared/Game/ProgressionRules.luau src/shared/Game/RewardLedger.luau src/shared/Game/RewardRules.luau tests/RequestLimiter.spec.luau tests/CombatState.spec.luau tests/MatchState.spec.luau tests/Progression.spec.luau tests/Rewards.spec.luau
+        & $analyzer src/server/Services/RequestLimiter.luau src/shared/Combat/CombatState.luau src/shared/Config/CombatConfig.luau src/shared/Game/MatchState.luau src/shared/Game/MatchRoster.luau tests/MatchRoster.spec.luau src/shared/Game/ProgressionRules.luau src/shared/Game/RewardLedger.luau src/shared/Game/RewardRules.luau tests/RequestLimiter.spec.luau tests/CombatState.spec.luau tests/MatchState.spec.luau tests/Progression.spec.luau tests/Rewards.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Pure logic type check failed' }
         & $analyzer src/shared/Combat/AbilityState.luau src/shared/Combat/HeroPoses.luau src/shared/Config/AbilityConfig.luau tests/AbilityState.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Hero pure logic type check failed' }
@@ -83,7 +83,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
         & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Config/RoundConfig.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/TowerRules.spec.luau')) {
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/TowerRules.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }

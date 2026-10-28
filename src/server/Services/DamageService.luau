@@ -12,6 +12,8 @@ function DamageService.SetEnabled(value: boolean) enabled = value end
 function DamageService.CanAct(model: Model): boolean
 	if not enabled or model:GetAttribute("CombatDisabled") == true or not model:IsDescendantOf(workspace) then return false end
 	local state = Teams.GetState()
+	local player = game:GetService("Players"):GetPlayerFromCharacter(model)
+	if state and player and not Teams.IsParticipant(player) then return false end
 	if state and (state.phase ~= "InProgress" or model:GetAttribute("RoundId") ~= state.roundId or not Teams.IsActive(Teams.GetId(model))) then return false end
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	return humanoid ~= nil and humanoid.Health > 0

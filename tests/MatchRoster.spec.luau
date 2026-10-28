@@ -1,0 +1,95 @@
+--!strict
+local Roster = require("../src/shared/Game/MatchRoster")
+local passed = 0
+local function check(name: string, value: boolean)
+	assert(value, name); passed += 1; print("PASS MatchRoster: " .. name)
+end
+local ids = { "Blue", "Red" }
+local state = Roster.new(ids)
+ids[1] = "Changed"
+check("configuration copied and default capacity five", state.order[1] == "Blue" and state.capacity == 5)
+check("empty roster not ready", not Roster.ready(state, 5) and Roster.connectedCount(state) == 0)
+check("balanced first join", Roster.join(state, 1) == "Blue")
+check("balanced second join", Roster.join(state, 2) == "Red")
+check("duplicate join idempotent", Roster.join(state, 1) == "Blue" and Roster.connectedCount(state) == 2)
+check("small-team readiness", Roster.ready(state, 1) and not Roster.ready(state, 5))
+for userId = 3, 10 do Roster.join(state, userId) end
+local counts = Roster.counts(state)
+check("ten players fill five per side", counts.Blue == 5 and counts.Red == 5 and Roster.ready(state, 5))
+check("overflow never assigned", Roster.join(state, 11) == nil and Roster.teamOf(state, 11) == nil)
+check("overflow does not count toward readiness", Roster.connectedCount(state) == 10)
+counts.Blue = 100
+check("returned counts do not mutate aggregate", Roster.counts(state).Blue == 5)
+Roster.leave(state, 1)
+check("preparation leave releases membership", Roster.teamOf(state, 1) == nil and state.members[1] == nil)
+check("preparation loses readiness", not Roster.ready(state, 5) and Roster.connectedCount(state) == 9)
+check("waiting player can fill vacancy", Roster.join(state, 11) == "Blue" and Roster.ready(state, 5))
+check("former member cannot overflow filled team", Roster.join(state, 1) == nil)
+Roster.lock(state); Roster.lock(state)
+check("lock idempotent", state.locked and Roster.connectedCount(state) == 10)
+Roster.leave(state, 2); Roster.leave(state, 2)
+check("locked leave hides connected team", Roster.teamOf(state, 2) == nil and Roster.connectedCount(state) == 9)
+check("locked leave preserves reservation", state.members[2].teamId == "Red" and not state.members[2].connected)
+check("disconnected reserve does not satisfy readiness", not Roster.ready(state, 5))
+check("new player cannot replace disconnected member", Roster.join(state, 12) == nil)
+check("former unreserved player cannot rejoin locked roster", Roster.join(state, 1) == nil)
+check("reconnect retains side and capacity", Roster.join(state, 2) == "Red" and Roster.counts(state).Red == 5)
+check("reconnect duplicate does not increment", Roster.join(state, 2) == "Red" and Roster.connectedCount(state) == 10)
+Roster.leave(state, 999)
+check("unknown departure harmless", Roster.connectedCount(state) == 10)
+local nextRound = Roster.new({ "Blue", "Red" })
+check("fresh round has no old reservations", Roster.teamOf(nextRound, 2) == nil and not nextRound.locked)
+check("fresh round admits previously waiting player", Roster.join(nextRound, 12) == "Blue")
+check("one side alone not ready", not Roster.ready(nextRound, 1))
+check("impossible readiness threshold rejected", not Roster.ready(nextRound, 6))
+local studio = Roster.new({ "Blue", "Red" }, 1)
+check("negative Studio player ID allowed", Roster.join(studio, -1) == "Blue")
+check("explicit capacity supported", Roster.join(studio, -2) == "Red" and Roster.join(studio, -3) == nil)
+check("duplicate team IDs rejected", not pcall(function() Roster.new({ "Blue", "Blue" }) end))
+check("single team rejected", not pcall(function() Roster.new({ "Blue" }) end))
+check("zero capacity rejected", not pcall(function() Roster.new({ "Blue", "Red" }, 0) end))
+check("fractional capacity rejected", not pcall(function() Roster.new({ "Blue", "Red" }, 1.5) end))
+check("infinite capacity rejected", not pcall(function() Roster.new({ "Blue", "Red" }, math.huge) end))
+check("NaN user ID rejected", not pcall(function() Roster.join(studio, 0 / 0) end))
+check("fractional user ID rejected", not pcall(function() Roster.join(studio, 1.5) end))
+check("zero readiness threshold rejected", not pcall(function() Roster.ready(studio, 0) end))
+-- Pure integration with the existing match lifecycle; mirrors the adapter's
+-- eligibility calculation instead of counting every connected spectator.
+local Match = require("../src/shared/Game/MatchState")
+local match = Match.new({ "Blue", "Red" })
+local roundRoster = Roster.new(match.order)
+local function advance(now: number): boolean
+	local eligible = if Roster.ready(roundRoster, 5) then Roster.connectedCount(roundRoster) else 0
+	local changed = Match.advance(match, now, eligible, 10, 5, 5)
+	if changed and match.phase == "InProgress" then Roster.lock(roundRoster) end
+	return changed
+end
+for userId = 1, 10 do Roster.join(roundRoster, userId) end
+check("full 5v5 begins preparation", advance(0) and match.phase == "Preparing")
+Roster.leave(roundRoster, 1)
+check("4v5 cancels preparation despite connected spectator", advance(1) and match.phase == "WaitingForPlayers")
+check("4v5 cannot start at old deadline", not advance(5) and match.phase == "WaitingForPlayers")
+Roster.join(roundRoster, 11)
+check("replacement begins a new countdown", advance(6) and match.preparationEnds == 11)
+check("new countdown cannot start early", not advance(10))
+check("full 5v5 starts at new deadline", advance(11) and match.phase == "InProgress" and roundRoster.locked)
+Roster.leave(roundRoster, 2)
+check("locked round refuses overflow even with 4v5", Roster.join(roundRoster, 12) == nil and Roster.connectedCount(roundRoster) == 9)
+check("departure does not abort active match", not advance(12) and match.phase == "InProgress")
+check("locked reconnect restores original slot", Roster.join(roundRoster, 2) == "Red" and Roster.connectedCount(roundRoster) == 10)
+
+for round = 1, 3 do
+	local now = 100 * round
+	check("round " .. round .. " has exactly ten active members", Roster.ready(roundRoster, 5) and Roster.connectedCount(roundRoster) == 10)
+	check("round " .. round .. " finishes", Match.eliminate(match, "Red", now) and match.phase == "Finished")
+	check("round " .. round .. " schedules intermission", Match.schedule(match, now, 5))
+	check("round " .. round .. " enters intermission", Match.intermission(match, now + 2, 2))
+	check("round " .. round .. " reset advances once", Match.restart(match, now + 5, round) and not Match.restart(match, now + 5, round))
+	roundRoster = Roster.new(match.order)
+	for userId = 1, 10 do Roster.join(roundRoster, userId); Roster.join(roundRoster, userId) end
+	check("round " .. round .. " reset has no duplicate counts", Roster.connectedCount(roundRoster) == 10 and not roundRoster.locked)
+	check("round " .. round .. " overflow remains unassigned", Roster.join(roundRoster, 11) == nil)
+	check("round " .. round .. " new preparation starts", advance(now + 6) and match.phase == "Preparing")
+	check("round " .. round .. " next round starts", advance(now + 11) and match.phase == "InProgress")
+end
+print("ALL PASS: " .. passed .. " roster checks")
