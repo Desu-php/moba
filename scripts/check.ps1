@@ -79,11 +79,13 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Pure logic type check failed' }
         & $analyzer src/shared/Combat/AbilityState.luau src/shared/Combat/HeroPoses.luau src/shared/Config/AbilityConfig.luau tests/AbilityState.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Hero pure logic type check failed' }
+        & $analyzer src/shared/Abilities/NarutoDefinitions.luau src/shared/Abilities/NarutoRules.luau src/shared/Abilities/RasenganState.luau src/shared/Abilities/CloneState.luau src/shared/Abilities/CloneCommands.luau src/shared/Abilities/WorldUnits.luau tests/NarutoLegend.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Naruto Legend domain type check failed' }
         & $analyzer src/shared/Game/TowerRules.luau src/shared/Game/StructureRules.luau src/shared/Config/TowerConfig.luau tests/TowerRules.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
         & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Config/RoundConfig.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/TowerRules.spec.luau')) {
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/TowerRules.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
