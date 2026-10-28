@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Minions = require(Shared.Config.MinionConfig)
 local VFX = require(script.Parent.VFXController)
+local Rounds = require(script.Parent.RoundController)
 local HUD = {}
 local started = false
 function HUD.Start()
@@ -45,8 +46,10 @@ function HUD.Start()
 		local notice = label(panel, "TowerNotice", UDim2.new(0, 0, 1, 4), UDim2.new(1, 0, 0, 27), 15)
 		notice.BackgroundColor3 = Color3.fromRGB(17, 24, 35); notice.BackgroundTransparency = 0.1; notice.Visible = false
 		local noticeUntil = 0
+		Rounds.Watch(function() noticeUntil = 0; notice.Visible = false end)
 		local towerEvents = state:WaitForChild("TowerEvent") :: RemoteEvent
-		towerEvents.OnClientEvent:Connect(function(kind: string, _model: Model, _origin: Vector3, _destination: Vector3, id: string, lane: string)
+		towerEvents.OnClientEvent:Connect(function(kind: string, _model: Model, _origin: Vector3, _destination: Vector3, id: string, lane: string, roundId: number)
+			if not Rounds.Accepts(roundId) then return end
 			if kind == "Destroyed" then notice.Text = "Пала башня " .. id .. " • " .. lane; noticeUntil = os.clock() + 4; notice.Visible = true end
 		end)
 		local ending = Instance.new("Frame"); ending.Name = "Result"; ending.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -65,14 +68,17 @@ function HUD.Start()
 			notice.Visible = os.clock() < noticeUntil and (camera == nil or camera.ViewportSize.Y >= 350)
 			local teamId = player:GetAttribute("TeamId")
 			local phase = state:GetAttribute("Phase")
+			local between = phase == "Finished" or phase == "Intermission"
+			local round = (state:GetAttribute("RoundId") or 1) :: number
 			local now = workspace:GetServerTimeNow()
 			local startedAt = (state:GetAttribute("StartedAt") or 0) :: number
 			local finishedAt = (state:GetAttribute("FinishedAt") or 0) :: number
-			local elapsed = if startedAt > 0 then math.max(0, (if phase == "Finished" then finishedAt else now) - startedAt) else 0
-			title.Text = "LAST TEAM STANDING  •  " .. (if typeof(teamId) == "string" then teamId else "Наблюдатель")
+			local elapsed = if startedAt > 0 then math.max(0, (if between then finishedAt else now) - startedAt) else 0
+			local remaining = math.max(0, math.ceil(((state:GetAttribute("IntermissionEnds") or 0) :: number) - now))
+			title.Text = "РАУНД " .. round .. "  •  " .. (if typeof(teamId) == "string" then teamId else "Наблюдатель")
 			local status = if phase == "WaitingForPlayers" then "Ожидание игроков (" .. tostring(state:GetAttribute("MinimumPlayers")) .. ")"
 				elseif phase == "Preparing" then "Подготовка " .. math.max(0, math.ceil((state:GetAttribute("PreparationEnds") :: number) - now)) .. " с"
-				elseif phase == "Finished" then "Матч завершён" else "Бой"
+				elseif between then "Следующий раунд через " .. remaining .. " с" else "Бой"
 			details.Text = string.format("%s  •  %02d:%02d  •  Волна %d  •  Мобы %d", status, math.floor(elapsed / 60), math.floor(elapsed % 60),
 				(state:GetAttribute("Wave") or 0) :: number, (state:GetAttribute("ActiveNPCs") or 0) :: number)
 			for _, team in teams do
@@ -85,16 +91,16 @@ function HUD.Start()
 					(team:GetAttribute("TowersTotal") or 3) :: number, if team:GetAttribute("BaseProtected") == true then "Защита" else "Уязвима")
 			end
 			local eliminated = player:GetAttribute("Eliminated") == true
-			ending.Visible = phase == "Finished" or eliminated
+			ending.Visible = between or eliminated
 			local winner = state:GetAttribute("Winner")
-			result.Text = if phase == "Finished" and winner == teamId then "ПОБЕДА" elseif eliminated or (phase == "Finished" and winner ~= "") then "ПОРАЖЕНИЕ" else "МАТЧ ЗАВЕРШЁН"
-			explanation.Text = if phase == "Finished" then "Победитель: " .. tostring(winner) else "Ваша база уничтожена. Команда выбыла."
+			result.Text = if between and winner == teamId then "ПОБЕДА" elseif eliminated or (between and winner ~= "") then "ПОРАЖЕНИЕ" else "РАУНД ЗАВЕРШЁН"
+			explanation.Text = if between then "Победитель: " .. tostring(winner) .. "\nСледующий раунд через " .. remaining .. " с" else "Ваша база уничтожена. Команда выбыла."
 			if camera then
 				local viewport = camera.ViewportSize
 				scale.Scale = if viewport.Y < 350 then 0.85 else 1
 				panel.Size = UDim2.fromOffset(math.min(580, viewport.X - 24), 122)
 				if compact then
-					title.Text = tostring(teamId or "Наблюдатель") .. " • БОЙ ЗА БАЗЫ"
+					title.Text = "РАУНД " .. round .. " • " .. tostring(teamId or "Наблюдатель")
 					details.Text = string.format("%s • %02d:%02d • Волна %d", status, math.floor(elapsed / 60), math.floor(elapsed % 60), (state:GetAttribute("Wave") or 0) :: number)
 				end
 				panel.AnchorPoint = Vector2.new(0.5, 0)
@@ -102,7 +108,8 @@ function HUD.Start()
 			end
 		end)
 		local shots = state:WaitForChild("MinionShot") :: RemoteEvent
-		shots.OnClientEvent:Connect(function(origin: Vector3, destination: Vector3, kind: string, id: string, target: Model)
+		shots.OnClientEvent:Connect(function(origin: Vector3, destination: Vector3, kind: string, id: string, target: Model, roundId: number)
+			if not Rounds.Accepts(roundId) then return end
 			local team = state:FindFirstChild(id)
 			local color = if team then team:GetAttribute("Color") else Color3.new(1, 1, 1)
 			if kind == "Ranged" then VFX.Projectile(origin, destination, color :: Color3, Minions.ProjectileDuration) end

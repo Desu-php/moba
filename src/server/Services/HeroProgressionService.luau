@@ -6,6 +6,7 @@ local Items = require(Shared.Config.ItemConfig)
 local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, Items.Items)
 local Economy = require(script.Parent.EconomyService)
+local Teams = require(script.Parent.TeamService)
 local Progression = { Changed = Instance.new("BindableEvent") }
 local records: { [Player]: Logic.Profile } = {}
 local folders: { [Player]: Folder } = {}
@@ -14,7 +15,8 @@ local started = false
 function Progression.Get(player: Player): Logic.Profile? return records[player] end
 function Progression.GetFolder(player: Player): Folder? return folders[player] end
 function Progression.Notify(player: Player, xp: number, gold: number, levels: number)
- if notice and player.Parent == Players then notice:FireClient(player, xp, gold, levels) end
+ local match = Teams.GetState()
+ if notice and player.Parent == Players and match then notice:FireClient(player, xp, gold, levels, match.roundId) end
 end
 function Progression.Publish(player: Player)
  local data, folder = records[player], folders[player]; if not data or not folder then return end
@@ -27,7 +29,8 @@ function Progression.Publish(player: Player)
 end
 function Progression.ResetPlayer(player: Player)
  records[player] = Rules.new(); Economy.ResetPlayerEconomy(player)
- Progression.Publish(player); Progression.Changed:Fire(player, "Reset", 0)
+ local match = Teams.GetState()
+ Progression.Publish(player); Progression.Changed:Fire(player, "Reset", 0, if match then match.roundId else nil)
 end
 function Progression.ResetMatch()
  for _, player in Players:GetPlayers() do Progression.ResetPlayer(player) end
@@ -36,7 +39,8 @@ function Progression.AddXP(player: Player, amount: number): number
  local data = records[player]; if not data or not Economy.IsEligible(player) then return 0 end
  local levels, accepted = Rules.addXP(data, amount)
  if accepted > 0 then
-  Progression.Publish(player); Progression.Changed:Fire(player, "XP", levels)
+  local match = Teams.GetState()
+  Progression.Publish(player); Progression.Changed:Fire(player, "XP", levels, if match then match.roundId else nil)
   Progression.Notify(player, accepted, 0, levels)
  end
  return levels
@@ -53,12 +57,14 @@ function Progression.Equip(player: Player, id: string): boolean
  local data, item = records[player], Items.Items[id]
  if not data or not item or not item.Permanent or data.Owned[id] or not Economy.IsEligible(player) then return false end
  data.Owned[id] = true
- Progression.Publish(player); Progression.Changed:Fire(player, "Equipment", 0); return true
+ local match = Teams.GetState()
+ Progression.Publish(player); Progression.Changed:Fire(player, "Equipment", 0, if match then match.roundId else nil); return true
 end
 function Progression.Start()
  if started then return end; started = true
  notice = Instance.new("RemoteEvent"); notice.Name = "HeroNotice"; notice.Parent = game:GetService("ReplicatedStorage")
- Economy.GoldChanged.Event:Connect(function(player: Player, _balance: number, delta: number, reason: string)
+ Economy.GoldChanged.Event:Connect(function(player: Player, _balance: number, delta: number, reason: string, roundId: number?)
+  local match = Teams.GetState(); if match and roundId ~= match.roundId then return end
   Progression.Publish(player)
   if delta > 0 and reason ~= "Reset" then Progression.Notify(player, 0, delta, 0) end
  end)

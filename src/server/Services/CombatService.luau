@@ -16,6 +16,8 @@ local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Structures = require(Shared.Game.StructureRules)
+local Teams = require(script.Parent.TeamService)
+local RoundProtocol = require(Shared.Game.RoundProtocol)
 
 type Session = { bucket: RequestLimiter.Bucket, lastRequestId: number, lastRejectAt: number }
 local CombatService = {}
@@ -174,6 +176,14 @@ local function heartbeat()
 	end
 end
 
+-- Trusted server callers use TryAttack; network callers must carry the round.
+function CombatService.HandleRequest(player: Player, ...: any): string
+	local match = Teams.GetState()
+	if not match then return CombatService.TryAttack(player, ...) end
+	local args = table.pack(...)
+	if not RoundProtocol.accepts(match.roundId, args[args.n]) then return "Rejected" end
+	return CombatService.TryAttack(player, table.unpack(args, 1, args.n - 1))
+end
 function CombatService.Start()
 	if started then return end
 	local existingFolder = ReplicatedStorage:FindFirstChild(Protocol.FolderName)
@@ -191,7 +201,7 @@ function CombatService.Start()
 	local request = makeRemote(Protocol.BasicAttackName)
 	eventRemote = makeRemote(Protocol.EventName)
 	request.OnServerEvent:Connect(function(player: Player, ...: any)
-		CombatService.TryAttack(player, ...)
+		CombatService.HandleRequest(player, ...)
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player) sessions[player] = nil end)
 	Fighters.Changed.Event:Connect(broadcastState)

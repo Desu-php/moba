@@ -9,6 +9,7 @@ local Debug = require(Shared.Config.DebugConfig)
 local Protocol = require(Shared.Combat.CombatProtocol)
 local Animations = require(script.Parent.AnimationController)
 local VFX = require(script.Parent.VFXController)
+local Rounds = require(script.Parent.RoundController)
 
 type Pending = { id: number, step: number, sentAt: number, startAt: number, played: boolean, character: Model }
 local CombatController = {}
@@ -64,6 +65,7 @@ end
 
 local function onEvent(message: Protocol.Event)
 	local incoming = message.snapshot
+	if incoming and not Rounds.Accepts(incoming.roundId) then return end
 	local character = if incoming then incoming.character else message.character
 	if message.kind == "Rejected" then
 		if incoming then reconcile(incoming) end
@@ -149,7 +151,7 @@ function CombatController.TryAttack(): boolean
 		localLastAttackAt = now
 		localNextAttackAt = now + (if step == #currentProfile.DamageByComboStep then currentProfile.FinisherCooldown else currentProfile.AttackCooldown)
 	end
-	remote:FireServer(intent.id, character)
+	if match then remote:FireServer(intent.id, character, Rounds.Current()) else remote:FireServer(intent.id, character) end
 	return true
 end
 
@@ -159,6 +161,7 @@ end
 
 function CombatController.Start()
 	if attackRemote then return end
+	Rounds.Watch(function() reset(); table.clear(seenStarted); table.clear(seenHits) end)
 	local folder = ReplicatedStorage:WaitForChild(Protocol.FolderName, Config.CharacterReadyTimeout)
 	assert(folder, "CombatRemotes missing: check Server/Main")
 	local request = folder:WaitForChild(Protocol.BasicAttackName, Config.CharacterReadyTimeout)

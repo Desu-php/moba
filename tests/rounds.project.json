@@ -1,0 +1,12 @@
+{
+ "name": "RoundTests",
+ "tree": {
+  "$className": "DataModel",
+  "ReplicatedStorage": { "Shared": { "$path": "../src/shared" } },
+  "ServerScriptService": { "Server": { "$path": "../src/server" }, "RoundTests": { "$path": "rounds/Runner.server.luau" } },
+  "StarterPlayer": {
+   "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false },
+   "StarterPlayerScripts": { "Client": { "$path": "../src/client" }, "RoundDriver": { "$path": "rounds/Driver.client.luau" } }
+  }
+ }
+}

@@ -9,6 +9,7 @@ local Damage = require(script.Parent.DamageService)
 local Teams = require(script.Parent.TeamService)
 local Factory = require(script.Parent.TowerFactory)
 local Hitboxes = require(script.Parent.HitboxService)
+local Reset = require(script.Parent.StructureReset)
 export type Tower = { structure: Structures.Structure, logic: Rules.State, crystal: BasePart,
 	label: TextLabel, fill: Frame, connections: { RBXScriptConnection } }
 local Service = { Event = Instance.new("BindableEvent") }
@@ -17,6 +18,9 @@ local ids: { [Model]: number } = setmetatable({}, { __mode = "k" })
 local models: { [number]: Model } = setmetatable({}, { __mode = "v" })
 local serial = 0
 local started = false
+local currentRound = 0
+local arena: Folder? = nil
+local visuals: { [Model]: Reset.Snapshot } = {}
 local function idFor(model: Model): number
 	if ids[model] then return ids[model] end
 	serial += 1; ids[model] = serial; models[serial] = model; return serial
@@ -38,14 +42,14 @@ local function destroy(tower: Tower)
 	local record = tower.structure
 	record.model:SetAttribute("IsDestroyed", true); mode(tower, "Destroyed")
 	for _, item in record.model:GetDescendants() do
-		if item:IsA("BasePart") then
+		if item:IsA("BasePart") and item:GetAttribute("StructureCosmetic") ~= nil then
 			item.CanCollide = false; item.CanQuery = false; item.CanTouch = false
 			item.Transparency = if item.Name == "Plinth" then 0 else 1
 			item.Material = Enum.Material.Slate; item.Color = Color3.fromRGB(47, 50, 58)
-		elseif item:IsA("PointLight") then item.Enabled = false end
+		elseif item:IsA("PointLight") and item.Parent and item.Parent:GetAttribute("StructureCosmetic") ~= nil then item.Enabled = false end
 	end
 	tower.label.Text = record.teamId .. " • " .. record.lane .. "\nБАШНЯ РАЗРУШЕНА"; tower.fill.Size = UDim2.fromScale(0, 1)
-	Service.Event:Fire("Destroyed", record.model, tower.crystal.Position, tower.crystal.Position, record.teamId, record.lane)
+	Service.Event:Fire("Destroyed", record.model, tower.crystal.Position, tower.crystal.Position, record.teamId, record.lane, currentRound)
 end
 local function valid(tower: Tower, model: Model): boolean
 	local kind = tostring(model:GetAttribute("EntityKind"))
@@ -78,7 +82,7 @@ function Service.Update(now: number)
 		if not model:IsDescendantOf(workspace) or tower.structure.humanoid.Parent ~= model or not tower.structure.root:IsDescendantOf(model) then
 			Rules.destroy(tower.logic); Structures.Remove(model)
 			for _, connection in tower.connections do connection:Disconnect() end
-			records[model] = nil; continue
+			records[model] = nil; visuals[model] = nil; continue
 		end
 		if tower.structure.humanoid.Health <= 0 then destroy(tower) end
 		if tower.logic.destroyed then continue end
@@ -94,7 +98,7 @@ function Service.Update(now: number)
 				if humanoid and root and root:IsA("BasePart") then
 					local position = root.Position
 					Damage.Apply(model, humanoid, Config.Damage)
-					Service.Event:Fire("Shot", model, tower.crystal.Position, position, tower.structure.teamId, tower.structure.lane)
+					Service.Event:Fire("Shot", model, tower.crystal.Position, position, tower.structure.teamId, tower.structure.lane, currentRound)
 				end
 			elseif not tower.logic.shot then mode(tower, "Idle") end
 			continue
@@ -110,28 +114,57 @@ function Service.Update(now: number)
 		elseif now >= ((model:GetAttribute("LastShotAt") or 0) :: number) + Config.Visual.ProjectileDuration then mode(tower, "Idle") end
 	end
 end
+local function bindHealth(tower: Tower)
+	local record, epoch = tower.structure, currentRound
+	table.insert(tower.connections, record.humanoid.HealthChanged:Connect(function()
+		if currentRound ~= epoch or tower.structure ~= record then return end
+		health(tower); if record.humanoid.Health <= 0 then destroy(tower) end
+	end))
+end
+local function register(model: Model)
+	visuals[model] = Reset.capture(model); model:SetAttribute("RoundId", currentRound)
+	local record = Structures.Register(model)
+	local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
+	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(170, 54)
+	board.StudsOffset = Vector3.new(0, 10, 0); board.MaxDistance = 170; board.AlwaysOnTop = true; board.Parent = record.root
+	local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
+	local track = Instance.new("Frame"); track.Size = UDim2.new(1, 0, 0, 5); track.Position = UDim2.new(0, 0, 1, -5)
+	track.BackgroundColor3 = Color3.fromRGB(25, 28, 35); track.BorderSizePixel = 0; track.Parent = board
+	local fill = Instance.new("Frame"); fill.BackgroundColor3 = crystal.Color; fill.BorderSizePixel = 0; fill.Parent = track
+	local tower: Tower = { structure = record, logic = Rules.new(), crystal = crystal, label = label, fill = fill, connections = {} }
+	records[model] = tower; health(tower)
+	bindHealth(tower)
+end
+function Service.Reset(roundId: number)
+	if roundId <= currentRound then return end
+	Service.CancelAll(); currentRound = roundId
+	table.clear(ids); table.clear(models); serial = 0
+	for model, tower in records do
+		for _, connection in tower.connections do connection:Disconnect() end; table.clear(tower.connections)
+		visuals[model].restore(); Structures.Remove(model)
+		Reset.humanoid(model, Config.Health)
+		model:SetAttribute("RoundId", roundId); model:SetAttribute("IsDestroyed", false)
+		model:SetAttribute("LastShotAt", 0); model:SetAttribute("CombatDisabled", false)
+		tower.structure = Structures.Register(model); tower.logic = Rules.new()
+		mode(tower, "Idle"); health(tower); bindHealth(tower)
+	end
+	local map = arena; assert(map)
+	for _, model in Factory.Build(map):GetChildren() do
+		if model:IsA("Model") and model:GetAttribute("ManagedTower") == true and not records[model] then register(model) end
+	end
+end
 function Service.Start(map: Folder)
 	if started then return end; started = true
+	arena = map
+	local match = Teams.GetState(); currentRound = if match then match.roundId else 1
 	local container = Factory.Build(map)
 	for _, model in container:GetChildren() do
 		if not model:IsA("Model") or model:GetAttribute("ManagedTower") ~= true then continue end
-		local record = Structures.Register(model)
-		local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
-		local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(170, 54)
-		board.StudsOffset = Vector3.new(0, 10, 0); board.MaxDistance = 170; board.AlwaysOnTop = true; board.Parent = record.root
-		local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
-		label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
-		local track = Instance.new("Frame"); track.Size = UDim2.new(1, 0, 0, 5); track.Position = UDim2.new(0, 0, 1, -5)
-		track.BackgroundColor3 = Color3.fromRGB(25, 28, 35); track.BorderSizePixel = 0; track.Parent = board
-		local fill = Instance.new("Frame"); fill.BackgroundColor3 = crystal.Color; fill.BorderSizePixel = 0; fill.Parent = track
-		local tower: Tower = { structure = record, logic = Rules.new(), crystal = crystal, label = label, fill = fill, connections = {} }
-		records[model] = tower; health(tower)
-		table.insert(tower.connections, record.humanoid.HealthChanged:Connect(function()
-			health(tower); if record.humanoid.Health <= 0 then destroy(tower) end
-		end))
+		register(model)
 	end
-	Damage.Applied.Event:Connect(function(attacker: Model, victim: Model, amount: number)
-		if amount <= 0 then return end
+	Damage.Applied.Event:Connect(function(attacker: Model, victim: Model, amount: number, roundId: number?)
+		if amount <= 0 or roundId ~= currentRound then return end
 		local killed = records[victim]
 		if killed and killed.structure.humanoid.Health <= 0 then
 			destroy(killed)

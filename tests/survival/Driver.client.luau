@@ -8,7 +8,7 @@ local attack = ReplicatedStorage:WaitForChild("CombatRemotes"):WaitForChild("Bas
 driver.OnClientEvent:Connect(function(sequence: number, mode: string)
 	if mode == "attack" or mode == "combo" then
 		for _ = 1, if mode == "combo" then 4 else 1 do
-			attack:FireServer(controller.NextRequestId(), player.Character)
+			attack:FireServer(controller.NextRequestId(), player.Character, ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId"))
 			task.wait(0.4)
 		end
 	end

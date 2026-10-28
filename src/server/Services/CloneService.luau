@@ -20,6 +20,10 @@ end
 function CloneService.ClearOwner(player: Player)
 	for model, record in records do if record.owner == player then CloneService.Remove(model) end end
 end
+function CloneService.Reset()
+	for model in records do CloneService.Remove(model) end
+	nextUpdate = 0
+end
 function CloneService.Spawn(player: Player, character: Model): number
 	if player.Character ~= character or not Damage.CanAct(character) then return 0 end
 	CloneService.ClearOwner(player)

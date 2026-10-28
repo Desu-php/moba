@@ -1,8 +1,10 @@
 --!strict
 
--- v2 request: (monotonic requestId, current Character), no combat parameters.
+-- Match request: (monotonic requestId, current Character, RoundId), no combat parameters.
+-- Isolated CombatOnlyTest keeps the two-argument protocol.
 -- CombatEvent is server -> clients only; see docs/COMBAT.md for packet fields.
 export type Snapshot = {
+	roundId: number?,
 	character: Model, profileId: string, revision: number, mode: string,
 	comboStep: number, lastAttackAt: number, nextAttackAt: number, stunUntil: number, attackSerial: number,
 }

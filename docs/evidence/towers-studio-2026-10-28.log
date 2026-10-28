@@ -1,0 +1,53 @@
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: exactly six towers without duplicate Build or Start
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: unknown map content preserved
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: three towers per team
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: allied damage blocked
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: direct damage blocked by central shield
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: structures never registered as fighters
+2026-10-28T14:31:24.217Z,17.217951,4ac0,6,Info [FLog::CreatorOutput] [TowerTests] PASS: decorations do not expand hurtbox
+2026-10-28T14:31:24.934Z,17.934452,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: new wall cancels prepared contact
+2026-10-28T14:31:26.166Z,19.166512,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: range checked again at contact
+2026-10-28T14:31:27.133Z,20.133125,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: tower shot deals eighteen
+2026-10-28T14:31:27.199Z,20.199102,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: both clients show tower counts and existing HUD
+2026-10-28T14:31:27.199Z,20.199102,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: bounded cosmetic effects
+2026-10-28T14:31:27.199Z,20.199102,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: shot events reach both clients
+2026-10-28T14:31:27.200Z,20.200102,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: hero damage confirmed
+2026-10-28T14:31:27.265Z,20.265547,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: hero damage triggers defensive aggression
+2026-10-28T14:31:28.765Z,21.765516,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: out of range aggressor released
+2026-10-28T14:31:29.765Z,22.765757,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: Finished cancels prepared shot
+2026-10-28T14:31:31.065Z,24.065620,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: removed target cancels pending shot
+2026-10-28T14:31:31.615Z,24.615273,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: removed tower cancels pending shot and unregisters
+2026-10-28T14:31:32.282Z,25.282055,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: real client M1 accepted
+2026-10-28T14:31:32.282Z,25.282055,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: M1 damages tower without stun or movement
+2026-10-28T14:31:33.283Z,26.283304,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: SpiralSphere cast accepted
+2026-10-28T14:31:34.298Z,27.298973,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: Rasengan damages structure without stun
+2026-10-28T14:31:35.315Z,28.315130,5118,6,Info [FLog::CreatorOutput] [TowerTests] PASS: WindPalm cast accepted
+2026-10-28T14:31:37.132Z,30.132278,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: ShadowClones cast accepted
+2026-10-28T14:31:40.533Z,33.533352,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: wind and summons exclude structures
+2026-10-28T14:31:42.481Z,35.481987,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: M1 cannot bypass base shield
+2026-10-28T14:31:43.483Z,36.483196,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: SpiralSphere cast accepted
+2026-10-28T14:31:44.482Z,37.482376,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: Rasengan cannot bypass base shield
+2026-10-28T14:31:45.501Z,38.501274,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: WindPalm cast accepted
+2026-10-28T14:31:47.315Z,40.315483,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: ShadowClones cast accepted
+2026-10-28T14:31:48.316Z,41.316517,18dc,6,Info [FLog::CreatorOutput] [TowerTests] PASS: wind and clones cannot bypass base shield
+2026-10-28T14:31:48.320Z,41.320518,18dc,6,Info [FLog::CreatorOutput] [TowerTests] PASS: minions cannot bypass shield
+2026-10-28T14:31:48.321Z,41.321518,18dc,6,Info [FLog::CreatorOutput] [TowerTests] PASS: melee minion attacks its lane tower
+2026-10-28T14:31:48.321Z,41.321518,18dc,6,Info [FLog::CreatorOutput] [TowerTests] PASS: nearby enemy minion takes priority over tower
+2026-10-28T14:31:48.322Z,41.322521,18dc,6,Info [FLog::CreatorOutput] [TowerTests] PASS: ranged minion attacks tower
+2026-10-28T14:31:49.682Z,42.682259,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: minion destroys tower and continues route
+2026-10-28T14:31:49.682Z,42.682259,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: two towers still shield core
+2026-10-28T14:31:49.713Z,42.713676,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: lethal damage confirmed
+2026-10-28T14:31:49.714Z,42.714672,328c,6,Info [FLog::CreatorOutput] [TowerTests] PASS: bounty committed synchronously with lethal damage
+2026-10-28T14:31:50.315Z,43.315548,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: destroyed tower cannot finish shot
+2026-10-28T14:31:50.315Z,43.315548,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: team gold awarded once
+2026-10-28T14:31:50.432Z,43.432243,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: repeated destruction gives no gold
+2026-10-28T14:31:50.432Z,43.432243,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: no KDA minion reward or life ledger for tower
+2026-10-28T14:31:50.432Z,43.432243,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: ruin cannot block or be hit
+2026-10-28T14:31:50.432Z,43.432243,a254,6,Info [FLog::CreatorOutput] [TowerTests] PASS: last tower still protects base
+2026-10-28T14:31:50.648Z,43.648575,3920,6,Info [FLog::CreatorOutput] [TowerTests] PASS: dead connected teammate receives tower gold
+2026-10-28T14:31:50.648Z,43.648575,3920,6,Info [FLog::CreatorOutput] [TowerTests] PASS: third tower opens base
+2026-10-28T14:31:50.648Z,43.648575,3920,6,Info [FLog::CreatorOutput] [TowerTests] PASS: base damage opens for minions
+2026-10-28T14:31:54.998Z,47.998722,9dec,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T14:31:54.998Z,47.998722,9dec,6,Info [FLog::CreatorOutput] [TowerTests] PASS: tower progression permits match victory
+2026-10-28T14:31:54.998Z,47.998722,9dec,6,Info [FLog::CreatorOutput] [TowerTests] ALL PASS: 50 integration checks
+2026-10-28T14:32:05.020Z,58.020164,328c,6,Info [FLog::CreatorOutput] [Match] Round 2 ready

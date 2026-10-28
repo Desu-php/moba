@@ -1,0 +1,112 @@
+2026-10-28T15:04:37.495Z,7.495378,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] Waiting for 2 clients; production round timings are preserved...
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six tower health subscriptions round 1
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: no duplicate remotes
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: unmanaged map content preserved
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: map objects do not grow
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six living towers and shielded cores
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:04:53.495Z,23.495083,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:04:53.496Z,23.496080,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: summons cleared
+2026-10-28T15:04:54.163Z,24.163744,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: M1 works each round
+2026-10-28T15:04:56.012Z,26.012894,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: Rasengan works each round
+2026-10-28T15:04:56.179Z,26.179329,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: minion rewards work each round
+2026-10-28T15:04:56.512Z,26.512436,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: shop works each round
+2026-10-28T15:04:56.521Z,26.521475,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: clones created before boundary
+2026-10-28T15:04:56.521Z,26.521475,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:04:56.522Z,26.522478,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:04:56.522Z,26.522478,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:04:56.522Z,26.522478,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:04:56.522Z,26.522478,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:04:56.522Z,26.522478,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:04:56.629Z,26.629152,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: ability prepared near finish
+2026-10-28T15:04:56.633Z,26.633142,637c,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T15:04:56.633Z,26.633142,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core damage after shields fall
+2026-10-28T15:04:56.633Z,26.633142,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: winner once
+2026-10-28T15:04:56.633Z,26.633142,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: finish stops attacks and summons
+2026-10-28T15:04:56.633Z,26.633142,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: early reset rejected
+2026-10-28T15:04:56.679Z,26.679029,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: HUD round and result
+2026-10-28T15:04:58.678Z,28.678802,42bc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: client effects cleared
+2026-10-28T15:05:06.651Z,36.651516,5ba8,6,Info [FLog::CreatorOutput] [Match] Round 2 ready
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six tower health subscriptions round 2
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: no duplicate remotes
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: unmanaged map content preserved
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: map objects do not grow
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six living towers and shielded cores
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:05:11.695Z,41.695370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:05:11.696Z,41.696365,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: summons cleared
+2026-10-28T15:05:11.696Z,41.696365,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old life removed
+2026-10-28T15:05:11.696Z,41.696365,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale attacker cannot damage
+2026-10-28T15:05:11.696Z,41.696365,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale victim cannot receive damage
+2026-10-28T15:05:11.696Z,41.696365,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale reset ignored
+2026-10-28T15:05:12.261Z,42.261578,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old network requests cannot buy, attack or summon
+2026-10-28T15:05:12.262Z,42.262573,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old death cannot reward
+2026-10-28T15:05:12.928Z,42.928501,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: M1 works each round
+2026-10-28T15:05:14.779Z,44.779034,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: Rasengan works each round
+2026-10-28T15:05:14.945Z,44.945553,985c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: minion rewards work each round
+2026-10-28T15:05:15.310Z,45.310551,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: shop works each round
+2026-10-28T15:05:15.317Z,45.317623,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: clones created before boundary
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:15.319Z,45.319637,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:15.396Z,45.396152,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: ability prepared near finish
+2026-10-28T15:05:15.400Z,45.400181,40dc,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T15:05:15.400Z,45.400181,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core damage after shields fall
+2026-10-28T15:05:15.401Z,45.401188,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: winner once
+2026-10-28T15:05:15.401Z,45.401188,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: finish stops attacks and summons
+2026-10-28T15:05:15.401Z,45.401188,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: early reset rejected
+2026-10-28T15:05:15.463Z,45.463455,985c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: HUD round and result
+2026-10-28T15:05:17.464Z,47.464165,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: client effects cleared
+2026-10-28T15:05:25.419Z,55.419041,5ba8,6,Info [FLog::CreatorOutput] [Match] Round 3 ready
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six tower health subscriptions round 3
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: no duplicate remotes
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: unmanaged map content preserved
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: map objects do not grow
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: six living towers and shielded cores
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core restored
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:05:30.461Z,60.461960,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: profile fully reset
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: cooldowns cleared
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: summons cleared
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old life removed
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale attacker cannot damage
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale victim cannot receive damage
+2026-10-28T15:05:30.462Z,60.462959,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: stale reset ignored
+2026-10-28T15:05:31.026Z,61.026970,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old network requests cannot buy, attack or summon
+2026-10-28T15:05:31.027Z,61.027973,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: old death cannot reward
+2026-10-28T15:05:31.694Z,61.694370,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: M1 works each round
+2026-10-28T15:05:33.545Z,63.545170,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: Rasengan works each round
+2026-10-28T15:05:33.710Z,63.710743,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: minion rewards work each round
+2026-10-28T15:05:34.077Z,64.077156,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: shop works each round
+2026-10-28T15:05:34.085Z,64.085152,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: clones created before boundary
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower lethal hit
+2026-10-28T15:05:34.086Z,64.086151,82cc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: tower bounty exactly once
+2026-10-28T15:05:34.194Z,64.194191,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: ability prepared near finish
+2026-10-28T15:05:34.199Z,64.199188,637c,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T15:05:34.199Z,64.199188,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: core damage after shields fall
+2026-10-28T15:05:34.199Z,64.199188,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: winner once
+2026-10-28T15:05:34.199Z,64.199188,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: finish stops attacks and summons
+2026-10-28T15:05:34.199Z,64.199188,637c,6,Info [FLog::CreatorOutput] [RoundTests] PASS: early reset rejected
+2026-10-28T15:05:34.277Z,64.277985,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: HUD round and result
+2026-10-28T15:05:36.278Z,66.278465,5ba8,6,Info [FLog::CreatorOutput] [RoundTests] PASS: client effects cleared
+2026-10-28T15:05:44.215Z,74.215424,40dc,6,Info [FLog::CreatorOutput] [Match] Round 4 ready
+2026-10-28T15:05:44.228Z,74.228424,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: third reset restored six towers
+2026-10-28T15:05:44.229Z,74.229424,40dc,6,Info [FLog::CreatorOutput] [RoundTests] PASS: no duplicated base notifications
+2026-10-28T15:05:44.229Z,74.229424,40dc,6,Info [FLog::CreatorOutput] [RoundTests] ALL PASS: 104 checks across three rounds

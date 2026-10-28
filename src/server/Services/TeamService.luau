@@ -14,7 +14,8 @@ local connections: { [Player]: { RBXScriptConnection } } = {}
 local deaths: { [Player]: RBXScriptConnection } = {}
 local descendants: { [Player]: RBXScriptConnection } = {}
 local pending: { [Player]: number } = {}
-local loading: { [Player]: boolean } = {}
+local loading: { [Player]: number } = {}
+local resetRound = 1
 function TeamService.GetId(model: Model): string?
 	local player = Players:GetPlayerFromCharacter(model)
 	local id = if player then player:GetAttribute("TeamId") else model:GetAttribute("TeamId")
@@ -45,10 +46,13 @@ end
 local function canSpawn(player: Player): boolean
 	local current = state
 	local id = player:GetAttribute("TeamId")
-	return player.Parent == Players and current ~= nil and current.phase ~= "Finished"
+	return player.Parent == Players and current ~= nil and current.phase ~= "Finished" and current.phase ~= "Intermission"
 		and typeof(id) == "string" and TeamService.IsActive(id)
 end
 local function characterAdded(player: Player, character: Model)
+	local current = state; if not current then return end
+	local epoch = loading[player] or current.roundId
+	character:SetAttribute("RoundId", epoch)
 	if deaths[player] then deaths[player]:Disconnect(); deaths[player] = nil end
 	if descendants[player] then descendants[player]:Disconnect() end
 	local function collision(item: Instance)
@@ -63,18 +67,19 @@ local function characterAdded(player: Player, character: Model)
 		local root = character:WaitForChild("HumanoidRootPart", 10)
 		if player.Character ~= character or player.Parent ~= Players then return end
 		if not humanoid or not humanoid:IsA("Humanoid") or not root or not root:IsA("BasePart") then return end
-		if not canSpawn(player) then invalidateCharacter(player); return end
+		if epoch ~= current.roundId or not canSpawn(player) then invalidateCharacter(player); return end
 		local respawn = player.RespawnLocation
 		if respawn then character:PivotTo(respawn.CFrame + Vector3.new(0, 4, 0)) end
 		character:SetAttribute("CombatDisabled", false)
 		deaths[player] = humanoid.Died:Connect(function()
-			if canSpawn(player) then pending[player] = workspace:GetServerTimeNow() + Config.RespawnTime end
+			if epoch == current.roundId and player.Character == character and canSpawn(player) then pending[player] = workspace:GetServerTimeNow() + Config.RespawnTime end
 		end)
 	end)
 end
 local function add(player: Player)
 	local current, arena = state, map
 	assert(current and arena)
+	player:SetAttribute("RoundId", current.roundId)
 	local id = Rules.assign(current, roster[player.UserId])
 	player.Neutral = true
 	if id then
@@ -91,13 +96,13 @@ local function add(player: Player)
 		player:SetAttribute("TeamId", roster[player.UserId])
 		player:SetAttribute("Eliminated", true)
 	end
-	connections[player] = {
+	if not connections[player] then connections[player] = {
 		player.CharacterAdded:Connect(function(character) characterAdded(player, character) end),
 		player.CharacterRemoving:Connect(function()
 			if deaths[player] then deaths[player]:Disconnect(); deaths[player] = nil end
 			if descendants[player] then descendants[player]:Disconnect(); descendants[player] = nil end
 		end),
-	}
+	} end
 	if player.Character then characterAdded(player, player.Character) end
 end
 function TeamService.Eliminate(id: string)
@@ -119,22 +124,29 @@ function TeamService.Finish()
 	end
 end
 function TeamService.Update(now: number)
+	local current = state; if not current then return end
 	for player, due in pending do
 		if now >= due and not loading[player] then
 			pending[player] = nil
 			if not canSpawn(player) then continue end
-			loading[player] = true
+			local epoch = current.roundId
+			loading[player] = epoch
 			task.spawn(function()
 				local ok, message = pcall(function() player:LoadCharacterAsync() end)
 				loading[player] = nil
 				if not ok then warn("[Teams] Character load failed: " .. tostring(message)) end
-				if not canSpawn(player) then invalidateCharacter(player) end
+				if epoch ~= current.roundId then
+					local model = player.Character
+					if model and model:GetAttribute("RoundId") == epoch then model:Destroy(); player.Character = nil end
+					if canSpawn(player) then pending[player] = workspace:GetServerTimeNow() end
+				elseif not canSpawn(player) then invalidateCharacter(player)
+				elseif not ok then pending[player] = workspace:GetServerTimeNow() + 2 end
 			end)
 		end
 	end
 end
 function TeamService.Start(match: Rules.State, arena: Folder)
-	assert(not state, "TeamService already started"); state = match; map = arena
+	if state then return end; state = match; map = arena; resetRound = match.roundId
 	Players.CharacterAutoLoads = false
 	for _, name in { "SurvivalHeroes", "SurvivalMinions" } do
 		if not Physics:IsCollisionGroupRegistered(name) then Physics:RegisterCollisionGroup(name) end
@@ -160,5 +172,21 @@ function TeamService.Start(match: Rules.State, arena: Folder)
 		connections[player] = nil
 	end)
 	for _, player in Players:GetPlayers() do add(player) end
+end
+function TeamService.Reset(roundId: number)
+	local current = state; assert(current and current.roundId == roundId)
+	if roundId <= resetRound then return end; resetRound = roundId
+	table.clear(pending); table.clear(roster)
+	for _, team in current.teams do team.count = 0 end
+	local players = Players:GetPlayers()
+	table.sort(players, function(a: Player, b: Player) return a.UserId < b.UserId end)
+	for _, player in players do
+		if deaths[player] then deaths[player]:Disconnect(); deaths[player] = nil end
+		if descendants[player] then descendants[player]:Disconnect(); descendants[player] = nil end
+		local character = player.Character
+		if character then character:SetAttribute("CombatDisabled", true); character:Destroy(); player.Character = nil end
+		player:SetAttribute("RoundId", roundId)
+		add(player)
+	end
 end
 return TeamService

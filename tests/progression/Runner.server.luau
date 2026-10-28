@@ -101,7 +101,11 @@ local ok, failure = xpcall(function()
  local dead, deadHumanoid = npc("Red", "Melee", Vector3.new(5, 36, 0))
  local observedDeath: Life.Death? = nil
  local deathConnection = Life.Died.Event:Connect(function(event: Life.Death) if event.model == dead then observedDeath = event end end)
- Damage.Apply(heroModel, deadHumanoid, 100)
+ check("melee lethal damage confirmed", Damage.Apply(heroModel, deadHumanoid, 100) == 100)
+ untilTrue(function() return observedDeath ~= nil end, 3, "No lifecycle event after lethal hit")
+ local death = observedDeath :: Life.Death
+ check("death belongs to current round", death.roundId == state.roundId)
+ check("last hit attributed to hero", death.killer ~= nil and death.killer.userId == hero.UserId)
  untilTrue(function() return profile(hero).TotalMinionKills == 1 end, 3, "No last hit reward")
  check("melee last hit gold", Economy.GetGold(hero) == 120)
  check("nearby allies get full XP", totalXP(hero) == 30 and totalXP(assistant) == 30)

@@ -8,13 +8,16 @@ local Teams = require(script.Parent.TeamService)
 local Structures = require(script.Parent.StructureService)
 local Reward = {}
 local ledger: { [Model]: Rules.State } = setmetatable({}, { __mode = "k" })
+local ledgerRound = 0
 -- Called synchronously after confirmed damage, before a same-frame core kill can finish the match.
 function Reward.Confirmed(attacker: Model, target: Model)
 	local record = Structures.GetAll()[target]
 	if not record or record.kind ~= "Tower" or record.humanoid.Health > 0 then return end
 	local attackingTeam = tostring(attacker:GetAttribute("TeamId"))
 	local match = Teams.GetState()
-	if not match or match.phase ~= "InProgress" or not Teams.IsActive(attackingTeam) then return end
+	if not match or match.phase ~= "InProgress" or attacker:GetAttribute("RoundId") ~= match.roundId
+		or target:GetAttribute("RoundId") ~= match.roundId or not Teams.IsActive(attackingTeam) then return end
+	if ledgerRound ~= match.roundId then table.clear(ledger); ledgerRound = match.roundId end
 	local state = ledger[target]
 	if not state then state = Rules.new(); Rules.destroy(state); ledger[target] = state end
 	if not Rules.claimReward(state, attackingTeam ~= record.teamId) then return end

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInput = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Items = require(Shared.Config.ItemConfig)
+local Rounds = require(script.Parent.RoundController)
 local HUD = {}
 local started = false
 local colors = { Background = Color3.fromRGB(17, 24, 35), Card = Color3.fromRGB(29, 40, 55),
@@ -113,13 +114,14 @@ function HUD.Start()
    buy.Activated:Connect(function()
     if pending or not buy.Active then return end
     serial += 1; local request = serial; pending = request; status.Text = "Покупка…"; refresh()
-    remote:FireServer(request, id)
+    remote:FireServer(request, id, Rounds.Current())
     task.delay(4, function()
      if pending == request then pending = nil; status.Text = "Ответ не получен. Проверьте баланс и попробуйте ещё раз"; refresh() end
     end)
    end)
   end
-  remote.OnClientEvent:Connect(function(kind: string, request: number?, success: boolean?, reason: string?)
+  remote.OnClientEvent:Connect(function(kind: string, request: number?, success: boolean?, reason: string?, roundId: number?)
+   if not Rounds.Accepts(roundId) then return end
    if kind == "Open" then refresh(); setOpen(true); status.Text = "Предметы приобретаются за золото матча"
    elseif kind == "Result" and request == pending then
     pending = nil; refresh()
@@ -128,7 +130,12 @@ function HUD.Start()
    end
   end)
   local xpGain, goldGain, levelGain, noticeVersion = 0, 0, 0, 0
-  notice.OnClientEvent:Connect(function(xpAmount: number, goldAmount: number, levels: number)
+  Rounds.Watch(function()
+   pending = nil; setOpen(false); status.Text = "Новый раунд"; toast.Text = ""
+   xpGain = 0; goldGain = 0; levelGain = 0; noticeVersion += 1; refresh()
+  end)
+  notice.OnClientEvent:Connect(function(xpAmount: number, goldAmount: number, levels: number, roundId: number?)
+   if not Rounds.Accepts(roundId) then return end
    xpGain += xpAmount; goldGain += goldAmount; levelGain += levels; noticeVersion += 1
    local version = noticeVersion
    toast.Text = (if levelGain > 0 then "LEVEL UP!  +" .. levelGain .. "\n" else "")

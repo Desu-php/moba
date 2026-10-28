@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config.TowerConfig)
+local Rounds = require(script.Parent.RoundController)
 type Effect = { object: BasePart, tween: Tween, endsAt: number }
 local Controller = {}
 local started = false
@@ -13,11 +14,13 @@ end
 function Controller.GetActiveCount(): number return #effects end
 function Controller.Start()
 	if started then return end; started = true
+	Rounds.Watch(function() for i = #effects, 1, -1 do remove(i) end end)
 	task.spawn(function()
 		local state = ReplicatedStorage:WaitForChild("SurvivalState", 30); if not state then return end
 		local event = state:WaitForChild("TowerEvent") :: RemoteEvent
 		local folder = Instance.new("Folder"); folder.Name = "LocalTowerVFX"; folder.Parent = workspace
-		event.OnClientEvent:Connect(function(kind: string, _model: Model, origin: Vector3, destination: Vector3, teamId: string)
+		event.OnClientEvent:Connect(function(kind: string, _model: Model, origin: Vector3, destination: Vector3, teamId: string, _lane: string, roundId: number)
+			if not Rounds.Accepts(roundId) then return end
 			local camera = workspace.CurrentCamera
 			if camera and (origin - camera.CFrame.Position).Magnitude > Config.Visual.ViewDistance then return end
 			while #effects >= Config.Visual.MaxEffects do remove(1) end

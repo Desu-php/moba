@@ -27,6 +27,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Hero test Rojo build failed' }
     & $RojoPath build tests/towers.project.json -o build/tower-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Tower test Rojo build failed' }
+    & $RojoPath build tests/rounds.project.json -o build/round-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Round test Rojo build failed' }
+    & $RojoPath sourcemap tests/rounds.project.json -o build/round-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Round sourcemap failed' }
     & $RojoPath sourcemap tests/towers.project.json -o build/tower-sourcemap.json
     if ($LASTEXITCODE -ne 0) { throw 'Tower sourcemap failed' }
     & $RojoPath sourcemap tests/hero.project.json -o build/hero-sourcemap.json
@@ -54,7 +58,7 @@ try {
         throw 'Unexpected scripts in production build (possible test or starter script leak)'
     }
     Write-Output 'PASS Rojo build, source mapping, entrypoint classes and scene separation'
-    if (Select-String -Path build/anime-battlegrounds.rbxlx -Pattern 'TowerTestDriver|HeroTestDriver|ProgressionTestDriver|SurvivalTestDriver|M1TestDriver' -Quiet) {
+    if (Select-String -Path build/anime-battlegrounds.rbxlx -Pattern 'RoundTestDriver|TowerTestDriver|HeroTestDriver|ProgressionTestDriver|SurvivalTestDriver|M1TestDriver' -Quiet) {
         throw 'Test driver leaked into production build'
     }
     Write-Output 'PASS production contains no test remotes'
@@ -77,7 +81,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Hero pure logic type check failed' }
         & $analyzer src/shared/Game/TowerRules.luau src/shared/Game/StructureRules.luau src/shared/Config/TowerConfig.luau tests/TowerRules.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
-        foreach ($suite in @('tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/TowerRules.spec.luau')) {
+        & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Config/RoundConfig.luau tests/Rounds.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
+        foreach ($suite in @('tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/TowerRules.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -101,6 +107,8 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Hero test type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/tower-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') towers
             if ($LASTEXITCODE -ne 0) { throw 'Tower test type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/round-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') rounds
+            if ($LASTEXITCODE -ne 0) { throw 'Round test type check failed' }
         }
         finally { Pop-Location }
         Write-Output 'PASS full Roblox-aware source type check (Luau new solver)'
@@ -112,6 +120,7 @@ try {
     Write-Output 'Stage 4: build/progression-tests.rbxlx, Server & Clients, 3 clients.'
     Write-Output 'Stage 5: build/hero-tests.rbxlx, Server & Clients, 2 clients.'
     Write-Output 'Towers: build/tower-tests.rbxlx, Server & Clients, 2 clients.'
+    Write-Output 'Rounds: build/round-tests.rbxlx, Server & Clients, 2 clients, three rounds on one server.'
 }
 finally {
     Pop-Location

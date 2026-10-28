@@ -49,6 +49,7 @@ function FighterStateService.Snapshot(fighter: Fighter)
 	local logic = fighter.logic
 	return {
 		character = fighter.character, profileId = fighter.profileId, revision = fighter.revision,
+		roundId = fighter.character:GetAttribute("RoundId"),
 		mode = logic.mode, comboStep = logic.comboStep, lastAttackAt = logic.lastAttackAt,
 		nextAttackAt = logic.nextAttackAt, stunUntil = logic.stunUntil, attackSerial = logic.attackSerial,
 	}
@@ -78,6 +79,9 @@ end
 
 function FighterStateService.Get(character: Model): Fighter?
 	return fighters[character]
+end
+function FighterStateService.Reset()
+	for character in fighters do FighterStateService.Remove(character) end
 end
 
 function FighterStateService.SetWalkSpeed(character: Model, speed: number)
@@ -178,6 +182,10 @@ local function bindPlayer(player: Player)
 		task.spawn(function()
 			local humanoid = character:WaitForChild("Humanoid", Config.CharacterReadyTimeout)
 			local root = character:WaitForChild("HumanoidRootPart", Config.CharacterReadyTimeout)
+			local deadline = os.clock() + Config.CharacterReadyTimeout
+			while player.Character == character and player.Parent == Players and not character:IsDescendantOf(Workspace) and os.clock() < deadline do
+				game:GetService("RunService").Heartbeat:Wait()
+			end
 			if humanoid and root and player.Parent == Players and player.Character == character then
 				FighterStateService.GetOrCreate(character)
 			end

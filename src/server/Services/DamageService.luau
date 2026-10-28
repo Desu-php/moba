@@ -12,7 +12,7 @@ function DamageService.SetEnabled(value: boolean) enabled = value end
 function DamageService.CanAct(model: Model): boolean
 	if not enabled or model:GetAttribute("CombatDisabled") == true or not model:IsDescendantOf(workspace) then return false end
 	local state = Teams.GetState()
-	if state and (state.phase ~= "InProgress" or not Teams.IsActive(Teams.GetId(model))) then return false end
+	if state and (state.phase ~= "InProgress" or model:GetAttribute("RoundId") ~= state.roundId or not Teams.IsActive(Teams.GetId(model))) then return false end
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	return humanoid ~= nil and humanoid.Health > 0
 end
@@ -35,7 +35,8 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 	if dealt > 0 then
 		TowerRewards.Confirmed(attacker, target)
 		Life.Record(attacker, target)
-		DamageService.Applied:Fire(attacker, target, dealt)
+		local match = Teams.GetState()
+		DamageService.Applied:Fire(attacker, target, dealt, if match then match.roundId else nil)
 	end
 	return dealt
 end

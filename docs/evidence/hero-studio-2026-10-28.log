@@ -1,0 +1,89 @@
+2026-10-28T14:37:18.054Z,6.054334,67b4,6,Info [FLog::CreatorOutput] [HeroTests] Waiting for 2 clients...
+2026-10-28T14:37:30.764Z,18.764696,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: R15 automatically assigned
+2026-10-28T14:37:30.764Z,18.764696,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: server combat profile snapshot
+2026-10-28T14:37:30.768Z,18.768679,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: appearance idempotent
+2026-10-28T14:37:30.769Z,18.769674,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: cosmetics never change hurtbox
+2026-10-28T14:37:30.769Z,18.769674,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: joints and server Animator preserved
+2026-10-28T14:37:30.769Z,18.769674,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: modern joints preferred and mapped by body part
+2026-10-28T14:37:30.769Z,18.769674,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: legacy joints still supported
+2026-10-28T14:37:30.828Z,18.828585,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: hero ability and match HUD exist
+2026-10-28T14:37:30.964Z,18.964588,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: observer sees appearance and real idle joints
+2026-10-28T14:37:31.596Z,19.596716,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: first hero M1 prediction not replayed on profile confirmation
+2026-10-28T14:37:32.913Z,20.913004,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 accepted 1
+2026-10-28T14:37:33.045Z,21.045750,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: observer joints move for M1 1
+2026-10-28T14:37:33.412Z,21.412773,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 accepted 2
+2026-10-28T14:37:33.547Z,21.547739,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: observer joints move for M1 2
+2026-10-28T14:37:33.913Z,21.913624,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 accepted 3
+2026-10-28T14:37:34.047Z,22.047600,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: observer joints move for M1 3
+2026-10-28T14:37:34.413Z,22.413803,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 accepted 4
+2026-10-28T14:37:34.547Z,22.547283,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: observer joints move for M1 4
+2026-10-28T14:37:36.329Z,24.329283,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: real client request accepted
+2026-10-28T14:37:36.329Z,24.329283,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: ability blocks M1
+2026-10-28T14:37:36.329Z,24.329283,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: ability blocks another ability
+2026-10-28T14:37:36.694Z,24.694862,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: local ability moves joints
+2026-10-28T14:37:37.296Z,25.296730,67b4,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere impacts once for 22
+2026-10-28T14:37:37.296Z,25.296730,67b4,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere selects only nearest target
+2026-10-28T14:37:37.713Z,25.713821,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere does not repeat impact
+2026-10-28T14:37:37.713Z,25.713821,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: server enforces cooldown
+2026-10-28T14:37:38.130Z,26.130133,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: replay rejected
+2026-10-28T14:37:39.063Z,27.063934,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: forged Character rejected
+2026-10-28T14:37:39.547Z,27.547438,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: extra damage argument rejected
+2026-10-28T14:37:40.262Z,28.262413,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: flood replies throttled
+2026-10-28T14:37:40.262Z,28.262413,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: flood requests limited
+2026-10-28T14:37:42.264Z,30.264309,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: NaN request rejected
+2026-10-28T14:37:42.264Z,30.264309,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: infinite request rejected
+2026-10-28T14:37:43.131Z,31.131266,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: moving contact cast accepted
+2026-10-28T14:37:43.796Z,31.796553,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere catches entry during contact window
+2026-10-28T14:37:45.580Z,33.580719,566c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere cannot hit during recovery
+2026-10-28T14:37:46.447Z,34.447842,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere cast near wall accepted
+2026-10-28T14:37:47.261Z,35.261665,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere cannot hit through wall
+2026-10-28T14:37:48.928Z,36.928360,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere has no allied damage
+2026-10-28T14:37:50.297Z,38.297913,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: zero damage causes no stun
+2026-10-28T14:37:50.297Z,38.297913,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: zero damage causes no knockback
+2026-10-28T14:37:51.279Z,39.279289,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: stun immediately cancels cast
+2026-10-28T14:37:51.279Z,39.279289,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: stunned actor cannot cast
+2026-10-28T14:37:51.995Z,39.995792,566c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: cancelled sphere cannot impact
+2026-10-28T14:37:51.995Z,39.995792,566c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: cancelled sphere keeps cooldown
+2026-10-28T14:37:52.864Z,40.864483,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 starts before ability
+2026-10-28T14:37:52.864Z,40.864483,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 blocks ability
+2026-10-28T14:37:53.162Z,41.162022,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: M1 recovery still blocks ability
+2026-10-28T14:37:54.829Z,42.829105,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: level and Blade multiplier applied once
+2026-10-28T14:37:59.095Z,47.095528,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: clone level and Blade multiplier applied once
+2026-10-28T14:37:59.963Z,47.963577,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: clone cast accepted
+2026-10-28T14:38:00.378Z,48.378773,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: two summons separate from NPC waves
+2026-10-28T14:38:00.378Z,48.378773,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: summons invulnerable and not fighters
+2026-10-28T14:38:03.197Z,51.197113,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: two clones at most three hits each
+2026-10-28T14:38:03.197Z,51.197113,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: hit budget exhausted at six
+2026-10-28T14:38:05.412Z,53.412933,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: summons expire without rewards
+2026-10-28T14:38:07.495Z,55.495068,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: clone damage credits owner's last hit
+2026-10-28T14:38:10.177Z,58.177528,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: clones cannot strike through wall
+2026-10-28T14:38:12.461Z,60.461197,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: clones never attack bases
+2026-10-28T14:38:13.277Z,61.277908,566c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: sphere damages base
+2026-10-28T14:38:13.277Z,61.277908,566c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: base is never a stunned fighter
+2026-10-28T14:38:14.152Z,62.152782,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: global cap enforced across owners
+2026-10-28T14:38:14.161Z,62.161797,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: owner cannot accumulate clones
+2026-10-28T14:38:15.130Z,63.130825,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind cast accepted
+2026-10-28T14:38:15.845Z,63.845535,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind damages nearest three targets once
+2026-10-28T14:38:15.845Z,63.845535,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind does not dash the owner
+2026-10-28T14:38:15.846Z,63.846531,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind preserves Boots and autorotate
+2026-10-28T14:38:15.846Z,63.846531,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: removed dash request rejected
+2026-10-28T14:38:17.428Z,65.428360,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind cannot hit through wall
+2026-10-28T14:38:19.010Z,67.010696,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: wind has no allied damage
+2026-10-28T14:38:20.311Z,68.311958,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: stun cancels wind before impact
+2026-10-28T14:38:20.311Z,68.311958,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: stun movement lock survives wind cleanup
+2026-10-28T14:38:20.628Z,68.628098,2924,6,Info [FLog::CreatorOutput] [HeroTests] PASS: Boots restored after stun
+2026-10-28T14:38:21.494Z,69.494705,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: outside InProgress rejected
+2026-10-28T14:38:21.494Z,69.494705,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: CombatDisabled rejects actions
+2026-10-28T14:38:21.494Z,69.494705,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: server HeroId whitelist enforced
+2026-10-28T14:38:23.012Z,71.012863,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: death cancels impact and clones
+2026-10-28T14:38:23.012Z,71.012863,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: dead player cannot cast
+2026-10-28T14:38:26.543Z,74.543411,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: respawn appearance and Boots preserved
+2026-10-28T14:38:26.543Z,74.543411,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: old Character request rejected
+2026-10-28T14:38:26.543Z,74.543411,48f8,6,Info [FLog::CreatorOutput] [HeroTests] PASS: old life did not damage later
+2026-10-28T14:38:27.418Z,75.418884,0458,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T14:38:27.419Z,75.419884,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: finished match rejects abilities
+2026-10-28T14:38:27.419Z,75.419884,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: eliminated team rejects abilities
+2026-10-28T14:38:27.419Z,75.419884,0458,6,Info [FLog::CreatorOutput] [HeroTests] PASS: match reset clears cooldowns
+2026-10-28T14:38:28.444Z,76.444031,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] PASS: departure clears ability session
+2026-10-28T14:38:28.444Z,76.444031,9d2c,6,Info [FLog::CreatorOutput] [HeroTests] ALL PASS: 85 integration checks
+2026-10-28T14:38:37.431Z,85.431015,9d2c,6,Info [FLog::CreatorOutput] [Match] Round 2 ready

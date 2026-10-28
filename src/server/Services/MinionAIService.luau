@@ -38,6 +38,8 @@ function AI.Remove(model: Model)
 	Fighters.Remove(model); model:Destroy()
 end
 function AI.Register(model: Model, teamId: string, kind: string, lane: string, route: { Vector3 }, stats: Config.Stats)
+	if records[model] then return end
+	local match = Teams.GetState(); if match then model:SetAttribute("RoundId", match.roundId) end
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	local now = workspace:GetServerTimeNow()
@@ -55,6 +57,11 @@ function AI.Register(model: Model, teamId: string, kind: string, lane: string, r
 	end))
 end
 function AI.GetCount(): number return active end
+function AI.Reset()
+	running = false
+	for model in records do AI.Remove(model) end
+	table.clear(grid); active = 0
+end
 function AI.GetAll(): { [Model]: Minion } return records end
 function AI.SetRunning(value: boolean)
 	running = value
@@ -207,7 +214,7 @@ function AI.Update(now: number)
 					npc.nextAttack = now + npc.stats.AttackCooldown
 					local humanoid = target:FindFirstChildOfClass("Humanoid")
 					if humanoid and Damage.Apply(model, humanoid, npc.stats.Damage) > 0 then
-						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target)
+						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
 					end
 				end
 				continue

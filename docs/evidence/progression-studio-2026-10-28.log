@@ -1,0 +1,57 @@
+2026-10-28T14:54:40.091Z,7.091574,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] Waiting for 3 clients...
+2026-10-28T14:54:56.317Z,23.317724,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: initial level and gold Player1
+2026-10-28T14:54:56.318Z,23.318722,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: initial level and gold Player2
+2026-10-28T14:54:56.318Z,23.318722,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: initial level and gold Player3
+2026-10-28T14:54:56.419Z,23.419489,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: event HUD has server profile
+2026-10-28T14:54:56.421Z,23.421501,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: melee lethal damage confirmed
+2026-10-28T14:54:56.461Z,23.461781,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: death belongs to current round
+2026-10-28T14:54:56.461Z,23.461781,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: last hit attributed to hero
+2026-10-28T14:54:56.461Z,23.461781,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: melee last hit gold
+2026-10-28T14:54:56.461Z,23.461781,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: nearby allies get full XP
+2026-10-28T14:54:56.567Z,23.567533,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: same death never rewarded twice
+2026-10-28T14:54:56.601Z,23.601336,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: NPC last hit gives XP but no gold
+2026-10-28T14:54:56.603Z,23.603323,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: friendly damage cannot yield rewards
+2026-10-28T14:54:56.652Z,23.652763,4460,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: XP radius excludes distant ally
+2026-10-28T14:54:56.884Z,23.884584,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: multiple levels and capped healing
+2026-10-28T14:54:56.884Z,23.884584,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: M1 stat multiplier reflects level
+2026-10-28T14:54:56.986Z,23.986473,1e2c,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: max level stops XP
+2026-10-28T14:54:57.102Z,24.102617,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: both generated shops have prompts
+2026-10-28T14:54:57.102Z,24.102617,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: insufficient funds refused
+2026-10-28T14:54:57.234Z,24.234642,47dc,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: real remote buys blade
+2026-10-28T14:54:57.335Z,24.335287,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: client supplied price rejected
+2026-10-28T14:54:57.335Z,24.335287,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: duplicate equipment refused
+2026-10-28T14:54:57.335Z,24.335287,4594,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: concurrent requests charge once
+2026-10-28T14:54:57.450Z,24.450457,47dc,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: armor adds HP without free healing
+2026-10-28T14:54:57.451Z,24.451452,47dc,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: boots purchase preserves stun
+2026-10-28T14:54:58.268Z,25.268377,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: stun restores upgraded speed
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: stats cannot stack on recalculation
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: potion heals exactly sixty
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: potion clamps to max
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: full health potion does not charge
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: enemy shop refused by server distance
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: remote purchase outside base refused
+2026-10-28T14:54:58.269Z,25.269381,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: negative gold and NaN rejected
+2026-10-28T14:54:58.270Z,25.270384,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: potion request replay cannot double-spend
+2026-10-28T14:54:58.270Z,25.270384,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: malformed flood rate limited
+2026-10-28T14:55:00.284Z,27.284653,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: real M1 uses blade multiplier
+2026-10-28T14:55:00.400Z,27.400669,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: victim equipment setup
+2026-10-28T14:55:00.551Z,27.551483,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: hero killer XP and gold
+2026-10-28T14:55:00.551Z,27.551483,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: assist paid once
+2026-10-28T14:55:00.551Z,27.551483,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: killer not also assistant
+2026-10-28T14:55:00.551Z,27.551483,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: death retains XP gold equipment
+2026-10-28T14:55:05.067Z,32.067661,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: respawn uses level and equipment
+2026-10-28T14:55:05.067Z,32.067661,9558,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: respawn has new life identity
+2026-10-28T14:55:05.101Z,32.101574,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: environment death credits recent attacker
+2026-10-28T14:55:05.101Z,32.101574,84a4,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: old life assist never reused
+2026-10-28T14:55:05.385Z,32.385937,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: HUD replicates XP gold KDA and health
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: passive income tick
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: passive tick not duplicated
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: finished match freezes rewards
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: eliminated team cannot shop
+2026-10-28T14:55:05.387Z,32.387951,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: finished match cannot spend
+2026-10-28T14:55:05.501Z,32.501343,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: reset API clears progression and equipment
+2026-10-28T14:55:05.501Z,32.501343,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: reset API restores base stats
+2026-10-28T14:55:06.534Z,33.534836,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] PASS: departure clears match data
+2026-10-28T14:55:06.534Z,33.534836,7570,6,Info [FLog::CreatorOutput] [ProgressionTests] ALL PASS: 53 integration checks
+2026-10-28T14:55:15.405Z,42.405033,9558,6,Info [FLog::CreatorOutput] [Match] Round 2 ready

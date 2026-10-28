@@ -6,6 +6,7 @@ local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, require(Shared.Config.ItemConfig).Items)
 local Progression = require(script.Parent.HeroProgressionService)
 local Fighters = require(script.Parent.FighterStateService)
+local Teams = require(script.Parent.TeamService)
 local Stats = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
 local healthConnections: { [Player]: RBXScriptConnection } = {}
@@ -41,6 +42,7 @@ local function bind(player: Player, model: Model)
   applied[player] = model
   if healthConnections[player] then healthConnections[player]:Disconnect() end
   healthConnections[player] = humanoid.HealthChanged:Connect(function(health)
+   if player.Character ~= model then return end
    local folder = Progression.GetFolder(player); if folder then folder:SetAttribute("CurrentHealth", health) end
   end)
   Stats.RecalculateStats(player, true)
@@ -48,7 +50,8 @@ local function bind(player: Player, model: Model)
 end
 function Stats.Start()
  if started then return end; started = true
- Progression.Changed.Event:Connect(function(player: Player, reason: string, levels: number)
+ Progression.Changed.Event:Connect(function(player: Player, reason: string, levels: number, roundId: number?)
+  local match = Teams.GetState(); if match and roundId ~= match.roundId then return end
   Stats.RecalculateStats(player, reason == "Reset", levels * Config.LevelHeal)
  end)
  local function add(player: Player)

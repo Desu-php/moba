@@ -1,0 +1,42 @@
+2026-10-28T14:41:04.051Z,6.051299,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] Waiting for two clients...
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: map build is idempotent
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: user objects and Baseplate preserved
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: two 1500 HP bases
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: three lanes
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: Top mirrored routes
+2026-10-28T14:41:16.473Z,18.473780,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: Mid mirrored routes
+2026-10-28T14:41:16.474Z,18.474775,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: Bottom mirrored routes
+2026-10-28T14:41:16.474Z,18.474775,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: team specific spawn
+2026-10-28T14:41:16.542Z,18.542896,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: HUD on both clients
+2026-10-28T14:41:16.542Z,18.542896,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: no early first wave
+2026-10-28T14:41:21.508Z,23.508366,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: first wave has 18 minions
+2026-10-28T14:41:21.508Z,23.508366,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: two melee and one ranged per lane and side
+2026-10-28T14:41:24.525Z,26.525368,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: all minions move along routes
+2026-10-28T14:41:41.524Z,43.524109,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: second wave after twenty seconds
+2026-10-28T14:41:41.524Z,43.524109,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: opposing waves fight on every lane
+2026-10-28T14:41:41.529Z,43.529140,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: despawn frees registry
+2026-10-28T14:41:44.541Z,46.541550,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: hero M1 combo deals 27 to enemy NPC
+2026-10-28T14:41:44.541Z,46.541550,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: finisher resets NPC combo
+2026-10-28T14:41:44.541Z,46.541550,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: shared damage can kill enemy NPC (dealt=73, health=0)
+2026-10-28T14:41:45.856Z,47.856953,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: dead NPC destroyed and state removed
+2026-10-28T14:41:47.607Z,49.607803,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: M1 friendly fire blocked
+2026-10-28T14:41:47.607Z,49.607803,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: friendly base damage blocked
+2026-10-28T14:41:47.975Z,49.975388,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: NPC can kill hero
+2026-10-28T14:41:52.523Z,54.523365,8464,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: hero respawns at living base
+2026-10-28T14:41:54.523Z,56.523663,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: hero M1 damages enemy base
+2026-10-28T14:41:54.889Z,56.889179,85c0,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: ranged NPC attacks enemy structure
+2026-10-28T14:41:54.890Z,56.890179,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: NPC friendly hero damage blocked
+2026-10-28T14:41:56.923Z,58.923912,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: minion resumes route after defeating enemy
+2026-10-28T14:42:09.188Z,71.188965,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: stuck recovery has finite retries and cleanup
+2026-10-28T14:42:35.386Z,97.386887,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: minion traverses full route and attacks base
+2026-10-28T14:42:35.424Z,97.424744,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: global NPC cap enforced
+2026-10-28T14:42:35.429Z,97.429771,6698,6,Info [FLog::CreatorOutput] [Match] Winner: Blue
+2026-10-28T14:42:35.429Z,97.429771,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: last active team wins
+2026-10-28T14:42:35.429Z,97.429771,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: eliminated minions removed
+2026-10-28T14:42:35.429Z,97.429771,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: eliminated hero removed from combat
+2026-10-28T14:42:35.429Z,97.429771,6698,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: repeated destruction ignored
+2026-10-28T14:42:40.439Z,102.439980,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: finished match cannot spawn waves or respawn eliminated hero
+2026-10-28T14:42:40.439Z,102.439980,7318,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: combat disabled after finish
+2026-10-28T14:42:40.506Z,102.506241,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] PASS: winner retained during intermission
+2026-10-28T14:42:40.506Z,102.506241,3b88,6,Info [FLog::CreatorOutput] [SurvivalTests] ALL PASS: 38 integration checks
+2026-10-28T14:42:45.448Z,107.448570,28cc,6,Info [FLog::CreatorOutput] [Match] Round 2 ready

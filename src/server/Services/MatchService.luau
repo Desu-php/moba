@@ -21,6 +21,10 @@ local Towers = require(script.Parent.TowerService)
 local Structures = require(script.Parent.StructureService)
 local TowerConfig = require(Shared.Config.TowerConfig)
 local MapConfig = require(Shared.Config.MapConfig)
+local RoundConfig = require(Shared.Config.RoundConfig)
+local Ability = require(script.Parent.AbilityService)
+local Fighters = require(script.Parent.FighterStateService)
+local Life = require(script.Parent.CombatLifeService)
 local MatchService = {}
 local state: Rules.State? = nil
 local folder: Folder? = nil
@@ -36,6 +40,7 @@ function MatchService.Publish()
 	local current, replicated = state, folder
 	if not current or not replicated then return end
 	replicated:SetAttribute("Phase", current.phase); replicated:SetAttribute("StartedAt", current.startedAt)
+	replicated:SetAttribute("RoundId", current.roundId); replicated:SetAttribute("IntermissionEnds", current.intermissionEnds)
 	replicated:SetAttribute("FinishedAt", current.finishedAt); replicated:SetAttribute("Winner", current.winner or "")
 	replicated:SetAttribute("Wave", current.wave); replicated:SetAttribute("ActiveNPCs", AI.GetCount())
 	replicated:SetAttribute("PreparationEnds", current.preparationEnds); replicated:SetAttribute("MinimumPlayers", Mode.MinimumPlayers())
@@ -51,12 +56,25 @@ function MatchService.Publish()
 		end
 	end
 end
-local function eliminate(id: string)
+function MatchService.ResetRound(expectedRound: number): boolean
+	local current = state; if not current then return false end
+	if not Rules.restart(current, workspace:GetServerTimeNow(), expectedRound) then return false end
+	Damage.SetEnabled(false); Towers.CancelAll(); Ability.Reset(); AI.Reset(); Fighters.Reset(); Life.Reset()
+	MatchService.ResetProgression()
+	Bases.Reset(current.roundId); Towers.Reset(current.roundId); Teams.Reset(current.roundId)
+	nextAI = 0; nextTower = 0; nextSnapshot = 0; nextDiagnostics = 0
+	MatchService.Publish()
+	print(string.format("[Match] Round %d ready", current.roundId))
+	return true
+end
+local function eliminate(id: string, roundId: number)
 	local current = state; if not current then return end
+	if roundId ~= current.roundId then return end
 	if not Rules.eliminate(current, id, workspace:GetServerTimeNow()) then return end
 	Teams.Eliminate(id); AI.RemoveTeam(id)
 	if current.phase == "Finished" then
-		Damage.SetEnabled(false); AI.SetRunning(false); Towers.CancelAll(); Teams.Finish()
+		Damage.SetEnabled(false); AI.SetRunning(false); Towers.CancelAll(); Ability.Reset(); Fighters.Reset(); Teams.Finish()
+		Rules.schedule(current, current.finishedAt, RoundConfig.IntermissionTime)
 		print("[Match] Winner: " .. (current.winner or "Draw"))
 	end
 	MatchService.Publish()
@@ -80,12 +98,14 @@ function MatchService.Start()
 	end
 	local shots = Instance.new("RemoteEvent"); shots.Name = "MinionShot"; shots.Parent = replicated
 	local towerEvents = Instance.new("RemoteEvent"); towerEvents.Name = "TowerEvent"; towerEvents.Parent = replicated
-	Towers.Event.Event:Connect(function(kind: string, model: Model, origin: Vector3, destination: Vector3, teamId: string, lane: string)
-		towerEvents:FireAllClients(kind, model, origin, destination, teamId, lane)
+	Towers.Event.Event:Connect(function(kind: string, model: Model, origin: Vector3, destination: Vector3, teamId: string, lane: string, roundId: number)
+		if roundId ~= initial.roundId then return end
+		towerEvents:FireAllClients(kind, model, origin, destination, teamId, lane, roundId)
 		if kind == "Destroyed" then MatchService.Publish() end
 	end)
-	AI.Shot.Event:Connect(function(origin: Vector3, target: Vector3, kind: string, id: string, model: Model)
-		shots:FireAllClients(origin, target, kind, id, model)
+	AI.Shot.Event:Connect(function(origin: Vector3, target: Vector3, kind: string, id: string, model: Model, roundId: number)
+		if roundId ~= initial.roundId then return end
+		shots:FireAllClients(origin, target, kind, id, model, roundId)
 	end)
 	replicated.Parent = ReplicatedStorage; folder = replicated
 	Bases.Destroyed.Event:Connect(eliminate)
@@ -93,6 +113,8 @@ function MatchService.Start()
 	RunService.Heartbeat:Connect(function()
 		local current = state; if not current then return end
 		local now = workspace:GetServerTimeNow()
+		if Rules.intermission(current, now, RoundConfig.ResultDisplayTime) then MatchService.Publish() end
+		if current.phase == "Intermission" and now >= current.intermissionEnds then MatchService.ResetRound(current.roundId) end
 		Teams.Update(now)
 		if Rules.advance(current, now, #Players:GetPlayers(), Mode.MinimumPlayers(), Config.PreparationTime, MinionConfig.FirstWaveDelay) then
 			if current.phase == "InProgress" then Damage.SetEnabled(true); AI.SetRunning(true) end

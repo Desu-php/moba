@@ -5,6 +5,7 @@ local Input = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
 local VFX = require(script.Parent.AbilityVFXController)
+local Rounds = require(script.Parent.RoundController)
 local Controller = { Changed = Instance.new("BindableEvent") }
 local remote: RemoteEvent? = nil
 local serial = 0
@@ -38,14 +39,16 @@ function Controller.TryCast(id: string): boolean
 	local model = Players.LocalPlayer.Character; if not model then return false end
 	serial += 1; if serial > Config.MaxRequestId then return false end
 	pendingId = serial; pendingAt = workspace:GetServerTimeNow(); lastReason = ""
-	remote:FireServer(serial, model, id); Controller.Changed:Fire(); return true
+	remote:FireServer(serial, model, id, Rounds.Current()); Controller.Changed:Fire(); return true
 end
 function Controller.GetMessage(): string return lastReason end
 function Controller.Start()
 	if remote then return end
+	Rounds.Watch(function() pendingId = 0; corrections = {}; correctionModel = nil; lastReason = ""; Controller.Changed:Fire() end)
 	local event = ReplicatedStorage:WaitForChild("HeroAbility", 15); assert(event and event:IsA("RemoteEvent"), "HeroAbility missing")
 	remote = event; VFX.Start()
 	event.OnClientEvent:Connect(function(message: any)
+		if not Rounds.Accepts(message.roundId) then return end
 		if message.kind ~= "Result" then VFX.Event(message); return end
 		if message.character ~= Players.LocalPlayer.Character then return end
 		if typeof(message.requestId) ~= "number" or message.requestId ~= pendingId then return end

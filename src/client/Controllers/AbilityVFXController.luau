@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
+local Rounds = require(script.Parent.RoundController)
 type Effect = { parts: { BasePart }, at: number, untilAt: number, origin: Vector3, sphere: Model?, wind: CFrame?, distance: number?, hit: boolean? }
 local VFX = {}
 local effects: { Effect } = {}
@@ -48,6 +49,7 @@ function VFX.Event(message: any)
 end
 function VFX.Start()
 	if started then return end; started = true
+	Rounds.Watch(function() for i = #effects, 1, -1 do remove(i) end; table.clear(seen) end)
 	local created = Instance.new("Folder"); created.Name = "LocalHeroVFX"; created.Parent = workspace; folder = created
 	RunService.PreRender:Connect(function()
 		local now = workspace:GetServerTimeNow()

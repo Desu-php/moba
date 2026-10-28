@@ -11,13 +11,14 @@ local Spawner = {}
 local map: Folder? = nil
 local container: Folder? = nil
 function Spawner.Start(arena: Folder)
+	if container then return end
 	map = arena
 	local existing = workspace:FindFirstChild("NPCs")
 	assert(not existing or existing:IsA("Folder"), "Workspace.NPCs must be a Folder")
 	local root = (existing or Instance.new("Folder")) :: Folder; root.Name = "NPCs"; root.Parent = workspace
 	local owned = root:FindFirstChild("SurvivalMinions")
 	assert(not owned, "SurvivalMinions container already exists")
-	container = Instance.new("Folder"); (container :: Folder).Name = "SurvivalMinions"; (container :: Folder).Parent = root
+	local created = Instance.new("Folder"); created.Name = "SurvivalMinions"; created.Parent = root; container = created
 end
 function Spawner.Spawn(teamId: string, lane: string, kind: string, slot: number): Model?
 	local arena, parent = map, container

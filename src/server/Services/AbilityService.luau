@@ -16,14 +16,20 @@ local Knockback = require(script.Parent.KnockbackService)
 local Clones = require(script.Parent.CloneService)
 local Limiter = require(script.Parent.RequestLimiter)
 local Teams = require(script.Parent.TeamService)
+local RoundProtocol = require(Shared.Game.RoundProtocol)
 type Session = { state: Rules.State, character: Model?, bucket: Limiter.Bucket, lastId: number, lastReply: number,
 	connections: { RBXScriptConnection } }
 local Ability = {}
 local sessions: { [Player]: Session } = {}
 local remote: RemoteEvent? = nil
 local started = false
+local function sendAll(message: any)
+	local match = Teams.GetState(); if not remote or not match then return end
+	message.roundId = match.roundId; remote:FireAllClients(message)
+end
 local function publish(session: Session)
-	local model = session.character; if not model or not model.Parent then return end
+	-- CharacterAdded may precede parenting to Workspace on a cached respawn.
+	local model = session.character; if not model then return end
 	local cast = session.state.active
 	model:SetAttribute("AbilityId", if cast then cast.abilityId else "")
 	model:SetAttribute("AbilityCastId", session.state.serial)
@@ -61,7 +67,8 @@ local function result(player: Player, session: Session, id: number, accepted: bo
 	local now = workspace:GetServerTimeNow()
 	if not accepted and now - session.lastReply < Config.ReplyInterval then return end
 	session.lastReply = now
-	if remote then remote:FireClient(player, { kind = "Result", requestId = id, character = player.Character,
+	local match = Teams.GetState()
+	if remote then remote:FireClient(player, { kind = "Result", requestId = id, character = player.Character, roundId = if match then match.roundId else nil,
 		accepted = accepted, reason = reason, ready = table.clone(session.state.ready) }) end
 end
 function Ability.TryCast(player: Player, ...: any): (boolean, string)
@@ -113,7 +120,7 @@ local function impact(player: Player, session: Session, cast: Rules.Cast, fighte
 		local target = humanoid.Parent; if not target or not target:IsA("Model") then return end
 		local dealt = deal(fighter, humanoid, Config.Sphere.Damage, Config.Sphere.Stun, Config.Sphere.Knockback, Config.Sphere.UpVelocity)
 		if dealt <= 0 then return end
-		if remote then remote:FireAllClients({ kind = "SphereHit", position = target:GetPivot().Position, character = fighter.character, castId = cast.id, damage = dealt }) end
+		sendAll({ kind = "SphereHit", position = target:GetPivot().Position, character = fighter.character, castId = cast.id, damage = dealt })
 	elseif Rules.claim(session.state, cast, now) then
 		if cast.abilityId == "ShadowClones" then Clones.Spawn(player, fighter.character)
 		elseif cast.abilityId == "WindPalm" then
@@ -124,7 +131,7 @@ local function impact(player: Player, session: Session, cast: Rules.Cast, fighte
 			local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Exclude
 			params.FilterDescendantsInstances = { fighter.character }; params.RespectCanCollide = true
 			local wall = workspace:Raycast(fighter.root.Position, fighter.root.CFrame.LookVector * wind.Range, params)
-			if remote then remote:FireAllClients({ kind = "WindBurst", frame = fighter.root.CFrame, distance = if wall then wall.Distance else wind.Range }) end
+			sendAll({ kind = "WindBurst", frame = fighter.root.CFrame, distance = if wall then wall.Distance else wind.Range })
 		end
 	end
 end
@@ -144,12 +151,19 @@ function Ability.Update(now: number)
 end
 function Ability.Reset()
 	for player, session in sessions do cancel(session); table.clear(session.state.ready); publish(session); Clones.ClearOwner(player) end
+	Clones.Reset()
+end
+function Ability.HandleRequest(player: Player, ...: any): (boolean, string)
+	local args = table.pack(...)
+	local match = Teams.GetState()
+	if not match or not RoundProtocol.accepts(match.roundId, args[args.n]) then return false, "StaleRound" end
+	return Ability.TryCast(player, table.unpack(args, 1, args.n - 1))
 end
 function Ability.GetState(player: Player): Rules.State? local session = sessions[player]; return if session then session.state else nil end
 function Ability.Start()
 	if started then return end; started = true
 	local event = Instance.new("RemoteEvent"); event.Name = "HeroAbility"; event.Parent = ReplicatedStorage; remote = event
-	event.OnServerEvent:Connect(function(player, ...: any) Ability.TryCast(player, ...) end)
+	event.OnServerEvent:Connect(function(player, ...: any) Ability.HandleRequest(player, ...) end)
 	Players.PlayerAdded:Connect(function(player) bind(player) end)
 	Players.PlayerRemoving:Connect(function(player)
 		local session = sessions[player]; if not session then return end
@@ -163,7 +177,8 @@ function Ability.Start()
 		end
 	end)
 	Clones.Spawned.Event:Connect(function(model: Model)
-		if remote then remote:FireAllClients({ kind = "Smoke", position = model:GetPivot().Position }) end
+		local match = Teams.GetState()
+		if match and model.Parent and model:GetAttribute("RoundId") == match.roundId then sendAll({ kind = "Smoke", position = model:GetPivot().Position }) end
 	end)
 	for _, player in Players:GetPlayers() do bind(player) end
 	RunService.Heartbeat:Connect(function() Ability.Update(workspace:GetServerTimeNow()) end)

@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.VFXConfig)
 local Debug = require(Shared.Config.DebugConfig)
+local Rounds = require(script.Parent.RoundController)
 
 type Effect = { object: Instance, expiresAt: number, tweens: { Tween } }
 local VFXController = {}
@@ -24,6 +25,14 @@ local function dispose(effect: Effect)
 	for _, tween in effect.tweens do tween:Cancel() end
 	effect.object:Destroy()
 end
+function VFXController.Clear()
+	for _, effect in effects do dispose(effect) end; table.clear(effects)
+	for _, effect in debugEffects do dispose(effect) end; table.clear(debugEffects)
+	shakeUntil = 0; shakeAmplitude = 0
+	if shakeHumanoid and shakeHumanoid.Parent then shakeHumanoid.CameraOffset = Vector3.zero end
+	shakeHumanoid = nil; cameraOffset = Vector3.zero
+end
+Rounds.Watch(VFXController.Clear)
 
 local function remember(object: Instance, lifetime: number, tweens: { Tween }, debugEffect: boolean?)
 	local list = if debugEffect then debugEffects else effects

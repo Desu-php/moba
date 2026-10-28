@@ -9,6 +9,8 @@ local Progression = require(script.Parent.HeroProgressionService)
 local Economy = require(script.Parent.EconomyService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Limiter = require(script.Parent.RequestLimiter)
+local Teams = require(script.Parent.TeamService)
+local RoundProtocol = require(Shared.Game.RoundProtocol)
 type Session = { bucket: Limiter.Bucket, lastId: number, busy: boolean }
 local Shop = {}
 local shops: { [string]: BasePart } = {}
@@ -19,6 +21,8 @@ function Shop.GetLocation(teamId: string): BasePart? return shops[teamId] end
 function Shop.Availability(player: Player): (Humanoid?, string?)
  if not Economy.IsEligible(player) then return nil, "Unavailable" end
  local model = player.Character
+ local match = Teams.GetState()
+ if not model or not match or model:GetAttribute("RoundId") ~= match.roundId or model:GetAttribute("CombatDisabled") == true then return nil, "Unavailable" end
  local humanoid = if model then model:FindFirstChildOfClass("Humanoid") else nil
  local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
  if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") then return nil, "Dead" end
@@ -66,6 +70,12 @@ function Shop.TryPurchase(player: Player, ...: any): (boolean, string)
  return success, reason
 end
 function Shop.ResetSessions() table.clear(sessions) end
+function Shop.HandleRequest(player: Player, ...: any): (boolean, string)
+ local args = table.pack(...)
+ local match = Teams.GetState()
+ if not match or not RoundProtocol.accepts(match.roundId, args[args.n]) then return false, "StaleRound" end
+ return Shop.TryPurchase(player, table.unpack(args, 1, args.n - 1))
+end
 function Shop.Start(arena: Folder)
  if started then return end; started = true
  remote = Instance.new("RemoteEvent"); remote.Name = "ItemShop"; remote.Parent = ReplicatedStorage
@@ -77,15 +87,19 @@ function Shop.Start(arena: Folder)
   local prompt = part:FindFirstChildOfClass("ProximityPrompt"); assert(prompt, "Shop needs ProximityPrompt")
   prompt.Triggered:Connect(function(player)
    local humanoid = Shop.Availability(player)
-   if humanoid and player:GetAttribute("TeamId") == id and remote then remote:FireClient(player, "Open") end
+   local match = Teams.GetState()
+   if humanoid and player:GetAttribute("TeamId") == id and remote and match then remote:FireClient(player, "Open", nil, nil, nil, match.roundId) end
   end)
  end
  ;(remote :: RemoteEvent).OnServerEvent:Connect(function(player: Player, ...: any)
   local requestId = ...
-  local success, reason = Shop.TryPurchase(player, ...)
+  local success, reason = Shop.HandleRequest(player, ...)
   -- Invalid floods receive no amplification; well-formed requests get a bounded response.
   if typeof(requestId) == "number" and requestId == requestId and requestId >= 1 and requestId <= Config.MaxRequestId
-   and reason ~= "RateLimited" and remote then remote:FireClient(player, "Result", requestId, success, reason) end
+   and reason ~= "RateLimited" and reason ~= "StaleRound" and remote then
+   local match = Teams.GetState()
+   remote:FireClient(player, "Result", requestId, success, reason, if match then match.roundId else nil)
+  end
  end)
  Players.PlayerRemoving:Connect(function(player) sessions[player] = nil end)
 end

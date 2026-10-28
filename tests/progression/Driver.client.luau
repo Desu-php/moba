@@ -13,10 +13,11 @@ end)
 local controller = require(player.PlayerScripts:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild("CombatController"))
 driver.OnClientEvent:Connect(function(id: number, mode: string, request: number?, item: string?)
  local result: any = {}
- if mode == "attack" then combat:FireServer(controller.NextRequestId(), player.Character); task.wait(0.45)
+ if mode == "attack" then combat:FireServer(controller.NextRequestId(), player.Character, ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId")); task.wait(0.45)
  elseif mode == "buy" or mode == "forged" then
   assert(request and item)
-  if mode == "forged" then shop:FireServer(request, item, 0) else shop:FireServer(request, item) end
+  local roundId = ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId")
+  if mode == "forged" then shop:FireServer(request, item, 0, roundId) else shop:FireServer(request, item, roundId) end
   local deadline = os.clock() + 5
   repeat task.wait(0.03) until replies[request] ~= nil or os.clock() > deadline
   result = replies[request] or { success = false, reason = "NoReply" }

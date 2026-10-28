@@ -14,12 +14,15 @@ ability.OnClientEvent:Connect(function(message: any) if message.kind == "Result"
 driver.OnClientEvent:Connect(function(id: number, mode: string, data: any)
 	local result: any = {}
 	if mode == "cast" then
-		ability:FireServer(table.unpack(data, 1, data.n))
+		-- RemoteEvent array serialization does not retain the mixed table's `n` key.
+		local count = #data + 1
+		data[count] = ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId")
+		ability:FireServer(table.unpack(data, 1, count))
 		local deadline = os.clock() + 2
 		repeat task.wait(0.02) until replies[data[1]] or os.clock() >= deadline
 		result = replies[data[1]] or { reason = "NoReply", accepted = false }
 	elseif mode == "flood" then
-		for i = 1, 30 do ability:FireServer(data + i, player.Character, "Unknown") end
+		for i = 1, 30 do ability:FireServer(data + i, player.Character, "Unknown", ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId")) end
 		task.wait(0.25); local replyCount = 0
 		for requestId in replies do if requestId > data and requestId <= data + 30 then replyCount += 1 end end
 		result.replies = replyCount
