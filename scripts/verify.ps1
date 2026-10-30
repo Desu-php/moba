@@ -18,10 +18,10 @@ function Inputs([string]$scope,[string]$launchKind = 'Standalone') {
     $files = @(Get-ChildItem (Join-Path $root 'src') -Recurse -File)
     if ($scope -eq 'Fast') {
         $files = @(Get-ChildItem (Join-Path $root 'src/shared/Abilities') -File) + @(Get-ChildItem (Join-Path $root 'src/shared/Combat') -File) + @(Get-ChildItem (Join-Path $root 'src/shared/Config') -File)
-        foreach ($relative in @('src/shared/Combat/HeroPoses.luau','src/shared/Config/AbilityConfig.luau','src/shared/Config/HeroConfig.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1')) { $files += Get-Item (Join-Path $root $relative) }
+        foreach ($relative in @('src/shared/Combat/HeroPoses.luau','src/shared/Config/AbilityConfig.luau','src/shared/Config/HeroConfig.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1')) { $files += Get-Item (Join-Path $root $relative) }
     } elseif ($scope -eq 'Targeted') {
         $files += @(Get-ChildItem (Join-Path $root 'tests/hero') -File)
-        foreach ($relative in @('tests/hero-fast.project.json','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1','default.project.json')) { $files += Get-Item (Join-Path $root $relative) }
+        foreach ($relative in @('tests/hero-fast.project.json','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1','default.project.json')) { $files += Get-Item (Join-Path $root $relative) }
     } elseif ($areas.ContainsKey($scope)) {
         # Hero also exercises the client's target picker; include its controller.
         $dir = Join-Path $root ('tests/' + $areas[$scope])
@@ -74,7 +74,7 @@ $fingerprint = Fingerprint (Inputs $scope)
 $toolFiles = @((Get-Item $RojoPath)) + @(Get-ChildItem $LuauDirectory -Filter '*.exe' -File) + @(Get-ChildItem $LuauLspDirectory -Filter '*.exe' -File) + @((Get-Item (Join-Path $LuauLspDirectory 'globalTypes.d.luau')))
 $toolStamp = ($toolFiles | Sort-Object FullName | ForEach-Object { $_.FullName + ':' + (Get-FileHash $_.FullName).Hash }) -join '|'
 $previous = ReadRecord $scope
-$products = if ($scope -eq 'Fast') { @() } elseif ($scope -eq 'Targeted') { @('rasengan-fast.rbxlx') } else { @('jungle-tests.rbxlx','regression.rbxlx','anime-battlegrounds.rbxlx','hero-tests.rbxlx','round-tests.rbxlx','tower-tests.rbxlx','progression-tests.rbxlx','survival-tests.rbxlx','combat-regression-stage3.rbxlx') }
+$products = if ($scope -eq 'Fast') { @() } elseif ($scope -eq 'Targeted') { @('rasengan-fast.rbxlx') } else { @('learning-tests.rbxlx','jungle-tests.rbxlx','regression.rbxlx','anime-battlegrounds.rbxlx','hero-tests.rbxlx','round-tests.rbxlx','tower-tests.rbxlx','progression-tests.rbxlx','survival-tests.rbxlx','combat-regression-stage3.rbxlx') }
 $present = @($products | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root ('build/' + $_))) }).Count -eq 0
 if ($present -and $previous) {
     foreach ($product in $products) {

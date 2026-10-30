@@ -95,8 +95,13 @@ local ok, failure = xpcall(function()
 	local initial = Native.Get(a); assert(initial)
 	check("native inference marked provisional", model:GetAttribute("NativeStatsProvisional") == true)
 	check("inferred level1 max mana1510", initial.pool.maximum == 1510)
-	check("rank1 Q requires source level4", select(2, cast(a, "Rasengan")) == "Level")
-	Progression.AddXP(a, 100000); Progression.AddXP(b, 100000)
+	check("unlearned Q cannot cast", select(2, cast(a, "Rasengan")) == "Unlearned")
+	Progression.AddXP(a, 2700); Progression.AddXP(b, 2700) -- Keep the existing level10 damage fixture, cap coverage lives in LearningTests.
+ for _, player in {a,b} do
+  local learning=require(services.AbilityLearningService); local character=player.Character :: Model
+  assert(learning.HandleRequest(player,1,character,character:GetAttribute("LifeId"),"Rasengan",state.roundId))
+  assert(learning.HandleRequest(player,2,character,character:GetAttribute("LifeId"),"ShadowClones",state.roundId))
+ end
 	model:SetAttribute("StrengthBonus", 2); (b.Character :: Model):SetAttribute("StrengthBonus", 2)
 	check("source integer STR input fixture30", select(2, Native.GetStats(a)) == 30 and Stats.Get(a).Level == 10)
 	clean(); arrange(a,Vector3.new(0,36,0)); target("Blue",Vector3.new(0,36,-4))

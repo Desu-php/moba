@@ -7,6 +7,7 @@ local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, Items.Items)
 local Economy = require(script.Parent.EconomyService)
 local Teams = require(script.Parent.TeamService)
+local Learning = require(Shared.Abilities.SkillLearning)
 local Progression = { Changed = Instance.new("BindableEvent") }
 local records: { [Player]: Logic.Profile } = {}
 local folders: { [Player]: Folder } = {}
@@ -22,6 +23,11 @@ function Progression.Publish(player: Player)
  local data, folder = records[player], folders[player]; if not data or not folder then return end
  for _, key in { "Level", "CurrentXP", "TotalKills", "TotalDeaths", "TotalMinionKills", "Assists" } do
   folder:SetAttribute(key, (data :: any)[key])
+ end
+ folder:SetAttribute("SkillPoints", data.SkillPoints)
+ for _, id in Learning.Order do
+  folder:SetAttribute("Rank_"..id, data.Learned[id] or 0)
+  folder:SetAttribute("LearnReason_"..id, Learning.reason(data,id) or "Ready")
  end
  folder:SetAttribute("XPToNextLevel", Rules.required(data.Level)); folder:SetAttribute("Gold", Economy.GetGold(player))
  for id in Items.Items do folder:SetAttribute("Own_" .. id, data.Owned[id] == true) end

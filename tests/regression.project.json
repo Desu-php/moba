@@ -38,6 +38,9 @@
         "$className": "Folder",
         "Jungle": {
           "$path": "jungle/Driver.client.luau"
+        },
+        "Learning": {
+          "$path": "learning/Driver.client.luau"
         }
       }
     },
@@ -70,6 +73,9 @@
         "$className": "Folder",
         "Jungle": {
           "$path": "jungle/Runner.server.luau"
+        },
+        "Learning": {
+          "$path": "learning/Runner.server.luau"
         }
       }
     },

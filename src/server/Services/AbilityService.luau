@@ -53,6 +53,9 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 		or fighter.humanoid:GetState()==Enum.HumanoidStateType.Dead or not Hitboxes.IsFiniteCFrame(fighter.root.CFrame) then return result(false,"Unavailable") end
 	Fighters.Update(fighter,now)
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
+ local profile=require(script.Parent.HeroProgressionService).Get(player)
+ local line=if abilityId=="CloneCommand" then "ShadowClones" else abilityId
+ if not profile or (profile.Learned[line] or 0)<1 then return result(false,"Unlearned") end
 	return result(Naruto.TryCast(player,abilityId,id,now,target))
 end
 function Ability.HandleRequest(player: Player,...: any): (boolean,string)

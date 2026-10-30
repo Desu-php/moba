@@ -10,10 +10,13 @@ local Teams = require(script.Parent.TeamService)
 local Stats = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
 local healthConnections: { [Player]: RBXScriptConnection } = {}
+local bonusConnections: { [Player]: RBXScriptConnection } = {}
 local applied: { [Player]: Model } = {}
 local started = false
 function Stats.Get(player: Player): Logic.Stats
- return Rules.stats(Progression.Get(player) or Rules.new())
+ local model = player.Character
+ local bonus = if model then model:GetAttribute("StrengthBonus") else nil
+ return Rules.stats(Progression.Get(player) or Rules.new(), if typeof(bonus)=="number" and bonus==bonus and math.abs(bonus)<math.huge then bonus else 0)
 end
 function Stats.GetForModel(model: Model): Logic.Stats?
  local player = Players:GetPlayerFromCharacter(model)
@@ -30,7 +33,7 @@ function Stats.RecalculateStats(player: Player, fullHealth: boolean?, healing: n
  local folder = Progression.GetFolder(player)
  if folder then
   local fields: { [string]: number } = { MaxHealth = values.MaxHealth, WalkSpeed = values.WalkSpeed,
-   AttackDamageMultiplier = values.AttackDamageMultiplier, Defense = values.Defense, Level = values.Level }
+   AttackDamageMultiplier = values.AttackDamageMultiplier, Defense = values.Defense, Level = values.Level, Strength = values.Strength, RawStrength = values.RawStrength, Agility = values.Agility, RawAgility = values.RawAgility, Intelligence = values.Intelligence, MaxMana = values.MaxMana, ManaRegen = values.ManaRegen }
   for key, value in fields do folder:SetAttribute(key, value) end
   folder:SetAttribute("CurrentHealth", humanoid.Health)
  end
@@ -41,6 +44,10 @@ local function bind(player: Player, model: Model)
   if not humanoid or not humanoid:IsA("Humanoid") or player.Character ~= model or player.Parent ~= Players or applied[player] == model then return end
   applied[player] = model
   if healthConnections[player] then healthConnections[player]:Disconnect() end
+  if bonusConnections[player] then bonusConnections[player]:Disconnect() end
+  bonusConnections[player]=model:GetAttributeChangedSignal("StrengthBonus"):Connect(function()
+   if player.Character==model then Stats.RecalculateStats(player) end
+  end)
   healthConnections[player] = humanoid.HealthChanged:Connect(function(health)
    if player.Character ~= model then return end
    local folder = Progression.GetFolder(player); if folder then folder:SetAttribute("CurrentHealth", health) end
@@ -59,6 +66,7 @@ function Stats.Start()
    player.CharacterAdded:Connect(function(model) bind(player, model) end),
    player.CharacterRemoving:Connect(function()
     if healthConnections[player] then healthConnections[player]:Disconnect(); healthConnections[player] = nil end
+    if bonusConnections[player] then bonusConnections[player]:Disconnect(); bonusConnections[player]=nil end
     applied[player] = nil
    end),
   }
@@ -68,6 +76,7 @@ function Stats.Start()
  Players.PlayerRemoving:Connect(function(player)
   for _, c in connections[player] or {} do c:Disconnect() end
   if healthConnections[player] then healthConnections[player]:Disconnect() end
+  if bonusConnections[player] then bonusConnections[player]:Disconnect(); bonusConnections[player]=nil end
   healthConnections[player] = nil; connections[player] = nil; applied[player] = nil
  end)
  for _, player in Players:GetPlayers() do add(player) end

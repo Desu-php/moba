@@ -1,9 +1,9 @@
 --!strict
 -- Prototype native-default inference from the supplement, not exact Warcraft runtime parity.
-export type Hero = { read Strength: number, read StrengthGrowth: number, read Intelligence: number,
+export type Hero = { read Strength: number, read StrengthGrowth: number, read Agility: number, read AgilityGrowth: number, read Intelligence: number,
 	read IntelligenceGrowth: number, read BaseMana: number }
 export type Native = { read ManaPerIntelligence: number, read RegenPerIntelligence: number, read BaseManaRegen: number }
-export type Values = { rawStrength: number, strength: number, intelligence: number, maxMana: number, regen: number }
+export type Values = { rawStrength: number, strength: number, rawAgility: number, agility: number, intelligence: number, maxMana: number, regen: number }
 export type Pool = { mana: number, maximum: number, regen: number, at: number }
 local Module = {}
 local function finite(value: number): boolean return value == value and math.abs(value) < math.huge end
@@ -15,7 +15,8 @@ function Module.configure(hero: Hero, native: Native)
 		-- Explicit provisional floor policy; preserve raw growth for later engine comparison.
 		local strength = math.max(0, math.floor(raw + 1e-9))
 		local intelligence = hero.Intelligence + (level - 1) * hero.IntelligenceGrowth
-		return { rawStrength = raw, strength = strength, intelligence = intelligence,
+		local agility = hero.Agility + (level - 1) * hero.AgilityGrowth
+		return { rawStrength = raw, strength = strength, rawAgility = agility, agility = math.floor(agility + 1e-9), intelligence = intelligence,
 			maxMana = hero.BaseMana + native.ManaPerIntelligence * intelligence,
 			regen = native.BaseManaRegen + native.RegenPerIntelligence * intelligence }
 	end

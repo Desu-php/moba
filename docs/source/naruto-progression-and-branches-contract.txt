@@ -1,0 +1,249 @@
+NARUTO LEGEND IMPLEMENTATION REFERENCE — PROGRESSION AND REMAINING BRANCHES
+2026-10-30. Static exact-map research, no code implementation.
+Original Library ID: libfile_1fd78f0b2d588191ae7316eed6853019
+Original SHA256: 8c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8
+
+This supplement does NOT certify every hidden Naruto technique or all native engine edge cases.
+Priority-ready: explicit progression configuration, XP script rules, Gamakichi rank tables and object profiles.
+Verified form control flow: Sage/KCM/Kurama; native inherited modifiers and quirks explicitly isolated.
+Advanced variants: bounded matrix, not a claim of complete ranged/periodic graph certification.
+Earlier base A014/A04N contract remains complementary; this document supersedes earlier tooltip-only statements where it gives exact object/script evidence.
+No Dota numbers or new attribute-purchase skill are introduced.
+No assets or JASS transplanted into Roblox.
+
+Files below use 1-based source references to extracted/war3map.j and rawcode records in extracted/war3map.w3a.json / war3map.w3u.json.
+Companion evidence JSON: gamakichi-object-evidence.json and forms-object-evidence.json.
+All references local to /workspace/scratch/c0baa7d7d30c/warcraft-map.
+
+
+======================================================================
+naruto-progression-core-contract.txt
+======================================================================
+NARUTO LEGEND1.7A FIX20.3 — NARUTO PROGRESSION CORE
+Source: exact uploaded map, SHA2568c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Pair with naruto-progression-xp-contract.txt for XP awards/rates.
+
+Hpal object facts:
+ustr16,ustp1.399999976; uagi15,uagp1.100000024; uint14,uinp1.
+Design precision: STR16+1.4*(level−1), AGI15+1.1*(level−1), INT14+1*(level−1), before native integer effective-stat rounding and bonuses. AGI tooltip14 is stale.
+uhpm300; uhpr1; umpm1300; umpi9999(initial, notmaximum); udef0; ua1b10; ua1s3; dicecount inherited; attackcooldown2; damagepoint.5; backswing.5; range50; collision25. Primary attribute inheritsHpal (official native Paladin STR), not explicit local override.
+war3mapMisc.txt: cap30, STR+20HP, AGI+.2armor. Native default INT+15mana and+.05mana/sec, STR+.05HP/sec supported by official Blizzard docs but not explicitly serialized. Hpal mana regeneration/base movement not overridden, official native Paladin.01/sec and270.
+Under that native profile, level1 unmodified maxHP620, maxMana1510, manaRegen.71/sec, HPregen1.8/sec; not runtime-certified final totals. No guessed Dota stat coefficients, attack-speed bonus or magicresistance per attribute. Effective attack damage additionally depends primary-stat/native dice/armor rules; do not simply display10 as total damage.
+Sources: https://classic.battle.net/war3/basics/heroes.shtml and https://classic.battle.net/war3/human/units/paladin.shtml.
+
+Learning:
+Hpal uhab exactlyA014,A04N,A005,A09J,A017.
+A014 alev3,arlv4,alsk7 =>minimumlevels4,11,18.
+A04N alev4,alsk4,arlv omitted =>firstMin+0/4/8/12; candidate1/5/9/13 ifnativefirst1.
+A005 alev10,alsk2,arlv omitted =>firstMin+2*(rank−1); candidate1/3/.../19 ifnativefirst1.
+A09J arlv6,alsk4,3level data butalev omitted =>6/10/14 for representedranks; native totalrank count mustconfirm.
+A017 alev3,arlv13,alsk7 =>13,20,27; rank3casting alsoHagoromo flag.
+Native source docs: one initialpoint andoneeachgainedlevel. No JASS manualNaruto skillpointgrant or attribute-point ability in uhab. User phrase "как в доте" does not justify replacing source growth/learning with Dota tables or inventing spendableattribute points.
+If expected3Sageranks and native1point/level, allfive branches cost23total points; level30 yields30points =>7remaining. This is arithmetic/inference, not proof of hiddenstatbutton. Surfaceunspentpoints or leaveexplicitdesigndecision; do not auto-add "+2allstats" option.
+Skillrank upgrades consumeonepoint; meetingminimumhero level enablespurchase, not autogrant ofrank. Validation: sufficientunspentpoint, previousrank, minimumlevel, maximumrank. Serverauthoritative adapter. ExactWC3 UI/minrank/firstlevel default mustconfirm.
+
+Late unlocks:
+>=16 leftarrow converts200Kuramachakra to200normalmana (44995–45018).
+>=21 Naruto level event exposes/addsA01F (58748–58756,59017–59023).
+>=25 once startsHagoromo wait360seconds, thenwaitalive and1secondcutscene ->flag224 (58760–58768,59024–59047).
+A017rank3available minimum27 butcannotcast withoutflag224. No freeautomaticrank3 in thatgrant.
+Generic Level_Event123068ff contains only locals; Ability_Level_Event123074ff noNaruto extra skill grants.
+
+Proposed architecture (not source mechanic):
+BaseGrowth fractional ledger +EffectiveNativeStatPolicy +Item/TemporaryModifiers.
+ProgressionAggregate {XP,Level,UnspentPoints,LearnedRanks,UnlockFlags}; perhero timers forHagoromo.
+Keep XPThresholds11–30, roundingpolicy, nativefirstlevels and creep-factor extension configurableunresolved. Do not choose200*level orDota tables as "NarutoLegend" fact.
+Do not resetXP/learnedranks whenKCM/Sage changes. Form-record rawgrowth differs; native metamorph retention has tobe confirmed before substituting growthprofiles.
+
+Acceptance:
+Level1 stats16/15/14; correcttooltip conflict; level increment growthonlyonce.
+Award crossingmultiplelevels grants everyearnedpoint once; cap30 nooverflowlevel.
+Rank4Rasengan impossible; rank1belowlevel4 impossible; rank2below11 impossible.
+Sage representedrank2notbefore10, KCMrank2notbefore20.
+Client cannotforgeextraXP/skillpoints/ranks; failedlearn leavespoints unchanged.
+Death/respawn preservesprogression; newmatch resets; morph preservesidentity.
+No freeHagoromo onlevel25, nofreeKCMrank3, noWindPalm/Naruto attribute-button invention.
+Native XP handicap175% appliedat verifiedlayer; explicitboss700 award shouldn'tautomaticallydouble-multiply.
+
+
+======================================================================
+naruto-progression-xp-contract.txt
+======================================================================
+NARUTO LEGEND 1.7A FIX20.3 — XP / SKILLPOINT CONTRACT
+Static source only; no map execution.
+
+MAP FACTS
+ModeSettings JASS17091–17103 sets175 percent XP handicap for players1–5,7–11. Invoked via ExecuteFunc at123502. Optional -exp (16116–16138) sets300 percent and9000gold for nonspectators; enabled intro16014, Player1 chat trigger, disables after use.
+Misc: MaxHeroLevel30; GlobalExperience0; BuildingKillsGiveExp1; HeroFactorXP90,70,60,50,40. No explicit NeedHeroXP table/formula, bounty table or XP radius override.
+Boss700XP calls18315–18360, helpers17415–17478: Kinkaku gg_unit_nsoc_0094, Ginkaku gg_unit_noga_0119, transformed udg_UNIT159; non-summoned neutral-aggressive death. Killer team selects all allied heroes across playable map. Each gets700, not shared700. Filter has no alive/illusion exclusion.
+Duel70*recipientLevel calls19369,19419,19894–5,19970–1,20047–8,20123–4. 1v1 source gives XP to apparent loser, not declared winner. Do not silently repair.
+Hidan death-prevention122824–122833: targetU002, learnedA0KV, mana>=30percent, lethal hit, not already immortal. Pool125*targetHeroLevel around SOURCE radius300. GiveHeroesXPInArea122762–122788 divides integer pool equally across same-team nonillusion heroes withoutACrn. Remainder lost; no alive check. Not ordinary kill formula.
+No bespoke skillpoint grant/modify calls found. Generic learn/level handlers123068ff do not grant Naruto extra points. SetHeroXP calls synchronize bodies/morphs/clones; generic copy4365ff; morph41179/41211. Debug level command123343–123349 excluded from gameplay.
+
+NATIVE DOCUMENTED / NOT SERIALIZED MAP FACT
+Blizzard https://classic.battle.net/war3/basics/heroes.shtml documents1initial skillpoint and1per level. Default cumulative thresholds levels2–10:200,500,900,1400,2000,2700,3500,4400,5400. Map overrides cap30.
+Unresolved: thresholds11–30; inherited sharing radius; HeroFactorXP extrapolation; whether XP handicap applies to explicit AddHeroXP and exact stacking/rounding. Do not assert700*1.75 or import Dota constants. Native defaults need matching engine data or controlled fixture verification.
+
+
+======================================================================
+naruto-gamakichi-contract.txt
+======================================================================
+Naruto Legend 1.7A FIX20.3 — A005 GAMAKICHI CONTRACT
+Source: uploaded map SHA2568c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Static source only; no Warcraft execution. Object refs mean war3map.w3a/.w3u parsed records; JASS line numbers refer extracted war3map.j.
+
+A005 inherits AOsf (Feral Spirit), hero ability in Hpal. alev10, alsk2; arlv omitted/inherited. Candidate minimum levels1/3/5/7/9/11/13/15/17/19 requires confirming inherited AOsf arlv1. Ten actual ranks, not eleven.
+Rank:          1  2  3  4   5   6   7   8   9  10
+Mana:         50 50 50 50 150 150 150 150 300 300
+Cooldown(s):  60 60 60 60  60 150 150 150 150 150
+LifeTime(s):  10 15 20 25  30  35  40  45  50  55
+Osf2 summon count1 all. Osf1=h00H ranks1–5, h005 ranks6–10. Buff B009. adur=ahdu listed. aare250 ranks5–8,300 ranks9–10; ranks1–4 inherited. Spell animation spell,throw; hotkeyR.
+Native AOsf supplies actual summon placement, ownership/lifetime/control, existing-summon cap/replacement policy. These are not fully encoded by custom overrides. Do NOT assert summon appears exactly200 ahead: JASS45726–45765 creates cosmetic Kuchiyose/smoke there, not the summon itself. EVENT_SPELL_EFFECT registration45767–45772. No literal h00H/h005 JASS usage or A005 custom stat scaling found. Do not invent scaling with Naruto STR or summon rank within each tier.
+
+h00H derives hrif: HP500, HPregen2, armor7, movement350, mana initial/max500, level7, collision100, attack range100, base attack ua1b41, dice count1/sides0, damagepoint.5, backswing.5; abilityA00A.
+h005 derives hrif: HP1500, HPregen5, armor15, movement400, mana initial/max1000, level7, collision100, attack range100, base attack ua1b101, dice count1/sides0; damagepoint.5/backswing.5; abilitiesA0EW,A00A.
+Tooltip says40/100 damage, object says41/101 with zero-sided die. Native zero-sided dice interpretation is unresolved; preserve rawbase and test actual damage rather than silently substituting tooltip. Attack cooldown, mana regen, attack/armor types and acquisition range not overridden here; inherited hrif/default fields need resolving. These units are nonheroes, not independent skill-learning characters.
+
+A00A oil/molasses shot derives ANdh (Drunken Haze), nonhero1rank:
+mana0, cooldown25s, range750, area150 (tooltip incorrectly100), durationhero/nonhero6s; projectile speed900, arc.05, buffB047; Nsi2=.3, Nsi3=.4, Nsi4=.4. Native metadata normally denotes miss chance, movement reduction, attack-speed reduction; metadata not embedded/read, so exact field interpretation remains native boundary. Tooltip confirms30%miss and40%movement slow only. No literal A00A/B047 JASS handlers found. Native immunity/dispels/stacking/filter defaults apply; not invented hard-stun or damage spell.
+
+A0EW chopping derives AHbz (Blizzard), nonhero1rank:
+mana0, cooldown30s, range250, area400, casttime.5, enemies filter, animation spell,channel.
+Hbz1=4, Hbz2=120, Hbz3=4, Hbz4=0, Hbz6=750. Native Blizzard interpretation: four waves,120damage/wave, four shards, zero building damage factor,750 max damage/wave; confirm metadata/runtime before claiming exact per-target total or cadence. Hbz5 wave interval is omitted/inherited. Tooltip calls it120persec for4sec; not sufficient proof of first/last tick or total480. No literal A0EW JASS handler found.
+Thus stronger toad adds an area channel, not passive120DPS during entire summon life.
+
+Implementation boundaries:
+- authoritative rank config separated from NativeSummonPolicy (initial minimumlevel, placement, replacement limit, control mode) and NativeSpellPolicy (Haze/Blizzard edges).
+- Explicitly represent early/adult summon profiles; do not upgrade existing summon when caster learns new rank without evidence.
+- Retain user-directed controls as product choice; map uses controllable owned native summoned units, no custom chase AI found for these rawcodes.
+- At expiration/death clean entity and effects. Owner-death/despawn behavior needs native test, not blanket auto-kill assumption.
+- No Naruto damage-stat scaling in summon base profiles.
+
+Acceptance:
+rank4→5 changesmana50→150 but not summon type/CD60;
+rank5→6 changes early→adult, cooldown60→150, lifetime30→35;
+rank8→9 changesmana150→300;
+rank10 lifetime55, no rank11;
+one native summon per cast; abilities earlyoil/adultoilandchopping;
+oil range750/area150/duration6; channel range250/area400;
+Q/R naming on toad distinct from Naruto's main loadout;
+no wholesale Warcraft assets/JASS copying.
+
+
+======================================================================
+naruto-forms-contract.txt
+======================================================================
+NARUTO LEGEND1.7A FIX20.3 — SAGE/KCM/KURAMA CONTRACT, 2026-10-30
+Exact uploaded map SHA2568c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Source refs: extracted/war3map.j line numbers; object records in extracted/war3map.w3a.json and .w3u.json.
+Static analysis; no map execution. Facts distinguished from inherited/native uncertainty and proposed safeguards.
+
+A09J SAGE:
+Object ANcl derived, mana25/cooldown150 at ranks1–3, requiredlevel6/skip4 =>6/10/14. alev omitted, three ranks represented but native inherited count remains boundary. Native Channel adur/ahdu50 does not itself implement this script timer.
+JASS44750–44851 EFFECT:
+create dummy A0JT at level26−6*rank =>levels20/14/8; explicit stun durations10/7/4 and zero damage.
+Visual preparation; wait.1; animation spell one (Kurama spell three); optionally create meditation clones; wait12.9−3*rank. Net preparation10/7/4, contrary tooltip10/8/6. Then set Sage-ready303=1, disableA017; if Hagoromo224=1 hideA09J/showA0I6. Direct mode (YReal445=0) restores50+150*rank mana =>200/350/500. This restore separate from native25 cast cost.
+Set SageTime50, call NarutoSenninModoCast, start1s repeating timer.
+44343–44363 modifiers:
+rank1 A08O attackIatt10, AId3 inherited armor, A07S HPIlif150, A002 movementImvb105.
+rank2 A08T attack30, AId7 inherited armor, A085 HP200, A002 movement105.
+rank3 A08W attack50, AId0 explicit armor15, A07Y inherited HP, A002 movement105.
+Tooltip armor3/7/15, HP150/200/300, speed50; only explicit overrides above are certified. Do not replace105 with50 because tooltip says so. A07Y derivesAIl2 with no Ilif override; original AIl2 record separately changed to150 in this map, while native commonly300. Custom-object/original-override inheritance resolution MUST be verified before choosing150 vs300; map bytes alone do not resolve engine application order.
+Timer44305–44339:
+when Time>0 display, destroy aura if Time==4, decrement.
+else remove all tier modifiers, reset flags/availability unless Rikudo CReal228!=0, re-enableA017, null aura reference, destroy timer.
+Therefore nominal intent50sec, actual simple timer cleanup51st callback; aura destruction47th callback. Preserve as explicit fidelity choice, not silently fix or call exact50.
+No local death/interrupt condition around preparation waits. Safe per-cast cancellation/death cleanup is recommended modernization, not source assertion.
+Sage is layered: KCM entry/exit explicitly reapplies Sage modifiers while SageTime>1 and aura handle nonnull (44488,44416); not flat mutually-exclusive form enum. Whether expired destroyed-but-nonnull aura affects state is a source quirk.
+
+MEDITATION MODE:
+Right-arrow toggle44858–44892 allowed owner and XReal262==0, changes YReal445; no immediate chakra in clone mode.
+44774–44826: Kurama buffB03V ->2 nmbg at offsets300±45deg;35sec timed life; addA0KP.
+Otherwise normal nmdr or KCM BEme nmcf at side100:
+rank3+hero>=18 normal =>2; KCM rank3+hero>18 =>2; otherwise1. Tooltip "+2" should not be implemented as3; source creates2 total.
+nmdr/nmcf: HP1, mana max500, regen20, speed0, attacksdisabled, abilityA0I5. Initial mana omitted (native default). nmbg: HP1, maxmana2000, initial0, regen100, speed0, attacksdisabled,A0I5.
+All live35sec. A0I5 (CD5, remaining native cost inherited) kills/removes triggering clone (44894–44916).
+Death handler44227–44296 recognizes these types and returns CURRENT clone mana to Naruto, then removes clone; no killer-filter. Thus natural expiration or enemy kill also runs death transfer; original globalNaruto ownership bug must not be copied. Do not give full500 instantly by tooltip.
+Three-headed44720–44727 kills two stored nmbg (thus death transfer path), removesA0KP, addsA0KR armor10/A0KQ attack80. No local alive-pair validation in action; add validation as safety, not certify original behavior.
+
+A017 KCM:
+Object AEme, ranks3,min13/skip7=>13/20/27, native mana0,CD10; baseEme1=Hpal; transformedEmeu=N01H/N00E/Ewrd byrank. adur.2,ahdu65536; exact native transition/inherited fields require engine verification.
+CAST event (not EFFECT!)44427–44509:
+requiresKuramaChakra>=200; rank1/2 allowed; rank3 additionallyHagoromo224==1. Failure issuesstop and1unit reposition. Success spends200, disablesA017,A005,A01F(removesA01F), setsflags/enables sharing; rank>1 creates cosmetic hcth.
+Start1s repeating timer; after.5s expose dashA0MK and clear alternate pose; reapply current Sage layer.
+Timer44377–44424: subtract40 BEFORE check; if BEme gone, chakra<=0, or cancelA0MJ missing ->clampnegative0, removeA0MJ/BEme, hide dash, removeface visual, disable sharing trigger; restore A017/A005/A09J; clear readiness/formflags; restoreA01F iflevel>=21 and not KuramaFormCD; reapply Sage if remaining. Hence manualcancel can still incur next40tick; do not silently assert instant/no-charge cancellation.
+A0MJ EFFECT44548–44563 simply removesA0MJ; timer detects on nexttick.
+Native transformed unit data, NOT independent added-stat buffs:
+N01H armor5, attackbase35, cooldown1.8, speed320, maxmanabase700, range0.
+N00E armor10, attackbase60,cooldown1.8,speed370,maxmanabase700,range0.
+Ewrd armor15,attackbase110,cooldown1.8,speed370,maxmanabase2300,range80.
+Hpal comparator armor0,baseattack10,cooldown2,baseMP1300,range50; speed270 inherited.
+All HPbase300, HPregen1, STRbase16. N01H/N00E STRgrowth1.4/AGIgrowth1.1/INTgrowth1; Ewrd1/.8/1.7; native metamorph attribute retention/levelgrowth application not certified. Do not blindly recompute from alternate record and lose player upgrades. N01H/N00E AGIbase omitted/inherited Nrob; exact retained runtime stats need native fixture.
+
+A0MK DASH:
+44512–44545 EFFECT: targetpoint=>SetUnitPosition at target; targetunit=>SetUnitPosition at unitXY thenDamage_Unit(100+currentSTR,NORMAL,UNIVERSAL). Cosmeticdeparture/arrival; NOT time-based travel. Object mana100 CD40 range650. Target validity/immunity/pathing are native/interface boundaries; no local ally/structure check in action.
+
+KURAMA RESOURCE:
+Initializer44923ff sets600. Separate from ordinary mana.
+sec_obhiy period1s66897. Condition66634: pool <900+100*heroLevel. Inside block66865–66878:
+if neitherBEme norB03V add20; then pay4*numberOfSharedUnits (or remove grants if insufficient); ifB03V restore20HP+20mana to allied nonstructures within400 (66665–66680).
+Threshold is condition, not hardclamp: one20 increment may overshoot. When pool>=threshold entireblock including sharingdrain/passiveheal skipped. Document this source quirk; do not redesign cap without marking adaptation.
+Left-arrow44995–45018: level>=16,pool>=200 ->subtract200,add200 ordinarymana.
+Normal capacity-threshold1000 atlevel1;3900 atlevel30. KCM40drain separate timer and no20regen whileBEme.
+
+A01F FULL KURAMA:
+Unlock A01F on Naruto level>=21:58748–58756,59017–59023.
+Object ANcr: buffB03V,Eme1Hpal,EmeuEwar,mana0,CD160,heroDuration30. Native morph handles formduration; script44650–44685 requires/spends2500Kuramachakra, disablesKCM, enablesagr_nar, setsKuramaFormCDtrue; waits25 then pollsuntilB03V absent; removes3head bonuses, clearsflag, reenablesKCM. Thus source30sec is native object-supported, script25sec isn't replacement duration.
+Hagoromo progression58760–58768,59024–59047: onceNaruto>=25 andflag422zero, setflag; wait240+60+60=360; waitalive, pause1sec cutscene; set224=1/unpause. Therefore rank3 requireslearnedrank3(min27) AND grant, not immediatelylevel25/27. One-timeflag/casterassociation must be perhero.
+
+A0JW SHARING (additional KCM branch, verified partial):
+44565–44642 + objects:CD1; aoe200 script. Allies passingFilteredUnits_2 getA0FT/A092/Asp5; heroes+15STR/+15AGI; prevent repeat group entry. Durationvariable100,1s timer. Source globalduration and repeatedtimer bug; use ownedgrant IDs in adaptation.
+Self doesn't get groupgrant; instead immediate350HP, then350 onfirsttwo1s callbacks; removesAmaterasu; lockoutbool clearedafterTime>60. Tooltip150/sec is stale. Native shield/MS bonus fields and FilteredUnits_2 not fully certified here. Raw abilityrange/mana omitted, tooltip500range is not explicit proof.
+Cleanup removesbonuses and15stats; down-arrow cancancelall (44690–44718).
+Face/Esc/Bijuu additional variants and rods/orbs are separate advanced contracts, not certified by this report.
+
+TESTS:
+Sage ranks actual prep10/7/4; mana25 then restore200/350/500 onlydirectmode; no immediateclone-mode refill.
+Sage ordinaryrank3 level17=1,18=2 clones; KCM18=1,19=2.
+Clone deathtransferscurrent notmaxmana; cleanowneridentity.
+Sage expiration nominal50 vs51callback discrepancy explicitly selected; remove each modifier exactlyonce.
+KCMrank2at20 allowed200pool; rank3 failswithoutHagoromo; preserveXP/learnedskills throughmorph.
+KCMcancel/removebuff detectionnexttick, resourceclamp, noorphan40drain afterexit.
+A005 unavailableKCM; dash650,damageonlyunit-target; no generic windpalm.
+Level21Kurama unlock; level25 Hagoromo360s+alivewait+1s, not immediate.
+ConcurrentNarutos, respawn/newround stale timers, layeredSage/KCM cleanup.
+
+INHERITED DATA STATUS:
+Checked standard embedded Units\\AbilityData.slk, AbilityMetaData.slk, UnitData.slk, UnitBalance.slk, UnitWeapons.slk, MiscData.txt and Human/Neutral/Item/OrcAbilityFunc.txt: absent; (listfile)empty. Original-modification records ANcl,AOsf,Absk,AIl2,hrif exist but must not automatically merge into all custom derived objects without certified native resolution semantics. No unknown software downloaded/executed.
+
+
+======================================================================
+naruto-variants-supplement.txt
+======================================================================
+NARUTO LEGEND1.7A FIX20.3 — BOUNDED VARIANT MATRIX
+Static exact uploaded map. No assets or JASS copied into game. Source refs are war3map.j lines; object fields from war3map.w3a. This matrix is not full downstream certification.
+
+COMMON GATES
+Hpal learns A014, A04N, A005, A09J, A017. Variants are temporary/book abilities, NOT extra independently learned hero lines.
+Odama grants A0HO if YReal303(Sage-ready)==1 and heroLevel>=16 (46552–46560,46634–46635).
+Held Rasengan in BEme branch exposes A0HQ for N01H/N00E; hides for Ewrd and other types (46460–46484). Odama BEme branch also exposes it46603.
+A013 Suriken action exposes A0HU; exposes A0HV only CReal224(Hagoromo)==1 (46680–46685,46763–46765). Ewrd additionally exposes A0IA/A0HY/A0HZ and adds A0HT spellbook (46768–46777); Sage-ready nonEwrd explicitly hides those three (46780–46788). KCM rank3+Hagoromo also exposes A0HW/A0IA/A0HY/A0HZ (44446–44455). Individual spell triggers usually only match rawcode, not independently validate form; new implementation must separate grant eligibility from cast validation. Book composition/native visibility needs retention.
+
+RAWCODE | OBJECT COST/COOLDOWN/TARGET | VERIFIED ACTION
+A0HO Cho Odama | mana absent(inherit ANhs, NOT zero); CD40; range600 | state6, point target. Trig_Xe_odama_nar46037–46109: remove previous helper/effect, disable normal hit, pause caster, two prep clones, pathingoff/fly capability, movement trigger. .7sec then state0/stop movement,4.5sec later cleanup/unpause,1sec later helpersremoved. Rasen_dvig49313ff state6 moves caster25/tick(.03), flies250, grows sphere. Collision/endpoint callback49210 hits enemies nonstructures within450 for90+.8STR and stunA0JT8=4sec if alive; Trig_pod_xe2_nar46122ff has additional45+.4STR AoE pulses. Full exact sum/timing/endpoint reach remains uncertified: do not claim one flat450+4STR hit.
+A0HQ Wakusei | mana absent(inherit Absk); CD100; duration15 | Trig_RasenRikudo48359ff state3, selfstunA0JT2=1sec, right-hand effect, after1sec enables attack for13sec. Melee shared hit branch48791–48824: stunA0JT8=4sec, pause.5sec, damage350+4STR, push18/.03 for.7sec, endpointimpact. Not original Q120+STR+10level.
+A0HU Rasen Ren Shuriken | mana500/CD60,duration15,self target | Trig_RenSuriken47076–47206 state10 after.6+.6+.1=1.3sec preparation, then13.7sec hit window; two hand spheres,4cosmetic helpers if notBEme. selfstunA0JT3=1.5sec. SurikDamage integer variable=(600+4STR)/87. Melee hit48933ff transitions10→11(push)→4(AoE); targetstunA0JT9=4.5sec, .5sec then SELF damage30*SurikDamage,1sec later unpause, AoE remains2+.5sec. Shared actual victim per-tick damage below. Ranged release uses A057, downstream graph not fully audited.
+A0HV Magma RS | mana700/CD60,duration15 | Trig_MAGSuriken47250–47358 state12, YReal414=-8(push away), radius350,scale120; selfstun1.5sec, right-hand magma sphere .6sec, prep ends1.3sec then13.7sec hitwindow. SurikDamage=(700+4STR)/87 set47273, but actual victim AoE does NOT read this variable! Melee state12→5→4, selfdamage30*SurikDamage and4.5sec target stun48994ff. Ranged release downstream not fully certified.
+A0IA Bijudama RS | mana1300/CD60,range0,Channel Ncl2 absent(inherited) | Trig_BidhuSuriken47401–47503 state13 after1.3sec prep,13.7sec hitwindow; selfstun1.5sec, right-hand sphere, YReal414=2(pull),radius350,visualscale200. Does NOT assign SurikDamage in this action; melee selfdamage subsequently reads shared variable490xx: stale-state risk, cannot invent intended formula. Actual victim AoE shared below. Grant primarilyEwrd/Hagoromo, not baseHpal.
+A0HY Cho Bijudama RS | mana1800/CD60,point Ncl2=2,range2000 | Trig_HOBidhudamaSuriken47511–47575 creates7projectile dummies (onecenter+6around radius300), pauses1.5sec, releases at1.3sec via YReal418=1. Initial radius636,scale120. Periodic36127–36190: forward30/.03 until within30 of chosenpoint; state418=2,58 AoE ticks every second .03tick (~.06). Radius grows4 per damage tick; pull2. Actual damage34811–34820 is (1050+4currentSTR)/58 per pulse. Filter34766–34810 excludes allies/structures and members of6other groups; overlap bookkeeping not fully audited. Nominal58pulses but concurrency/global counter initialization and filters mean no blanket guaranteed total.
+A0HZ Cho Bijuu RS | mana1800/CD60,point Ncl2=2,range2000 | Trig_HOBidhuSuriken47591–47706 creates8cosmetic clones and9projectile visuals, release1.3sec, unpause1.5, helpersremoved2.5sec. state423=1 travel30/.03 to within30 of target then2 explosion116ticks. radius636 grows4/tick. Counter426 starts16, damaging pulse first eligible tick then every17ticks (16increments/reset), for7nominal pulses. Actual callback34856–34864 uses REAL (900.+4currentSTR)/7., pull8, enemies nonstructures. Final callback34866–34873 casts native cripple with dummy; exact cripple stats unresolved. Approx3.48sec explosion; expanding target inclusion, concurrent state resets and engine timing must be tested. Tooltip800+4STR not authoritative.
+A0HW ChakraKnife | mana80/CD140,targetunit Ncl2=1,range600,enemies+ground | Trig_NohHakri47762–47800: .01sec then selfstun1sec; requires caster and target in same one of map regionpairs Ne_tp/Inst/IZM/Duel (47714–47760). If gate true teleport caster80units toward originalcaster from target, face target, targetstunA0JT4=2sec, instantdamage350+2STR; effectremoved1sec later. No full map-independent blink guarantee; invalidregion still incurs native cost/selfstun in source.
+
+COMMON AOE CORRECTION
+Trig_Surik_oblast_Func007A48282–48291 actually computes (600+4*GetHeroStr(current,true))/87 on EVERY.04sec tick. All literals/operands are integers here: preserve JASS integer-division semantics, rather than silently using real quotient. Enumerates nonallies/nonstructures within dynamic radius; moves toward center by YReal414 (negative=-8 pushes away). State flags affect scaling/radius/pull, not this hardcodeddamage. Thus initial SurikDamage700 etc is not guaranteed victim damage. Selfdamage reads separate integer SurikDamage. Total pulse count/native waits and ranged trajectory must be fixture-tested.
+
+UNKNOWNS / SAFETY
+Missing native costs A0HO/A0HQ are unknown, not zero. Target admission inherited fields remain unknown. Native mana debit event ordering unresolved. Global udg_c/state means simultaneous casts can interfere: new per-caster transaction/state is necessary improvement, not mechanic alteration. Death/respawn/late coroutine cleanup must be safe. Numerical visualscale fields are modelpercentage, not worlddistance. No source asset import authorized by this read-only contract.
+
+ACCEPTANCE CHECKS
+Grant only eligible form/rank chain, preserve costs and independent cooldowns. Self-prep/hit-window durations separate. Validate cast targeting server-side. Test each state's melee and ranged release separately, no merging all variants into same projectile. Distinguish caster selfdamage from targetAoE. Verify radius-growth and pull direction, integerdivision, latejoin/leaveAoE, onecast/player isolation. Native unknowns must be tagged, not replaced with Dota values.

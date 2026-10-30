@@ -79,7 +79,7 @@ function MatchService.Start()
 	Progression.Start(); Stats.Start(); Rewards.Start()
 	Teams.Start(initial, arena); Bases.Start(arena); Spawner.Start(arena)
 	Towers.Start(arena); Jungle.Start(arena)
-	Shop.Start(arena)
+	Shop.Start(arena); require(script.Parent.AbilityLearningService).Start()
 	local replicated = Instance.new("Folder"); replicated.Name = "SurvivalState"
 	for _, definition in Config.Teams do
 		local item = Instance.new("Folder"); item.Name = definition.Id

@@ -6,10 +6,11 @@ local Config = require(Shared.Config.AbilityConfig)
 local Items = require(Shared.Config.ItemConfig)
 local Controller = require(script.Parent.AbilityController)
 local View = require(script.Parent.MobaHUDView)
+local Learning = require(script.Parent.LearningController)
 local HUD = {}
 local started = false
 function HUD.Start()
-	if started then return end; started = true; Controller.Start()
+	if started then return end; started = true; Controller.Start(); Learning.Start()
 	local player = Players.LocalPlayer
 	local starterGui = game:GetService("StarterGui")
 	starterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -23,7 +24,16 @@ function HUD.Start()
 	local level = View.label(panel,"Level",UDim2.fromOffset(34,27),UDim2.fromOffset(86,93),17); level.BackgroundTransparency=0; level.BackgroundColor3=View.Background; level.TextColor3=View.Gold
 	local kda = View.label(panel,"KDA",UDim2.fromOffset(160,22),UDim2.fromOffset(130,8),12)
 	local gold = View.label(panel,"Gold",UDim2.fromOffset(160,22),UDim2.fromOffset(766,115),14); gold.TextColor3=View.Gold
-	local buttons: { [string]: TextButton } = {}
+	local points=View.label(panel,"SkillPoints",UDim2.fromOffset(280,20),UDim2.fromOffset(300,8),12); points.TextColor3=View.Gold
+ local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="C · Характеристики"; statsToggle.Size=UDim2.fromOffset(190,24); statsToggle.Position=UDim2.new(0,18,1,-180); statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=gui
+ local statsPanel=View.frame(gui,"CharacterStats",UDim2.fromOffset(260,226),UDim2.new(0,18,1,-214)); statsPanel.Position=UDim2.new(0,18,.5,0); statsPanel.AnchorPoint=Vector2.new(0,.5); statsPanel.Visible=false; View.border(statsPanel,View.Gold); local statsScale=Instance.new("UIScale"); statsScale.Parent=statsPanel
+ local statsText=View.label(statsPanel,"Values",UDim2.new(1,-16,1,-16),UDim2.fromOffset(8,8),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
+ statsToggle.Activated:Connect(function() statsPanel.Visible=not statsPanel.Visible end)
+ game:GetService("UserInputService").InputBegan:Connect(function(input,processed)
+  if not processed and not game:GetService("UserInputService"):GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.C then statsPanel.Visible=not statsPanel.Visible end
+ end)
+ local buttons: { [string]: TextButton } = {}
+ local learnButtons: { [string]: TextButton } = {}
 	for index,id in Config.Order do
 		local main = index <= 5; local slot = if main then index-1 else index-6
 		local button = Instance.new("TextButton"); button.Name=id; button.Size=UDim2.fromOffset(if main then 78 else 64,if main then 66 else 31)
@@ -35,6 +45,10 @@ function HUD.Start()
 		local status=View.label(button,"Status",UDim2.new(1,-4,0,18),UDim2.fromOffset(2,46),11); status.Visible=main
 		button.Activated:Connect(function() if id=="CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(id) end end)
 		buttons[id]=button
+  if main then
+   local plus=Instance.new("TextButton"); plus.Name="Learn"; plus.Text="+"; plus.Size=UDim2.fromOffset(22,18); plus.Position=UDim2.new(1,-23,0,1); plus.BackgroundColor3=Color3.fromRGB(152,112,33); plus.TextColor3=Color3.new(1,1,1); plus.Parent=button
+   plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
+  end
 	end
 	local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
 		local track=View.frame(panel,name,UDim2.fromOffset(480,17),UDim2.fromOffset(130,y)); track.BackgroundColor3=View.Card
@@ -59,6 +73,8 @@ function HUD.Start()
 			local compact=camera.ViewportSize.X<650; local width=if compact then 420 else 950; local height=if compact then 214 else 150
 			panel.Size=UDim2.fromOffset(width,height)
 			scale.Scale=math.min(1,(camera.ViewportSize.X-16)/width,(camera.ViewportSize.Y-80)/(height+90))
+   statsScale.Scale=math.min(1,(camera.ViewportSize.X-36)/260,(camera.ViewportSize.Y-50)/226)
+   statsToggle.Position=UDim2.new(0,18,1,-((height+8)*scale.Scale+30))
 			portrait.viewport.Size=UDim2.fromOffset(if compact then 80 else 112,if compact then 96 else 112)
 			hero.Size=UDim2.fromOffset(if compact then 80 else 112,20); hero.Position=UDim2.fromOffset(8,if compact then 105 else 120)
 			level.Position=UDim2.fromOffset(if compact then 54 else 86,if compact then 78 else 93)
@@ -96,13 +112,19 @@ function HUD.Start()
 		xpFill.Size=UDim2.fromScale(if number("XPToNextLevel")==0 then 1 else math.clamp(number("CurrentXP")/number("XPToNextLevel"),0,1),1)
 		local owned={}; for _,id in Items.Order do if state and state:GetAttribute("Own_"..id)==true then table.insert(owned,Items.Items[id].Name) end end
 		for index,slot in inventory do slot.Text=owned[index] or "—" end
-		message.Text=Controller.GetMessage()
+		message.Text=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
+  statsToggle.Text=string.format("C · Параметры · Очки %d",number("SkillPoints")); points.Text=string.format("Очки: %d · Ctrl+1–5 для обучения",number("SkillPoints"))
+  points.Visible=camera~=nil and camera.ViewportSize.X>=650
+  statsText.Text=string.format("НАРУТО · Уровень %d / 30\nXP %d / %d\nОчки обучения: %d\n\nSTR %.1f  (+1.4 / ур.)\nAGI %.1f  (+1.1 / ур.)\nINT %.1f  (+1 / ур.)\n\nБроня %.1f · M1 x%.2f\nМана %.0f · Реген %.2f/с\nСкорость %.1f",number("Level"),number("CurrentXP"),number("XPToNextLevel"),number("SkillPoints"),number("RawStrength"),number("RawAgility"),number("Intelligence"),number("Defense"),number("AttackDamageMultiplier"),number("MaxMana"),number("ManaRegen"),number("WalkSpeed"))
+  for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
 		for id,button in buttons do
 			local remaining=Controller.Remaining(id); local reason=Controller.AbilityUnavailable(id)
+   local rank=number("Rank_"..id)
 			button.Active=reason==nil and remaining<=0; button.AutoButtonColor=button.Active
 			button.BackgroundColor3=if button.Active then Color3.fromRGB(67,78,71) else View.Card
 			local status=button:FindFirstChild("Status") :: TextLabel
-			status.Text=if remaining>0 then string.format("%.1f",remaining) elseif not (Config.PrototypeEnabled :: {[string]: boolean})[id] then "Скоро" elseif reason then (if id=="Rasengan" and number("Level")<4 then "Ур. 4" else "—") else "Готово"
+			status.Text=if rank==0 and (id=="Rasengan" or id=="ShadowClones") then "Не изуч." elseif remaining>0 then string.format("%.1f",remaining) elseif not (Config.PrototypeEnabled :: {[string]: boolean})[id] then "Скоро" elseif reason then (if id=="Rasengan" and number("Level")<4 then "Ур. 4" else "—") else "Готово"
+			if id~="CloneCommand" then status.Text=tostring(rank).." · "..status.Text end
 		end
 	end)
 end

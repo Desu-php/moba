@@ -127,10 +127,12 @@ local ok, failure = xpcall(function()
 	check("real client M1 accepted", command(first, "attack").accepted)
 	check("M1 damages tower without stun or movement", sentry.structure.humanoid.Health == towerHP - 5 and Fighters.Get(sentry.structure.model) == nil and sentry.structure.root.Position == position)
 	require(services.HeroProgressionService).AddXP(first, 450)
+ local learnedCharacter=first.Character :: Model
+ for i,id in {"Rasengan","ShadowClones"} do assert(require(services.AbilityLearningService).HandleRequest(first,i,learnedCharacter,learnedCharacter:GetAttribute("LifeId"),id,state.roundId)) end
 	towerHP = sentry.structure.humanoid.Health
 	cast(first, "Rasengan"); task.wait(2.2); command(first, "attack")
 	local q = require(services.NarutoAbilityService).Get(first); assert(q)
-	check("structure receives M1 but cannot consume Rasengan", math.abs(sentry.structure.humanoid.Health - (towerHP - 5.3)) < 0.001
+	check("structure receives M1 but cannot consume Rasengan", math.abs(sentry.structure.humanoid.Health - (towerHP - 5.4)) < 0.001
 		and q.q.active ~= nil and q.q.active.phase == "Holding" and sentry.structure.model:GetAttribute("CombatState") == nil)
 	towerHP = sentry.structure.humanoid.Health
 	cast(first, "ShadowClones"); task.wait(3.4)

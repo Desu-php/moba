@@ -103,6 +103,8 @@ local ok, failure = xpcall(function()
 	check("natural respawn is fresh full-health life", (camp.model :: Model):GetAttribute("LifeId")~=model:GetAttribute("LifeId"))
 	local respawn=camp.model :: Model; local respawnHP=respawn:FindFirstChildOfClass("Humanoid") :: Humanoid
 	Progression.AddXP(blue,450)
+ local learner=blue.Character :: Model
+ for i,id in {"Rasengan","ShadowClones"} do assert(require(services.AbilityLearningService).HandleRequest(blue,i,learner,learner:GetAttribute("LifeId"),id,state.roundId)) end
 	move(blue,camp.home+Vector3.new(4.5,0,0),respawn:GetPivot().Position)
 	check("Q request against neutral admitted", Ability.HandleRequest(blue,1001,blue.Character,"Rasengan",state.roundId))
 	waitFor(function() return (blue.Character :: Model):GetAttribute("RasenganPhase")=="Holding" end,3,"Q hold")

@@ -104,6 +104,9 @@ local ok, failure = xpcall(function()
 		task.wait(1)
 		local hp = target.humanoid.Health
 		Progression.AddXP(blue, 450) -- Source rank-I Q eligibility; no timing shortcuts.
+  local learner=blue.Character :: Model
+  assert(require(Services.AbilityLearningService).HandleRequest(blue,1,learner,learner:GetAttribute("LifeId"),"Rasengan",state.roundId))
+  assert(require(Services.AbilityLearningService).HandleRequest(blue,2,learner,learner:GetAttribute("LifeId"),"ShadowClones",state.roundId))
 		response = command(blue, "cast", "Rasengan")
 		check("prepared Rasengan works each round", response.accepted == true and response.attack == true and target.humanoid.Health < hp)
 		Damage.Apply(model, target.humanoid, 9999); task.wait(0.15)

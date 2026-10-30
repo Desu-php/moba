@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
 local VFX = require(script.Parent.AbilityVFXController)
 local Rounds = require(script.Parent.RoundController)
+local Learning = require(script.Parent.LearningController)
 local Controller = { Changed = Instance.new("BindableEvent") }
 local remote: RemoteEvent? = nil
 local serial, pendingId, pendingAt = 0, 0, 0
@@ -46,6 +47,8 @@ function Controller.AbilityUnavailable(id: string): string?
 	local unavailable = Controller.Unavailable(); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
 	local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
+ local line=if id=="CloneCommand" then "ShadowClones" else id
+ if (id=="Rasengan" or id=="ShadowClones" or id=="CloneCommand") and (not state or ((state:GetAttribute("Rank_"..line) or 0) :: number)<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	local mana = model:GetAttribute("Mana")
 	local cost = if id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 else 0
@@ -145,11 +148,15 @@ function Controller.Start()
 		end
 		local alias = (Config.InputAliases :: {[string]: string})[input.KeyCode.Name]
 		if alias then
+   if alias~="CloneCommand" and (Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl)) then Learning.TryLearn(alias); return end
 			if alias == "CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(alias) end
 			return
 		end
 		for _, id in Config.Order do
-			if input.KeyCode.Name == Config.Abilities[id].Key then Controller.TryCast(id); break end
+			if input.KeyCode.Name == Config.Abilities[id].Key then
+    if Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl) then Learning.TryLearn(id) else Controller.TryCast(id) end
+    break
+   end
 		end
 	end)
 end

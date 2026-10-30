@@ -1,0 +1,115 @@
+{
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$attributes": {
+        "RegressionSuite": "Learning"
+      }
+    },
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "../src/shared"
+      },
+      "RegressionDrivers": {
+        "Fast": {
+          "$path": "hero/Driver.client.luau"
+        },
+        "Manual": {
+          "$path": "manual/Driver.client.luau"
+        },
+        "M1": {
+          "$path": "studio/Driver.client.luau"
+        },
+        "Tower": {
+          "$path": "towers/Driver.client.luau"
+        },
+        "Terminal": {
+          "$path": "rounds/Driver.client.luau"
+        },
+        "Hero": {
+          "$path": "hero/Driver.client.luau"
+        },
+        "Progression": {
+          "$path": "progression/Driver.client.luau"
+        },
+        "Survival": {
+          "$path": "survival/Driver.client.luau"
+        },
+        "$className": "Folder",
+        "Jungle": {
+          "$path": "jungle/Driver.client.luau"
+        },
+        "Learning": {
+          "$path": "learning/Driver.client.luau"
+        }
+      }
+    },
+    "ServerStorage": {
+      "RegressionFixtures": {
+        "Fast": {
+          "$path": "hero/Runner.server.luau"
+        },
+        "Manual": {
+          "$path": "manual/Runner.server.luau"
+        },
+        "M1": {
+          "$path": "studio/Runner.server.luau"
+        },
+        "Tower": {
+          "$path": "towers/Runner.server.luau"
+        },
+        "Terminal": {
+          "$path": "rounds/Runner.server.luau"
+        },
+        "Hero": {
+          "$path": "hero/Runner.server.luau"
+        },
+        "Progression": {
+          "$path": "progression/Runner.server.luau"
+        },
+        "Survival": {
+          "$path": "survival/Runner.server.luau"
+        },
+        "$className": "Folder",
+        "Jungle": {
+          "$path": "jungle/Runner.server.luau"
+        },
+        "Learning": {
+          "$path": "learning/Runner.server.luau"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "Regression": {
+        "$path": "regression/Regression.server.luau"
+      },
+      "Server": {
+        "$className": "Folder",
+        "Services": {
+          "$path": "../src/server/Services"
+        },
+        "Main": {
+          "$path": "../src/server/Main.server.luau",
+          "$properties": {
+            "Disabled": true
+          }
+        }
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "LoadCharacterAppearance": false,
+        "GameSettingsAvatar": "R15"
+      },
+      "StarterPlayerScripts": {
+        "Regression": {
+          "$path": "regression/Regression.client.luau"
+        },
+        "Client": {
+          "$path": "../src/client"
+        }
+      }
+    }
+  },
+  "name": "Regression"
+}

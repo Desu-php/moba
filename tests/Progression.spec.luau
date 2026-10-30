@@ -15,21 +15,21 @@ check("exact threshold", Rules.addXP(p, 1) == 1 and p.Level == 2 and p.CurrentXP
 check("overflow", Rules.addXP(p, 170) == 1 and p.Level == 3 and p.CurrentXP == 20)
 check("multiple levels", Rules.addXP(p, 500) == 2 and p.Level == 5 and p.CurrentXP == 70)
 local stats = Rules.stats(p)
-check("level five stats", stats.MaxHealth == 140 and math.abs(stats.AttackDamageMultiplier - 1.08) < 0.0001)
-check("level leaves speed and defense", stats.WalkSpeed == 16 and stats.Defense == 0)
-check("max level cap", Rules.addXP(p, 100000) == 5 and p.Level == 10 and p.CurrentXP == 0)
+check("level five stats", stats.MaxHealth == 720 and math.abs(stats.AttackDamageMultiplier - 1.10) < 0.0001)
+check("level leaves speed and defense", stats.WalkSpeed == 16 and math.abs(stats.Defense-3.8)<0.00001)
+check("max level cap", Rules.addXP(p, 100000) == 25 and p.Level == 30 and p.CurrentXP == 0)
 check("no XP at cap", Rules.addXP(p, 100) == 0 and p.CurrentXP == 0 and Rules.required(p.Level) == 0)
 stats = Rules.stats(p)
-check("level ten stats", stats.MaxHealth == 190 and math.abs(stats.AttackDamageMultiplier - 1.18) < 0.0001)
+check("level thirty stats", stats.MaxHealth == 1420 and math.abs(stats.AttackDamageMultiplier - 1.80) < 0.0001)
 p.Owned.IronBlade = true; p.Owned.GuardianArmor = true; p.Owned.SwiftBoots = true
 stats = Rules.stats(p)
-check("equipment health", stats.MaxHealth == 230)
+check("equipment health", stats.MaxHealth == 1460)
 check("equipment speed", stats.WalkSpeed == 18)
-check("additive base damage bonuses", math.abs(stats.AttackDamageMultiplier - 1.33) < 0.0001)
+check("additive base damage bonuses", math.abs(stats.AttackDamageMultiplier - 1.95) < 0.0001)
 for _ = 1, 100 do stats = Rules.stats(p) end
-check("idempotent recalculation", stats.MaxHealth == 230 and stats.WalkSpeed == 18)
+check("idempotent recalculation", stats.MaxHealth == 1460 and stats.WalkSpeed == 18)
 p.Owned.UnknownItem = true
-check("unknown ownership ignored", Rules.stats(p).MaxHealth == 230)
+check("unknown ownership ignored", Rules.stats(p).MaxHealth == 1460)
 check("defense mitigation", Rules.mitigate(20, 100) == 10 and Rules.mitigate(20, -5) == 20)
 for index, amount in { -1, 0/0, math.huge, -math.huge, 0.5, Config.MaxGrant + 1 } do
  check("invalid amount " .. index, not Rules.validAmount(amount))
@@ -52,7 +52,7 @@ check("poor player refused", Rules.purchaseReason(fresh, 100, "IronBlade", 50, 1
 check("full health potion refused", Rules.purchaseReason(fresh, 100, "HealingPotion", 100, 100) == "FullHealth")
 check("injured potion accepted", Rules.purchaseReason(fresh, 100, "HealingPotion", 99, 100) == nil)
 check("equipment accepted", Rules.purchaseReason(fresh, 200, "IronBlade", 100, 100) == nil)
-check("reset profile removes equipment", fresh.Level == 1 and next(fresh.Owned) == nil and Rules.stats(fresh).MaxHealth == 100)
+check("reset profile removes equipment", fresh.Level == 1 and next(fresh.Owned) == nil and Rules.stats(fresh).MaxHealth == 620)
 local a: Ledger.Actor = { userId = 1, teamId = "Blue" }; local b: Ledger.Actor = { userId = 2, teamId = "Blue" }
 local ledger = Ledger.new()
 Ledger.record(ledger, b, "Red", 1); Ledger.record(ledger, b, "Red", 2); Ledger.record(ledger, a, "Red", 3)
