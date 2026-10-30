@@ -49,6 +49,10 @@ function LifeService.Record(attacker: Model, victim: Model)
  LifeService.Register(victim)
  local life = lives[victim]; if not life then return end
  local player = Players:GetPlayerFromCharacter(attacker)
+ if not player and attacker:GetAttribute("NativeNarutoClone") == true then
+  local owner = attacker:GetAttribute("SummonOwner")
+  if typeof(owner) == "number" then player = Players:GetPlayerByUserId(owner) end
+ end
  local actor: Ledger.Actor = { userId = if player then player.UserId else nil, teamId = tostring(attacker:GetAttribute("TeamId") or "") }
  Ledger.record(life.ledger, actor, tostring(victim:GetAttribute("TeamId") or ""), workspace:GetServerTimeNow())
  -- A freshly spawned Humanoid can reach zero HP before its first physics step

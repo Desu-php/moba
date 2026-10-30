@@ -1,11 +1,13 @@
 param(
     [string]$RojoPath,
     [string]$LuauDirectory,
-    [string]$LuauLspDirectory
+    [string]$LuauLspDirectory,
+    [ValidateSet('Fast','Targeted','Full')][string]$Mode = 'Full'
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
+$totalTimer = [Diagnostics.Stopwatch]::StartNew()
 Push-Location $projectRoot
 try {
     if (-not $RojoPath) {
@@ -15,6 +17,38 @@ try {
     }
     if (-not (Test-Path -LiteralPath $RojoPath)) { throw 'Rojo not found. Pass -RojoPath.' }
     New-Item -ItemType Directory -Force build | Out-Null
+    if ($Mode -ne 'Full') {
+        if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
+        $timer = [Diagnostics.Stopwatch]::StartNew()
+        $pure = @('tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau')
+        $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
+        & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau @pure
+        if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
+        foreach ($suite in $pure) {
+            & (Join-Path $LuauDirectory 'luau.exe') $suite
+            if ($LASTEXITCODE -ne 0) { throw "Targeted suite failed: $suite" }
+        }
+        Write-Output ('TIMING pure/poses: {0:F2}s' -f $timer.Elapsed.TotalSeconds)
+        if ($Mode -eq 'Fast') { return }
+        if (-not $LuauLspDirectory) { throw 'Targeted requires -LuauLspDirectory.' }
+        $timer.Restart()
+        & $RojoPath build tests/hero-fast.project.json -o build/rasengan-fast.rbxlx
+        if ($LASTEXITCODE -ne 0) { throw 'Rasengan fixture build failed' }
+        & $RojoPath sourcemap default.project.json -o build/sourcemap.json
+        if ($LASTEXITCODE -ne 0) { throw 'Production sourcemap failed' }
+        & $RojoPath sourcemap tests/hero-fast.project.json -o build/hero-fast-sourcemap.json
+        if ($LASTEXITCODE -ne 0) { throw 'Rasengan fixture sourcemap failed' }
+        & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap build/sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') src
+        if ($LASTEXITCODE -ne 0) { throw 'Targeted Roblox source types failed' }
+        Push-Location tests
+        try {
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/hero-fast-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') hero
+            if ($LASTEXITCODE -ne 0) { throw 'Rasengan fixture types failed' }
+        } finally { Pop-Location }
+        Write-Output ('TIMING targeted build/types: {0:F2}s' -f $timer.Elapsed.TotalSeconds)
+        Write-Output 'PASS Targeted; Studio: build/rasengan-fast.rbxlx, Server & Clients, 2 clients. Fixture skips preparation countdown only in test build.'
+        return
+    }
     & $RojoPath build default.project.json -o build/anime-battlegrounds.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Production Rojo build failed' }
     & $RojoPath build tests/studio.project.json -o build/combat-regression-stage3.rbxlx
@@ -25,6 +59,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Progression test Rojo build failed' }
     & $RojoPath build tests/hero.project.json -o build/hero-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Hero test Rojo build failed' }
+    & $RojoPath build tests/hero-fast.project.json -o build/rasengan-fast.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Rasengan test Rojo build failed' }
     & $RojoPath build tests/towers.project.json -o build/tower-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Tower test Rojo build failed' }
     & $RojoPath build tests/rounds.project.json -o build/round-tests.rbxlx
@@ -79,13 +115,13 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Pure logic type check failed' }
         & $analyzer src/shared/Combat/AbilityState.luau src/shared/Combat/HeroPoses.luau src/shared/Config/AbilityConfig.luau tests/AbilityState.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Hero pure logic type check failed' }
-        & $analyzer src/shared/Abilities/NarutoDefinitions.luau src/shared/Abilities/NarutoRules.luau src/shared/Abilities/RasenganState.luau src/shared/Abilities/CloneState.luau src/shared/Abilities/CloneCommands.luau src/shared/Abilities/WorldUnits.luau tests/NarutoLegend.spec.luau
+        & $analyzer src/shared/Abilities/NarutoDefinitions.luau src/shared/Abilities/NarutoRules.luau src/shared/Abilities/RasenganState.luau src/shared/Abilities/CloneState.luau src/shared/Abilities/CloneCommands.luau src/shared/Abilities/WorldUnits.luau src/shared/Abilities/NarutoResources.luau tests/NarutoLegend.spec.luau tests/NarutoResources.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Naruto Legend domain type check failed' }
         & $analyzer src/shared/Game/TowerRules.luau src/shared/Game/StructureRules.luau src/shared/Config/TowerConfig.luau tests/TowerRules.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
-        & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Config/RoundConfig.luau tests/Rounds.spec.luau
+        & $analyzer src/shared/Game/RoundProtocol.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/TowerRules.spec.luau')) {
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -122,8 +158,9 @@ try {
     Write-Output 'Stage 4: build/progression-tests.rbxlx, Server & Clients, 3 clients.'
     Write-Output 'Stage 5: build/hero-tests.rbxlx, Server & Clients, 2 clients.'
     Write-Output 'Towers: build/tower-tests.rbxlx, Server & Clients, 2 clients.'
-    Write-Output 'Rounds: build/round-tests.rbxlx, Server & Clients, 2 clients, three rounds on one server.'
+    Write-Output 'Rounds: build/round-tests.rbxlx, Server & Clients, 2 clients, terminal victory with no restart.'
 }
 finally {
     Pop-Location
+    Write-Output ('TIMING {0} total: {1:F2}s' -f $Mode,$totalTimer.Elapsed.TotalSeconds)
 }

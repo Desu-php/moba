@@ -20,7 +20,7 @@ local Teams = require(script.Parent.TeamService)
 local RoundProtocol = require(Shared.Game.RoundProtocol)
 
 type Session = { bucket: RequestLimiter.Bucket, lastRequestId: number, lastRejectAt: number }
-local CombatService = {}
+local CombatService = { AttackStarted = Instance.new("BindableEvent") }
 local sessions: { [Player]: Session } = {}
 local eventRemote: RemoteEvent? = nil
 local started = false
@@ -46,6 +46,7 @@ local function announceStart(fighter: Fighters.Fighter)
 	local attack, remote = fighter.logic.active, eventRemote
 	if not attack or not remote then return end
 	Fighters.Publish(fighter)
+	CombatService.AttackStarted:Fire(fighter)
 	remote:FireAllClients({ kind = "Started", snapshot = Fighters.Snapshot(fighter), attack = attack })
 	if Debug.LogCombat then
 		print(string.format("[Combat] %s M1-%d request=%d", fighter.character.Name, attack.step, attack.requestId))
@@ -55,6 +56,7 @@ end
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
 		and Damage.CanAct(fighter.character)
+		and ((fighter.character:GetAttribute("NarutoPausedUntil") or 0) :: number) <= Workspace:GetServerTimeNow()
 		and (fighter.character:GetAttribute("AbilityId") == nil or fighter.character:GetAttribute("AbilityId") == "")
 		and fighter.humanoid.Health > 0
 		and fighter.humanoid:GetState() ~= Enum.HumanoidStateType.Dead

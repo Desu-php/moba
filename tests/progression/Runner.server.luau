@@ -221,6 +221,7 @@ local ok, failure = xpcall(function()
  nextHumanoid.Health = 0
  untilTrue(function() return profile(hero).TotalKills == 2 end, 3, "Recent hit not credited after environment death")
  check("environment death credits recent attacker", profile(hero).TotalKills == 2)
+ check("team scoreboard counts confirmed hero kills", Rewards.GetTeamKills(tostring(hero:GetAttribute("TeamId"))) == 2)
  check("old life assist never reused", profile(assistant).Assists == 1)
  task.wait(0.2)
  client = command(hero, "stats")

@@ -20,7 +20,6 @@ local Towers = require(script.Parent.TowerService)
 local Structures = require(script.Parent.StructureService)
 local TowerConfig = require(Shared.Config.TowerConfig)
 local MapConfig = require(Shared.Config.MapConfig)
-local RoundConfig = require(Shared.Config.RoundConfig)
 local Ability = require(script.Parent.AbilityService)
 local Fighters = require(script.Parent.FighterStateService)
 local Life = require(script.Parent.CombatLifeService)
@@ -39,7 +38,7 @@ function MatchService.Publish()
 	local current, replicated = state, folder
 	if not current or not replicated then return end
 	replicated:SetAttribute("Phase", current.phase); replicated:SetAttribute("StartedAt", current.startedAt)
-	replicated:SetAttribute("RoundId", current.roundId); replicated:SetAttribute("IntermissionEnds", current.intermissionEnds)
+	replicated:SetAttribute("RoundId", current.roundId)
 	replicated:SetAttribute("FinishedAt", current.finishedAt); replicated:SetAttribute("Winner", current.winner or "")
 	replicated:SetAttribute("Wave", current.wave); replicated:SetAttribute("ActiveNPCs", AI.GetCount())
 	replicated:SetAttribute("PreparationEnds", current.preparationEnds); replicated:SetAttribute("MinimumPlayers", Mode.MinimumPlayers())
@@ -47,6 +46,7 @@ function MatchService.Publish()
 		local item = replicated:FindFirstChild(id)
 		local base = Bases.Get(id)
 		if item and base then
+			item:SetAttribute("Kills", Rewards.GetTeamKills(id))
 			item:SetAttribute("PlayerCount", team.count); item:SetAttribute("Capacity", Config.TeamCapacity)
 			item:SetAttribute("Active", team.active); item:SetAttribute("Health", base.humanoid.Health)
 			item:SetAttribute("MaxHealth", base.humanoid.MaxHealth)
@@ -56,17 +56,6 @@ function MatchService.Publish()
 		end
 	end
 end
-function MatchService.ResetRound(expectedRound: number): boolean
-	local current = state; if not current then return false end
-	if not Rules.restart(current, workspace:GetServerTimeNow(), expectedRound) then return false end
-	Damage.SetEnabled(false); Towers.CancelAll(); Ability.Reset(); AI.Reset(); Fighters.Reset(); Life.Reset()
-	MatchService.ResetProgression()
-	Bases.Reset(current.roundId); Towers.Reset(current.roundId); Teams.Reset(current.roundId)
-	nextAI = 0; nextTower = 0; nextSnapshot = 0; nextDiagnostics = 0
-	MatchService.Publish()
-	print(string.format("[Match] Round %d ready", current.roundId))
-	return true
-end
 local function eliminate(id: string, roundId: number)
 	local current = state; if not current then return end
 	if roundId ~= current.roundId then return end
@@ -74,7 +63,6 @@ local function eliminate(id: string, roundId: number)
 	Teams.Eliminate(id); AI.RemoveTeam(id)
 	if current.phase == "Finished" then
 		Damage.SetEnabled(false); AI.SetRunning(false); Towers.CancelAll(); Ability.Reset(); Fighters.Reset(); Teams.Finish()
-		Rules.schedule(current, current.finishedAt, RoundConfig.IntermissionTime)
 		print("[Match] Winner: " .. (current.winner or "Draw"))
 	end
 	MatchService.Publish()
@@ -114,8 +102,6 @@ function MatchService.Start()
 	RunService.Heartbeat:Connect(function()
 		local current = state; if not current then return end
 		local now = workspace:GetServerTimeNow()
-		if Rules.intermission(current, now, RoundConfig.ResultDisplayTime) then MatchService.Publish() end
-		if current.phase == "Intermission" and now >= current.intermissionEnds then MatchService.ResetRound(current.roundId) end
 		Teams.Update(now)
 		local ready = if Mode.IsSoloTest() then Teams.Count() >= 1 else Teams.Ready(Mode.MinimumPerTeam())
 		local eligible = if ready then Teams.Count() else 0

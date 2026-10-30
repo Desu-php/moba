@@ -20,7 +20,8 @@ function Targets.InCone(attacker: Model, origin: CFrame, range: number, forwardD
 	local seen: { [Humanoid]: boolean } = {}
 	local function consider(model: Model, humanoid: Humanoid, root: BasePart)
 		local kind = model:GetAttribute("EntityKind")
-		if kind ~= "Hero" and kind ~= "Minion" and not (includeStructures and StructureRules.isStructure(kind)) then return end
+		if kind ~= "Hero" and kind ~= "Minion" and model:GetAttribute("NativeNarutoClone") ~= true
+			and not (includeStructures and StructureRules.isStructure(kind)) then return end
 		if not Damage.CanDamage(attacker, model) or not Hitboxes.IsFiniteCFrame(root.CFrame) then return end
 		local delta = root.Position - origin.Position
 		if delta.Magnitude > range or seen[humanoid] then return end

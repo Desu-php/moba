@@ -49,6 +49,14 @@ local function bind(model: Model)
 end
 local function active(rig: Rig, now: number): (string, number, number)
 	local model = rig.model
+	local selfPause = model:GetAttribute("RasenganSelfPauseUntil")
+	local ownPause = typeof(selfPause)=="number" and now<selfPause
+	local phase = model:GetAttribute("RasenganPhase")
+	local impact = model:GetAttribute("RasenganImpactAt")
+	if phase=="Consumed" and ownPause and typeof(impact)=="number" and impact>now then return "RasenganStrike",impact-1,1 end
+	local rasenganAt = model:GetAttribute("RasenganStartedAt"); local ready = model:GetAttribute("RasenganReadyAt")
+	if phase=="Preparing" and ownPause and typeof(rasenganAt)=="number" and typeof(ready)=="number" and now>=rasenganAt+1 and now<ready then return "RasenganPrepare",rasenganAt+1,1 end
+	if model:GetAttribute("RasenganHelper")==true then return "RasenganHelper",0,1 end
 	if model:GetAttribute("CombatState") == "Stunned" then return "Stun", now, 1 end
 	local ability = model:GetAttribute("AbilityId")
 	if typeof(ability) == "string" and ability ~= "" then
@@ -113,6 +121,8 @@ function Motion.Start()
 			for _, player in Players:GetPlayers() do if player.Character then bind(player.Character) end end
 			local summons = workspace:FindFirstChild("HeroSummons")
 			if summons then for _, model in summons:GetChildren() do if model:IsA("Model") then bind(model) end end end
+			local visuals = workspace:FindFirstChild("LocalHeroVFX")
+			if visuals then for _, model in visuals:GetChildren() do if model:IsA("Model") and model:GetAttribute("RasenganHelper")==true then bind(model) end end end
 		end
 		for model, rig in rigs do
 			if not model:IsDescendantOf(workspace) or rig.humanoid.Health <= 0 then remove(model); continue end
@@ -127,7 +137,8 @@ function Motion.Start()
 			if camera and (camera.CFrame.Position - rig.root.Position).Magnitude > Config.Visual.ViewDistance and not rig.owned then continue end
 			local key, at, duration = active(rig, now)
 			if rig.track and rig.key ~= key then rig.track:Stop(Combat.AnimationFadeTime); rig.track = nil end
-			local published = hasPublished(rig, key, at, duration)
+			local holding = model:GetAttribute("RasenganVisible")==true and (key=="Idle" or key=="Run")
+			local published = not holding and hasPublished(rig, key, at, duration)
 			rig.key = key
 			if published then table.clear(rig.poses); continue end
 			if not model:GetAttribute("HeroId") and (key == "Idle" or key == "Run") then
@@ -135,6 +146,7 @@ function Motion.Start()
 				table.clear(rig.poses); continue
 			end
 			local pose = Poses.sample(key, now, math.clamp((now - at) / math.max(0.001, duration), 0, 1))
+			if holding then pose = Poses.holdRasengan(pose,now) end
 			local alpha = 1 - math.exp(-Config.Visual.BlendSpeed * dt)
 			for _, entry in rig.joints do
 				local motor = entry.joint

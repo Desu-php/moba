@@ -129,10 +129,10 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 	return fighter
 end
 
-function FighterStateService.Stun(fighter: Fighter, duration: number, resetCombo: boolean)
+local function applyStun(fighter: Fighter, duration: number, resetCombo: boolean)
 	if fighter.humanoid.Health <= 0 or fighter.logic.mode == "Dead" then return end
 	local now = Workspace:GetServerTimeNow()
-	State.Stun(fighter.logic, now, math.clamp(duration, 0, fighter.profile.MaxStunDuration), resetCombo)
+	State.Stun(fighter.logic, now, duration, resetCombo)
 	local humanoid, root = fighter.humanoid, fighter.root
 	if not fighter.movement then
 		local canOwn = root:CanSetNetworkOwnership()
@@ -155,6 +155,14 @@ function FighterStateService.Stun(fighter: Fighter, duration: number, resetCombo
 		root.AssemblyLinearVelocity = Vector3.new(0, math.clamp(vertical, -fighter.profile.MaxKnockbackSpeed, fighter.profile.MaxKnockbackSpeed), 0)
 	end
 	FighterStateService.Publish(fighter)
+end
+
+function FighterStateService.Stun(fighter: Fighter, duration: number, resetCombo: boolean)
+	applyStun(fighter, math.clamp(duration, 0, fighter.profile.MaxStunDuration), resetCombo)
+end
+function FighterStateService.StunSpell(fighter: Fighter, duration: number)
+	if duration ~= duration or duration <= 0 or duration == math.huge then return end
+	applyStun(fighter, duration, false)
 end
 
 function FighterStateService.Update(fighter: Fighter, now: number)

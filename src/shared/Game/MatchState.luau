@@ -1,10 +1,10 @@
 --!strict
-export type Phase = "WaitingForPlayers" | "Preparing" | "InProgress" | "Finished" | "Intermission"
+export type Phase = "WaitingForPlayers" | "Preparing" | "InProgress" | "Finished"
 export type TeamState = { active: boolean, count: number }
 export type State = {
 	phase: Phase, teams: { [string]: TeamState }, order: { string },
 	preparationEnds: number, startedAt: number, finishedAt: number,
-	nextWaveAt: number, wave: number, winner: string?, roundId: number, intermissionEnds: number,
+	nextWaveAt: number, wave: number, winner: string?, roundId: number,
 }
 local Rules = {}
 function Rules.new(ids: { string }): State
@@ -16,7 +16,7 @@ function Rules.new(ids: { string }): State
 	end
 	return { phase = "WaitingForPlayers", teams = teams, order = table.clone(ids),
 		preparationEnds = 0, startedAt = 0, finishedAt = 0, nextWaveAt = 0, wave = 0, winner = nil,
-		roundId = 1, intermissionEnds = 0 }
+		roundId = 1 }
 end
 function Rules.active(state: State): { string }
 	local result = {}
@@ -24,7 +24,7 @@ function Rules.active(state: State): { string }
 	return result
 end
 function Rules.assign(state: State, preferred: string?): string?
-	if state.phase == "Finished" or state.phase == "Intermission" then return nil end
+	if state.phase == "Finished" then return nil end
 	if preferred and state.teams[preferred] then
 		-- Rejoining an eliminated team cannot escape elimination.
 		if state.teams[preferred].active then return preferred end
@@ -73,26 +73,5 @@ function Rules.eliminate(state: State, id: string, now: number): boolean
 	end
 	return true
 end
--- Scheduling is separate from phase assignment: test fixtures and admin inspection
--- cannot accidentally start a new round by temporarily setting phase = Finished.
-function Rules.schedule(state: State, now: number, duration: number): boolean
-	if state.phase ~= "Finished" or state.intermissionEnds > 0 then return false end
-	state.intermissionEnds = now + math.max(0, duration)
-	return true
-end
-function Rules.intermission(state: State, now: number, resultDuration: number): boolean
-	if state.phase ~= "Finished" or state.intermissionEnds <= 0 then return false end
-	if now < math.min(state.finishedAt + resultDuration, state.intermissionEnds) then return false end
-	state.phase = "Intermission"
-	return true
-end
-function Rules.restart(state: State, now: number, expectedRound: number): boolean
-	if state.roundId ~= expectedRound or state.phase ~= "Intermission" or now < state.intermissionEnds then return false end
-	state.roundId += 1
-	state.phase = "WaitingForPlayers"
-	state.preparationEnds = 0; state.startedAt = 0; state.finishedAt = 0; state.intermissionEnds = 0
-	state.nextWaveAt = 0; state.wave = 0; state.winner = nil
-	for _, team in state.teams do team.active = true; team.count = 0 end
-	return true
-end
+-- Finished is terminal for this server. roundId remains an internal event epoch.
 return Rules

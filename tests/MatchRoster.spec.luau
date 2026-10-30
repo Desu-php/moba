@@ -78,18 +78,8 @@ check("locked round refuses overflow even with 4v5", Roster.join(roundRoster, 12
 check("departure does not abort active match", not advance(12) and match.phase == "InProgress")
 check("locked reconnect restores original slot", Roster.join(roundRoster, 2) == "Red" and Roster.connectedCount(roundRoster) == 10)
 
-for round = 1, 3 do
-	local now = 100 * round
-	check("round " .. round .. " has exactly ten active members", Roster.ready(roundRoster, 5) and Roster.connectedCount(roundRoster) == 10)
-	check("round " .. round .. " finishes", Match.eliminate(match, "Red", now) and match.phase == "Finished")
-	check("round " .. round .. " schedules intermission", Match.schedule(match, now, 5))
-	check("round " .. round .. " enters intermission", Match.intermission(match, now + 2, 2))
-	check("round " .. round .. " reset advances once", Match.restart(match, now + 5, round) and not Match.restart(match, now + 5, round))
-	roundRoster = Roster.new(match.order)
-	for userId = 1, 10 do Roster.join(roundRoster, userId); Roster.join(roundRoster, userId) end
-	check("round " .. round .. " reset has no duplicate counts", Roster.connectedCount(roundRoster) == 10 and not roundRoster.locked)
-	check("round " .. round .. " overflow remains unassigned", Roster.join(roundRoster, 11) == nil)
-	check("round " .. round .. " new preparation starts", advance(now + 6) and match.phase == "Preparing")
-	check("round " .. round .. " next round starts", advance(now + 11) and match.phase == "InProgress")
-end
+check("full match finishes", Match.eliminate(match, "Red", 100) and match.phase == "Finished")
+check("late members cannot join completed match", Match.assign(match, nil) == nil)
+check("full roster cannot restart completed match", not advance(100000) and match.phase == "Finished" and match.roundId == 1)
+check("terminal roster retains reserved slots", roundRoster.locked and Roster.join(roundRoster, 12) == nil)
 print("ALL PASS: " .. passed .. " roster checks")

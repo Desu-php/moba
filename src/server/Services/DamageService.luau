@@ -20,7 +20,7 @@ function DamageService.CanAct(model: Model): boolean
 end
 function DamageService.CanDamage(attacker: Model, target: Model): boolean
 	return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
-		and target:GetAttribute("EntityKind") ~= "Summon"
+		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true)
 		and target:GetAttribute("IsDestroyed") ~= true
 		and Structures.CanReceive(target)
 end
@@ -29,6 +29,8 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 	if not target or not target:IsA("Model") or not DamageService.CanDamage(attacker, target) then return 0 end
 	if amount ~= amount or amount <= 0 or amount == math.huge then return 0 end
 	local before = humanoid.Health
+	if attacker:GetAttribute("NativeNarutoClone") == true then amount *= (attacker:GetAttribute("OutgoingDamageMultiplier") :: number) end
+	if target:GetAttribute("NativeNarutoClone") == true then amount *= (target:GetAttribute("IncomingDamageMultiplier") :: number) end
 	local stats = Stats.GetForModel(target)
 	if stats then amount = Rules.mitigate(amount, stats.Defense) end
 	Life.Register(target)

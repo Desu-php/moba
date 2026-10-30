@@ -15,7 +15,9 @@ check("minion preferred over closer hero", choose(state, { sample(1, "Hero", 2),
 check("nearest minion", choose(state, { sample(1, "Minion", 20), sample(2, "Minion", 10) }, 0) == 2)
 check("hero when no minions", choose(state, { sample(1, "Hero", 9), sample(2, "Hero", 10) }, 0) == 1)
 check("invalid includes dead wall range and ally", choose(state, { sample(1, "Minion", 1, false), sample(2, "Hero", 2) }, 0) == 2)
-check("summons explicitly excluded", choose(state, { sample(1, "Summon", 1) }, 0) == nil)
+check("damageable summons can be selected", choose(state, { sample(1, "Summon", 1) }, 0) == 1)
+check("summons remain below heroes in priority", choose(state, { sample(1, "Summon", 1), sample(2, "Hero", 10) }, 0) == 2)
+check("legacy summon exclusion policy still supported", Rules.choose(state, { sample(1, "Summon", 1) }, 0, Config.TargetPriority, false) == nil)
 check("structures never candidates", choose(state, { sample(1, "Tower", 1), sample(2, "Base", 1) }, 0) == nil)
 check("equal distance stable by id", choose(state, { sample(2, "Hero", 10), sample(1, "Hero", 10) }, 0) == 1)
 state.target = 2

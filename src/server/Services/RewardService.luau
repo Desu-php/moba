@@ -10,6 +10,9 @@ local Economy = require(script.Parent.EconomyService)
 local Reward = {}
 local started = false
 local nextPassive = 0
+-- Match scoreboard projection survives individual profile removal/reconnect.
+local teamKills: { [string]: number } = {}
+function Reward.GetTeamKills(id: string): number return teamKills[id] or 0 end
 local awarded: { [Model]: number } = setmetatable({}, { __mode = "k" })
 local function death(event: Life.Death)
  if awarded[event.model] == event.lifeId then return end
@@ -35,7 +38,11 @@ local function death(event: Life.Death)
   local player = recipients[id]
   if grant.XP > 0 then Progression.AddXP(player, grant.XP) end
   if grant.Gold > 0 then Economy.AddGold(player, grant.Gold, if grant.Assists > 0 then "Assist" else "Kill") end
-  if grant.Kills > 0 then Progression.Increment(player, "TotalKills") end
+  if grant.Kills > 0 then
+   Progression.Increment(player, "TotalKills")
+   local teamId = tostring(player:GetAttribute("TeamId") or "")
+   teamKills[teamId] = (teamKills[teamId] or 0) + grant.Kills
+  end
   if grant.Deaths > 0 then Progression.Increment(player, "TotalDeaths") end
   if grant.MinionKills > 0 then Progression.Increment(player, "TotalMinionKills") end
   if grant.Assists > 0 then Progression.Increment(player, "Assists") end
@@ -49,7 +56,7 @@ function Reward.Update(now: number)
  nextPassive = now + Config.PassiveInterval
  for _, player in Players:GetPlayers() do Economy.AddGold(player, Config.PassiveGold, "Passive") end
 end
-function Reward.Reset() nextPassive = 0; table.clear(awarded); Life.ResetHistory() end
+function Reward.Reset() nextPassive = 0; table.clear(awarded); table.clear(teamKills); Life.ResetHistory() end
 function Reward.Start()
  if started then return end; started = true
  Life.Died.Event:Connect(death)

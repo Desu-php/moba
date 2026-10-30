@@ -5,7 +5,7 @@ return {
 	Health = 600, Range = 28, Damage = 18, AttackInterval = 1.2, Windup = 0.3,
 	UpdateInterval = 0.1, AggroDuration = 3, TeamGold = 50,
 	TargetPriority = priority,
-	AllowSummons = false, -- Current clones are invulnerable cosmetics, never tower targets.
+	AllowSummons = true, -- Source clones are damageable illusions; DamageService excludes legacy cosmetics.
 	Positions = {
 		Blue = { Top = { -70, 4, -99 }, Mid = { -70, 4, 15 }, Bottom = { -70, 4, 99 } },
 		Red = { Top = { 70, 4, -99 }, Mid = { 70, 4, 15 }, Bottom = { 70, 4, 99 } },

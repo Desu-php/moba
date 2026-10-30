@@ -1,5 +1,6 @@
 --!strict
 local Storage = game:GetService("ReplicatedStorage")
+local Protocol = require(Storage:WaitForChild("Shared").Game.RoundProtocol)
 local Controller = {}
 local callbacks: { () -> () } = {}
 local bound: Instance? = nil
@@ -9,7 +10,7 @@ local function bind(state: Instance)
 	state:GetAttributeChangedSignal("RoundId"):Connect(clear)
 	state:GetAttributeChangedSignal("Phase"):Connect(function()
 		local phase = state:GetAttribute("Phase")
-		if phase == "Finished" or phase == "Intermission" then clear() end
+		if phase == "Finished" then clear() end
 	end)
 end
 function Controller.Current(): number?
@@ -17,7 +18,9 @@ function Controller.Current(): number?
 	return if state then state:GetAttribute("RoundId") :: number? else nil
 end
 function Controller.Accepts(roundId: any): boolean
-	return Controller.Current() == roundId
+	local state = Storage:FindFirstChild("SurvivalState")
+	local isolated = game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatOnlyTest") == true
+	return Protocol.acceptsClient(Controller.Current(), roundId, if state then state:GetAttribute("Phase") else nil, isolated)
 end
 function Controller.Watch(callback: () -> ())
 	table.insert(callbacks, callback)

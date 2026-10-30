@@ -44,18 +44,6 @@ function HUD.Start()
    b.BackgroundColor3 = colors.Gold; b.TextColor3 = colors.Background; b.TextSize = 14; b.Font = Enum.Font.GothamBold
    b.BorderSizePixel = 0; b.Parent = parent; round(b, 6); return b
   end
-  local hero = frame(gui, "ProgressionPanel", UDim2.fromOffset(380, 98), UDim2.new(0.5, 0, 1, -12))
-  hero.AnchorPoint = Vector2.new(0.5, 1); hero.BackgroundTransparency = 0.08; round(hero, 10)
-  local scale = Instance.new("UIScale"); scale.Parent = hero
-  local level = label(hero, "Level", "LV 1", UDim2.fromOffset(100, 24), UDim2.fromOffset(12, 5), 17)
-  local gold = label(hero, "Gold", "", UDim2.new(1, -125, 0, 24), UDim2.fromOffset(113, 5), 17); gold.TextColor3 = colors.Gold; gold.TextXAlignment = Enum.TextXAlignment.Right
-  local hp = label(hero, "Health", "", UDim2.fromOffset(150, 18), UDim2.fromOffset(12, 32), 12)
-  local kda = label(hero, "KDA", "", UDim2.new(1, -175, 0, 18), UDim2.fromOffset(163, 32), 12); kda.TextXAlignment = Enum.TextXAlignment.Right
-  local hpTrack = frame(hero, "HealthTrack", UDim2.new(1, -24, 0, 6), UDim2.fromOffset(12, 53)); hpTrack.BackgroundColor3 = colors.Card
-  local hpFill = frame(hpTrack, "Fill", UDim2.fromScale(1, 1), UDim2.new()); hpFill.BackgroundColor3 = colors.Green
-  local xp = label(hero, "XP", "", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(12, 64), 12); xp.TextColor3 = colors.Muted
-  local xpTrack = frame(hero, "XPTrack", UDim2.new(1, -24, 0, 4), UDim2.fromOffset(12, 87)); xpTrack.BackgroundColor3 = colors.Card
-  local xpFill = frame(xpTrack, "Fill", UDim2.fromScale(0, 1), UDim2.new()); xpFill.BackgroundColor3 = colors.Blue
   local toast = label(gui, "RewardNotice", "", UDim2.fromOffset(360, 50), UDim2.new(0.5, 0, 1, -235), 18)
   toast.AnchorPoint = Vector2.new(0.5, 1); toast.TextXAlignment = Enum.TextXAlignment.Center
   toast.TextColor3 = colors.Gold; toast.TextStrokeTransparency = 0.4; toast.TextWrapped = true
@@ -86,13 +74,7 @@ function HUD.Start()
   local function number(name: string): number return (state:GetAttribute(name) or 0) :: number end
   local function refresh()
    local maximum = math.max(1, number("MaxHealth")); local health = number("CurrentHealth")
-   local required = number("XPToNextLevel"); local current = number("CurrentXP"); local balance = number("Gold")
-   level.Text = "LV " .. number("Level"); gold.Text = math.floor(balance) .. " GOLD"
-   hp.Text = string.format("HP %d / %d", math.ceil(health), maximum)
-   kda.Text = string.format("K / D / A   %d / %d / %d", number("TotalKills"), number("TotalDeaths"), number("Assists"))
-   xp.Text = if required == 0 then "МАКСИМАЛЬНЫЙ УРОВЕНЬ" else string.format("XP %d / %d", current, required)
-   hpFill.Size = UDim2.fromScale(math.clamp(health / maximum, 0, 1), 1)
-   xpFill.Size = UDim2.fromScale(if required == 0 then 1 else math.clamp(current / required, 0, 1), 1)
+   local balance = number("Gold")
    shopGold.Text = math.floor(balance) .. " GOLD  •  экипировка сохраняется после смерти"
    for id, buy in buys do
     local item = Items.Items[id]; local owned = state:GetAttribute("Own_" .. id) == true
@@ -131,7 +113,7 @@ function HUD.Start()
   end)
   local xpGain, goldGain, levelGain, noticeVersion = 0, 0, 0, 0
   Rounds.Watch(function()
-   pending = nil; setOpen(false); status.Text = "Новый раунд"; toast.Text = ""
+   pending = nil; setOpen(false); status.Text = "Матч"; toast.Text = ""
    xpGain = 0; goldGain = 0; levelGain = 0; noticeVersion += 1; refresh()
   end)
   notice.OnClientEvent:Connect(function(xpAmount: number, goldAmount: number, levels: number, roundId: number?)
@@ -149,7 +131,6 @@ function HUD.Start()
   local cameraConnection: RBXScriptConnection? = nil
   local function resize()
    local camera = workspace.CurrentCamera; if not camera then return end
-   scale.Scale = math.clamp(math.min((camera.ViewportSize.X - 32) / 380, camera.ViewportSize.Y / 500), 0.7, 1)
    local viewport = camera.ViewportSize
    toast.Size = UDim2.fromOffset(math.min(360, viewport.X - 24), 50)
    toast.TextSize = if viewport.Y < 500 then 14 else 18

@@ -15,11 +15,12 @@ remote.OnClientEvent:Connect(function(id: number, mode: string)
 	else
 		local gui = player.PlayerGui
 		local survival = gui:FindFirstChild("SurvivalHUD"); local panel = if survival then survival:FindFirstChild("MatchPanel") else nil
-		local labels = 0
-		if panel then for _, item in panel:GetDescendants() do if item:IsA("TextLabel") and item.Name == "Towers" and string.find(item.Text, "Башни") then labels += 1 end end end
+		local labels, portraits = 0, 0
+		for _, item in workspace:GetDescendants() do if item:IsA("BillboardGui") and item.Name == "TowerHealth" then labels += 1 end end
+		if panel then for _, item in panel:GetDescendants() do if item:IsA("ViewportFrame") then portraits += 1 end end end
 		local safe = true; local effects = workspace:FindFirstChild("LocalTowerVFX")
 		if effects then for _, item in effects:GetChildren() do if item:IsA("BasePart") then safe = safe and not item.CanCollide and not item.CanQuery and not item.CanTouch end end end
-		result = { towerLabels = labels, hero = gui:FindFirstChild("HeroHUD") ~= nil, abilities = gui:FindFirstChild("AbilityHUD") ~= nil,
+		result = { towerLabels = labels, portraitSlots = portraits, hero = gui:FindFirstChild("HeroHUD") ~= nil, abilities = gui:FindFirstChild("AbilityHUD") ~= nil,
 			safeEffects = safe, effectCount = require(controllers.TowerVFXController).GetActiveCount(), shots = shots }
 	end
 	remote:FireServer(id, result)

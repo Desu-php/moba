@@ -24,6 +24,7 @@ return table.freeze({
 	Rasengan = table.freeze({
 		Ranks = 3, RequiredLevel = 4, RankSkip = 7, ManaCost = 100, Cooldown = 60,
 		Preparation = 2, HoldDuration = 15, AttackControlDelay = 0.01, ImpactDelay = 1, Stun = 3.5,
+		VariantWindow = 1, HandEffectDelay = 1.5, HelperOffsetWarcraft = 120,
 		BaseDamage = 120, StrengthFactor = 1, LevelFactor = 10,
 	}),
 	Clones = table.freeze({

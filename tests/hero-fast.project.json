@@ -1,0 +1,39 @@
+{
+  "name": "RasenganFast",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "../src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "../src/server"
+      },
+      "HeroTests": {
+        "$path": "hero/Runner.server.luau"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "GameSettingsAvatar": "R15",
+        "LoadCharacterAppearance": false
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "../src/client"
+        },
+        "HeroDriver": {
+          "$path": "hero/Driver.client.luau"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$attributes": {
+        "NarutoQuickFixture": true
+      }
+    }
+  }
+}

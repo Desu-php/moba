@@ -19,13 +19,6 @@ function Poses.sample(key: string, time: number, phase: number): Pose
 		pose.Waist = angles(0.23, 0, math.sin(time * 32) * 0.035); pose.Neck = angles(-0.25)
 		pose.LeftShoulder = angles(-0.3, 0, -0.35); pose.RightShoulder = angles(-0.3, 0, 0.35)
 		pose.LeftKnee = angles(-0.22); pose.RightKnee = angles(-0.22)
-	elseif key == "WindPalm" then
-		local thrust = math.clamp((phase - 0.12) / (0.385 - 0.12), 0, 1) * (1 - math.clamp((phase - 0.6) / 0.4, 0, 1))
-		pose.Waist = angles(-0.24 * thrust); pose.Neck = angles(0.13)
-		pose.LeftShoulder = angles(0.3 + 1.35 * thrust, 0, 0.25); pose.RightShoulder = angles(0.3 + 1.35 * thrust, 0, -0.25)
-		pose.LeftElbow = angles(1.5 * (1 - thrust)); pose.RightElbow = angles(1.5 * (1 - thrust))
-		pose.LeftWrist = angles(-0.65 * thrust); pose.RightWrist = angles(-0.65 * thrust)
-		pose.LeftHip = angles(0.4 * thrust); pose.RightHip = angles(-0.25 * thrust)
 	elseif key == "ShadowClones" then
 		local seal = math.clamp(phase / 0.16, 0, 1) * (1 - math.clamp((phase - 0.62) / 0.38, 0, 1))
 		local sign = math.sin(phase * math.pi * 6) * 0.2 * seal
@@ -33,14 +26,18 @@ function Poses.sample(key: string, time: number, phase: number): Pose
 		pose.LeftElbow = angles((1.45 + sign) * seal); pose.RightElbow = angles((1.45 - sign) * seal)
 		pose.LeftWrist = angles(0, sign, 0.55 * seal); pose.RightWrist = angles(0, -sign, -0.55 * seal)
 		pose.Waist = angles(-0.18 * seal); pose.Neck = angles(0.12 * seal)
-	elseif key == "SpiralSphere" then
-		local thrust = math.clamp((phase - 0.24) / (0.35 / 0.9 - 0.24), 0, 1) * (1 - math.clamp((phase - 0.64) / 0.36, 0, 1))
-		local charge = 1 - thrust
-		pose.RightShoulder = angles(0.35 + thrust * 1.45, -0.1, -0.2 * charge); pose.RightElbow = angles(1.5 * charge)
-		pose.RightWrist = angles(-0.4 * thrust)
-		pose.LeftShoulder = angles(1.2 * charge + 0.2, -0.35 * charge, 0.75 * charge); pose.LeftElbow = angles(1.4 * charge)
-		pose.LeftWrist = angles(math.sin(phase * 25) * 0.35 * charge, 0, 0.3 * charge)
-		pose.Waist = angles(-0.3 * thrust, -0.4 + thrust * 0.85); pose.RightHip = angles(0.5 * thrust); pose.LeftHip = angles(-0.3 * thrust)
+	elseif key == "RasenganPrepare" or key == "RasenganHelper" then
+		local circle = time * 16
+		pose.Waist = angles(-.12, -.18); pose.Neck = angles(.12)
+		pose.RightShoulder = angles(.65,-.25,-.15); pose.RightElbow = angles(1.25)
+		pose.LeftShoulder = angles(1.05,-.2,.65); pose.LeftElbow = angles(1.5)
+		pose.LeftWrist = angles(math.sin(circle)*.22,math.cos(circle)*.25,.2)
+	elseif key == "RasenganStrike" then
+		local extend = math.clamp(phase/.12,0,1)
+		pose.Waist = angles(-.2,.35*extend); pose.Neck = angles(.08)
+		pose.RightShoulder = angles(.6+1.1*extend,-.1,-.15); pose.RightElbow = angles(.9*(1-extend))
+		pose.LeftShoulder = angles(.45,0,.35); pose.LeftElbow = angles(1.2)
+		pose.RightHip = angles(.25); pose.LeftHip = angles(-.2)
 	elseif string.match(key, "^Punch%d$") or key == "HeavyPunch" then
 		local heavy = key == "HeavyPunch"
 		local contact = if heavy then 0.327 else if key == "Punch3" then 0.4 else 0.357
@@ -57,6 +54,12 @@ function Poses.sample(key: string, time: number, phase: number): Pose
 		if heavy then pose.RightHip = angles(0.55 * thrust); pose.LeftHip = angles(-0.35 * thrust)
 		elseif key == "Punch3" then pose.RightHip = angles(0.3 * thrust); pose.RightKnee = angles(-0.4 * thrust) end
 	end
+	return pose
+end
+function Poses.holdRasengan(pose: Pose, time: number): Pose
+	pose.RightShoulder = angles(.55,-.25,-.22)
+	pose.RightElbow = angles(1.15 + math.sin(time*3)*.025)
+	pose.RightWrist = angles(-.15,0,-.1)
 	return pose
 end
 return Poses

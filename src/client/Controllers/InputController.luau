@@ -16,6 +16,7 @@ function InputController.Start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if game:GetService("Players").LocalPlayer:GetAttribute("SelectingCloneTarget") == true then return end
 			local playerGui = game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui")
 			local abilityGui = if playerGui then playerGui:FindFirstChild("AbilityHUD") else nil
 			if playerGui and abilityGui then

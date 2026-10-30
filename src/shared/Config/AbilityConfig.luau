@@ -1,15 +1,18 @@
 --!strict
-export type Ability = { Name: string, Key: string, Cooldown: number, Windup: number, Duration: number }
+export type Ability = { Name: string, Key: string, KeyLabel: string, Cooldown: number, Windup: number, Duration: number }
 local abilities: { [string]: Ability } = {
-	ShadowClones = { Name = "Теневые двойники", Key = "Z", Cooldown = 14, Windup = 0.3, Duration = 0.65 },
-	SpiralSphere = { Name = "Расенган", Key = "X", Cooldown = 8, Windup = 0.35, Duration = 0.9 },
-	WindPalm = { Name = "Ветряная ладонь", Key = "C", Cooldown = 7, Windup = 0.25, Duration = 0.65 },
+	Rasengan = { Name = "Расенган I", Key = "One", KeyLabel = "1 / Q", Cooldown = 60, Windup = 2, Duration = 15 },
+	ShadowClones = { Name = "Клоны I", Key = "Two", KeyLabel = "2", Cooldown = 50, Windup = 0.25, Duration = 20 },
+	Gamakichi = { Name = "Гамакичи", Key = "Three", KeyLabel = "3", Cooldown = 0, Windup = 0, Duration = 0 },
+	SageMode = { Name = "Режим мудреца", Key = "Four", KeyLabel = "4", Cooldown = 0, Windup = 0, Duration = 0 },
+	KCM = { Name = "KCM", Key = "Five", KeyLabel = "5", Cooldown = 0, Windup = 0, Duration = 0 },
+	CloneCommand = { Name = "Цель клонам", Key = "F", KeyLabel = "F", Cooldown = 0, Windup = 0, Duration = 0 },
 }
 return table.freeze({
-	Abilities = abilities, Order = { "ShadowClones", "SpiralSphere", "WindPalm" },
+	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand" },
+	PrototypeEnabled = table.freeze({ Rasengan = true, ShadowClones = true, CloneCommand = true }),
+	InputAliases = table.freeze({ Q = "Rasengan" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
-	Sphere = { Damage = 22, Range = 6, ForwardDot = 0.15, ContactWindow = 0.2, Stun = 0.4, Knockback = 19, UpVelocity = 3 },
-	Wind = { Damage = 14, Range = 16, ForwardDot = 0.65, MaxTargets = 3, Stun = 0.25, Knockback = 30, UpVelocity = 4, VisualDuration = 0.3 },
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },
 	Visual = { MaxEffects = 32, SmokeLifetime = 0.55, ViewDistance = 240, BlendSpeed = 20, HUDInterval = 0.1 },

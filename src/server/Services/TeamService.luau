@@ -67,7 +67,7 @@ end
 local function canSpawn(player: Player): boolean
 	local current = state
 	local id = player:GetAttribute("TeamId")
-	return player.Parent == Players and current ~= nil and current.phase ~= "Finished" and current.phase ~= "Intermission"
+	return player.Parent == Players and current ~= nil and current.phase ~= "Finished"
 		and TeamService.IsParticipant(player) and typeof(id) == "string" and TeamService.IsActive(id)
 end
 local function characterAdded(player: Player, character: Model)
@@ -102,7 +102,7 @@ local function add(player: Player)
 	assert(current and arena)
 	player:SetAttribute("RoundId", current.roundId)
 	local members = roster; assert(members)
-	local id: string? = if current.phase ~= "Finished" and current.phase ~= "Intermission" then Roster.join(members, player.UserId) else nil
+	local id: string? = if current.phase ~= "Finished" then Roster.join(members, player.UserId) else nil
 	local eliminated = id ~= nil and not TeamService.IsActive(id)
 	if eliminated then id = nil end
 	syncCounts()
@@ -155,7 +155,7 @@ end
 function TeamService.Update(now: number)
 	local current = state; if not current then return end
 	-- Fill vacated lobby slots deterministically. A locked round accepts only its
-	-- original members on reconnect; new arrivals wait until the next round.
+	-- original members on reconnect; new arrivals spectate for the remainder of this match.
 	if current.phase == "WaitingForPlayers" or current.phase == "Preparing" then
 		local waiting = Players:GetPlayers()
 		table.sort(waiting, function(a: Player, b: Player) return a.UserId < b.UserId end)

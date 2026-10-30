@@ -11,15 +11,13 @@ local Structures = require(Services.StructureService)
 local Damage = require(Services.DamageService)
 local Combat = require(Services.CombatService)
 local Ability = require(Services.AbilityService)
-local Clones = require(Services.CloneService)
+local Clones = require(Services.NarutoSummonService)
 local Spawner = require(Services.MinionSpawnerService)
 local AI = require(Services.MinionAIService)
 local Progression = require(Services.HeroProgressionService)
 local Economy = require(Services.EconomyService)
 local Shop = require(Services.ItemShopService)
-local Life = require(Services.CombatLifeService)
 local Rewards = require(Services.RewardService)
-local RoundConfig = require(Storage:WaitForChild("Shared").Config.RoundConfig)
 local driver = Instance.new("RemoteEvent"); driver.Name = "RoundTestDriver"; driver.Parent = Storage
 local responses: { [Player]: { id: number, data: any } } = {}
 driver.OnServerEvent:Connect(function(player: Player, id: number, data: any) responses[player] = { id = id, data = data } end)
@@ -54,19 +52,16 @@ local function connections(): number
 	return total
 end
 local ok, failure = xpcall(function()
-	print("[RoundTests] Waiting for 2 clients; production round timings are preserved...")
+	print("[RoundTests] Waiting for 2 clients; single-match terminal policy...")
 	untilTrue(function() return #Players:GetPlayers() == 2 and Match.GetState() ~= nil end, 120, "Use Server & Clients with 2 clients")
 	local state = Match.GetState(); assert(state)
 	local map = workspace:WaitForChild("Map") :: Folder
 	local keep = Instance.new("Folder"); keep.Name = "UnmanagedRoundSentinel"; keep.Parent = map
-	local oldHero: Model? = nil; local oldHumanoid: Humanoid? = nil; local oldDeath: Life.Death? = nil
-	local oldTowerHumanoid: Humanoid? = nil
 	local baselineRemotes = 0
 	for _, child in Storage:GetDescendants() do if child:IsA("RemoteEvent") then baselineRemotes += 1 end end
 	local baseConnection = Bases.Destroyed.Event:Connect(function() finishes += 1 end)
-	local deathConnection = Life.Died.Event:Connect(function(event: Life.Death) oldDeath = event end)
 	local mapCount: number? = nil
-	for round = 1, 3 do
+	do local round = 1
 		untilTrue(function() return state.roundId == round and state.phase == "InProgress" end, 35, "Next round did not start")
 		local first: Player? = nil; local second: Player? = nil
 		for _, player in Players:GetPlayers() do if player:GetAttribute("TeamId") == "Blue" then first = player else second = player end end
@@ -95,27 +90,12 @@ local ok, failure = xpcall(function()
 			local profile = Progression.Get(player); assert(profile)
 			check("profile fully reset", profile.Level == 1 and profile.CurrentXP == 0 and next(profile.Owned) == nil
 				and profile.TotalKills == 0 and profile.TotalDeaths == 0 and profile.Assists == 0 and profile.TotalMinionKills == 0 and Economy.GetGold(player) == 100)
-			local ability = Ability.GetState(player); assert(ability)
-			check("cooldowns cleared", ability.active == nil and next(ability.ready) == nil)
+			local ability = require(Services.NarutoAbilityService).Get(player); assert(ability)
+			check("cooldowns cleared", ability.q.active == nil and ability.q.cooldownAt == 0 and ability.clones.cooldownAt == 0)
 		end
-		local model, humanoid = body(blue)
+		local model = body(blue)
 		arrange(blue, Vector3.new(0, 36, 0)); arrange(red, Vector3.new(130, 36, 50))
 		check("summons cleared", Clones.GetCount() == 0)
-		if round > 1 then
-			assert(oldHero and oldHumanoid and oldTowerHumanoid)
-			check("old life removed", oldHero ~= model and oldHero.Parent == nil and oldTowerHumanoid.Parent == nil)
-			check("stale attacker cannot damage", Damage.Apply(oldHero, humanoid, 100) == 0)
-			check("stale victim cannot receive damage", Damage.Apply(model, oldHumanoid, 100) == 0)
-			check("stale reset ignored", not Match.ResetRound(round - 1))
-			Bases.Destroyed:Fire("Blue", round - 1)
-			if oldDeath then Life.Died:Fire(oldDeath) end
-			local shop = Shop.GetLocation("Blue"); assert(shop); arrange(blue, shop.Position + Vector3.new(0, 2, -4))
-			Economy.AddGold(blue, 900, "StaleRequestFixture")
-			command(blue, "stale", round - 1)
-			check("old network requests cannot buy, attack or summon", Economy.GetGold(blue) == 1000 and Clones.GetCount() == 0
-				and model:GetAttribute("AbilityId") == "" and model:GetAttribute("CombatLastAttackAt") == 0 and state.phase == "InProgress")
-			check("old death cannot reward", (Progression.Get(blue) :: any).TotalKills == 0)
-		end
 		arrange(blue, Vector3.new(0, 36, 0))
 		local npc = Spawner.Spawn("Red", "Mid", "Melee", 1); assert(npc)
 		local target = AI.GetAll()[npc]; target.root.Anchored = true; target.root.CFrame = CFrame.new(0, 36, -4)
@@ -123,8 +103,9 @@ local ok, failure = xpcall(function()
 		check("M1 works each round", response.accepted == true and target.humanoid.Health < target.humanoid.MaxHealth)
 		task.wait(1)
 		local hp = target.humanoid.Health
-		response = command(blue, "cast", "SpiralSphere")
-		check("Rasengan works each round", response.accepted == true and target.humanoid.Health < hp)
+		Progression.AddXP(blue, 450) -- Source rank-I Q eligibility; no timing shortcuts.
+		response = command(blue, "cast", "Rasengan")
+		check("prepared Rasengan works each round", response.accepted == true and response.attack == true and target.humanoid.Health < hp)
 		Damage.Apply(model, target.humanoid, 9999); task.wait(0.15)
 		check("minion rewards work each round", (Progression.Get(blue) :: any).TotalMinionKills == 1)
 		local shop = Shop.GetLocation("Blue"); assert(shop)
@@ -133,41 +114,62 @@ local ok, failure = xpcall(function()
 		check("shop works each round", (Progression.Get(blue) :: any).Owned.IronBlade == true)
 		Progression.AddXP(blue, 500); Progression.Increment(blue, "TotalKills")
 		arrange(blue, Vector3.new(0, 36, 0)); Ability.Reset()
-		check("clones created before boundary", Clones.Spawn(blue, model) > 0)
+		local native = require(Services.NarutoAbilityService)
+		local summoned = native.TryCast(blue, "ShadowClones", round, workspace:GetServerTimeNow(), nil)
+		untilTrue(function() return Clones.GetCount() > 0 end, 2, "No source clones before boundary")
+		check("clones created before boundary", summoned and Clones.GetCount() > 0)
 		local gold = Economy.GetGold(blue)
 		local bounty = 0
 		for _, tower in Towers.GetAll() do
 			if tower.structure.teamId == "Red" then
-				oldTowerHumanoid = tower.structure.humanoid
 				check("tower lethal hit", Damage.Apply(model, tower.structure.humanoid, 9999) > 0)
 				bounty += 50
 				check("tower bounty exactly once", Economy.GetGold(blue) == gold + bounty and Damage.Apply(model, tower.structure.humanoid, 9999) == 0)
 			end
 		end
 		local base = Bases.Get("Red"); assert(base)
-		check("ability prepared near finish", command(blue, "prepare").accepted == true)
-		oldHero = model; oldHumanoid = humanoid
+		task.wait(.35); local preparing = command(blue, "prepare"); local active = native.Get(blue)
+		check("ability prepared near finish", preparing.accepted == true and active ~= nil and active.q.active ~= nil)
 		check("core damage after shields fall", Damage.Apply(model, base.humanoid, 9999) > 0)
 		untilTrue(function() return state.phase == "Finished" end, 2, "No result")
 		check("winner once", state.winner == "Blue" and state.roundId == round)
-		local stoppedAbility = Ability.GetState(blue); assert(stoppedAbility)
-		check("finish stops attacks and summons", not Damage.CanAct(model) and Clones.GetCount() == 0 and stoppedAbility.active == nil)
-		check("early reset rejected", not Match.ResetRound(round))
-		local ending = command(blue, "status")
-		check("HUD round and result", ending.roundId == round and string.find(ending.title, tostring(round), 1, true) ~= nil and ending.guiCount == 3)
-		untilTrue(function() return state.phase == "Intermission" end, RoundConfig.IntermissionTime, "No intermission")
-		local endingAgain = command(red, "status")
-		check("client effects cleared", endingAgain.effects == 0 and endingAgain.phase == "Intermission")
-		if round == 3 then
-			untilTrue(function() return state.roundId == 4 end, 15, "Third reset did not complete")
-			check("third reset restored six towers", Structures.Remaining("Blue") == 3 and Structures.Remaining("Red") == 3)
-		end
+		local stoppedAbility = require(Services.NarutoAbilityService).Get(blue); assert(stoppedAbility)
+		check("finish stops attacks and summons", not Damage.CanAct(model) and Clones.GetCount() == 0 and stoppedAbility.q.active == nil)
+		local finishingGold = Economy.GetGold(blue)
+		local epoch, finishedAt, wave = state.roundId, state.finishedAt, state.wave
+		local ending = command(blue, "status", "ПОБЕДА")
+		check("victory HUD retained", ending.phase == "Finished" and ending.guiCount == 3)
+		check("ten top hero portrait slots", ending.portraitSlots == 10)
+		check("lower HP and MP use real current/max values", ending.health ~= "" and ending.mana ~= "" and string.find(ending.health, "/", 1, true) ~= nil and string.find(ending.mana, "/", 1, true) ~= nil)
+		check("HUD has no round diagnostics or duplicate stats", not ending.debugText and not ending.duplicateStats)
+		check("winning side sees victory", ending.resultText == "ПОБЕДА")
+		Bases.Destroyed:Fire("Blue", epoch + 1)
+		check("foreign epoch core event ignored", state.winner == "Blue" and state.phase == "Finished")
+		Bases.Destroyed:Fire("Blue", epoch)
+		check("late same epoch core event ignored", state.winner == "Blue")
+		command(blue, "stale", epoch + 1)
+		check("foreign epoch requests rejected", Economy.GetGold(blue) == finishingGold and Clones.GetCount() == 0)
+		check("current epoch ability rejected after victory", not Ability.TryCast(blue, 999999, model, "ShadowClones"))
+		check("current epoch attack rejected after victory", Combat.TryAttack(blue, 999999, model) ~= "Started")
+		check("no damage after victory", Damage.Apply(model, base.humanoid, 9999) == 0)
+		task.wait(17) -- Exceeds the former result/intermission/preparation cycle.
+		check("match stays terminal beyond old restart deadline", state.phase == "Finished" and state.roundId == epoch and state.finishedAt == finishedAt and state.winner == "Blue")
+		check("no new wave or economy after victory", state.wave == wave and Economy.GetGold(blue) == finishingGold)
+		check("destroyed structures remain destroyed", Structures.Remaining("Red") == 0 and base.humanoid.Health == 0)
+		check("winner character not reset", blue.Character == model and model.Parent ~= nil)
+		check("loser does not respawn", red.Character == nil or (red.Character:FindFirstChildOfClass("Humanoid") :: Humanoid).Health <= 0)
+		local endingAgain = command(red, "status", "ПОРАЖЕНИЕ")
+		check("client effects cleared and result retained", endingAgain.effects == 0 and endingAgain.phase == "Finished")
+		check("losing side sees defeat", endingAgain.resultText == "ПОРАЖЕНИЕ")
+		local abilityRemote = Storage:FindFirstChild("HeroAbility") :: RemoteEvent
+		abilityRemote:FireClient(blue, { kind = "RasenganFinish", position = model:GetPivot().Position, roundId = epoch })
+		task.wait(.1)
+		check("late same epoch visual ignored after victory", command(blue, "status").effects == 0)
 	end
-	-- Three real destructions plus two explicitly injected stale events.
-	check("no duplicated base notifications", finishes == 5)
-	baseConnection:Disconnect(); deathConnection:Disconnect(); keep:Destroy()
+	check("one real destruction plus injected notifications", finishes == 3)
+	baseConnection:Disconnect(); keep:Destroy()
 	workspace:SetAttribute("RoundTestsPassed", count)
-	print("[RoundTests] ALL PASS: " .. count .. " checks across three rounds")
+	print("[RoundTests] ALL PASS: " .. count .. " terminal match checks")
 	return "passed"
 end, function(message) return debug.traceback(tostring(message), 2) end)
 if not ok then workspace:SetAttribute("RoundTestsFailed", tostring(failure)); warn("[RoundTests] FAILED after " .. count .. ": " .. tostring(failure)) end
