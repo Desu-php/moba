@@ -93,6 +93,8 @@ local ok,err=xpcall(function()
  task.wait(.5)
  castSerial+=1; check("new summon before death",Ability.HandleRequest(a,castSerial,character,"Gamakichi",state.roundId))
  local dead=Gama.Get(a); assert(dead);
+ -- Server-authored fixture death must own the humanoid simulation, as the M1 fixture does.
+ local deathRoot=character:FindFirstChild("HumanoidRootPart"); assert(deathRoot and deathRoot:IsA("BasePart")); deathRoot:SetNetworkOwner(nil);
  (character:FindFirstChildOfClass("Humanoid") :: Humanoid).Health=0
  waitFor(function() return Gama.Get(a)==nil end,1,"owner death cleanup")
  check("owner death cancels delayed hits",not dead.model.Parent and session.gama.active==nil)

@@ -8,6 +8,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Rules = require(Shared.Game.ProgressionRules).configure(require(Shared.Config.ProgressionConfig), require(Shared.Config.ItemConfig).Items)
 local DamageService = { Applied = Instance.new("BindableEvent") }
 local enabled = true
+local Oil=require(script.Parent.OilStatusService)
 function DamageService.SetEnabled(value: boolean) enabled = value end
 function DamageService.CanAct(model: Model): boolean
 	if not enabled or model:GetAttribute("CombatDisabled") == true or not model:IsDescendantOf(workspace) then return false end
@@ -19,7 +20,11 @@ function DamageService.CanAct(model: Model): boolean
 	return humanoid ~= nil and humanoid.Health > 0
 end
 function DamageService.CanDamage(attacker: Model, target: Model): boolean
-	return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
+	function DamageService.ApplyAttack(attacker: Model,humanoid: Humanoid,amount: number): number
+ if Oil.MissesAttack(attacker) then return 0 end
+ return DamageService.Apply(attacker,humanoid,amount)
+end
+return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
 		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true)
 		and target:GetAttribute("IsDestroyed") ~= true
 		and Structures.CanReceive(target)
@@ -44,5 +49,9 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 		DamageService.Applied:Fire(attacker, target, dealt, if match then match.roundId else nil)
 	end
 	return dealt
+end
+function DamageService.ApplyAttack(attacker: Model,humanoid: Humanoid,amount: number): number
+ if Oil.MissesAttack(attacker) then return 0 end
+ return DamageService.Apply(attacker,humanoid,amount)
 end
 return DamageService

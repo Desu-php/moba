@@ -14,6 +14,7 @@ local Hitboxes = require(script.Parent.HitboxService)
 local Knockback = require(script.Parent.KnockbackService)
 local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
+local Oil=require(script.Parent.OilStatusService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Structures = require(Shared.Game.StructureRules)
 local Teams = require(script.Parent.TeamService)
@@ -122,7 +123,7 @@ function CombatService.TryAttack(player: Player, ...: any): string
 end
 
 local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
-	if not canAttack(fighter) then return end
+	if not canAttack(fighter) or Oil.MissesAttack(fighter.character) then return end
 	local profile = fighter.profile
 	local targets, box, size = Hitboxes.GetTargets(fighter.character, fighter.root, profile)
 	local hits = {}

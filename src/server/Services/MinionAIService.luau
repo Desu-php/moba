@@ -213,7 +213,7 @@ function AI.Update(now: number)
 				if now >= npc.nextAttack then
 					npc.nextAttack = now + npc.stats.AttackCooldown
 					local humanoid = target:FindFirstChildOfClass("Humanoid")
-					if humanoid and Damage.Apply(model, humanoid, npc.stats.Damage) > 0 then
+					if humanoid and Damage.ApplyAttack(model, humanoid, npc.stats.Damage) > 0 then
 						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
 					end
 				end

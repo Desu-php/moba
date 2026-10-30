@@ -38,10 +38,10 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
-	local session = sessions[player]
-	return if session then { Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt } else {}
+	local session = sessions[player]; local toad=Gama.Get(player)
+	return if session then { Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
 end
 local function publish(player: Player, session: Session, now: number)
 	local model = session.character; if not model or model ~= player.Character then return end
@@ -112,6 +112,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	local fighter = if model then Fighters.GetOrCreate(model) else nil
 	if not model or not fighter then return false, "Unavailable" end
 	Resource.recalculate(session.pool, values(player), now)
+	if id=="GamakichiOil" or id=="GamakichiChop" then return Gama.TrySpell(player,id,requestId,now,targetValue) end
 	if id == "CloneCommand" then
 		if typeof(targetValue) ~= "Instance" then return false, "Target" end
 		local instance = targetValue :: Instance
@@ -229,6 +230,7 @@ function Service.Update(now: number)
 end
 function Service.Start()
 	if started then return end; started = true
+ Gama.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
 	Players.PlayerAdded:Connect(function(player) bind(player) end)
 	Players.PlayerRemoving:Connect(function(player)
 		local session = sessions[player]; if not session then return end

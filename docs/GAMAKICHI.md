@@ -53,3 +53,5 @@ Verified on two Studio clients: 45 runtime checks including ranks 5/6, mana/cool
 owner reward, independent owners, clones coexistence, expiry/death/respawn/terminal.
 Physical Ctrl+3, 3, 2 and F+click were observed; command did not increment M1.
 Lifetime boundary advancement is test-only; no claim of a 55-second wall-clock soak.
+
+Follow-up oil/chopping implementation and native boundaries: [GAMAKICHI-SPELLS.md](GAMAKICHI-SPELLS.md). Its runtime acceptance is separate from the core results above.

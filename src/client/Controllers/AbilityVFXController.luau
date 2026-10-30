@@ -7,11 +7,12 @@ local Config=require(Shared.Config.AbilityConfig)
 local Definition=require(Shared.Abilities.NarutoDefinitions).Rasengan
 local Units=require(Shared.Abilities.WorldUnits)
 local Rounds=require(script.Parent.RoundController)
-type Effect={parts:{BasePart},at:number,untilAt:number,origin:Vector3,model:Model?,kind:string}
+type Effect={parts:{BasePart},at:number,untilAt:number,origin:Vector3,model:Model?,kind:string,destination:Vector3?,radius:number?,caster:Model?}
 type Helper={model:Model,cast:number}
 local effects:{Effect}={}
 local orbs:{[Model]:Effect}={}
 local helpers:{[Model]:Helper}={}
+local oilHighlights:{[Model]:Highlight}={}
 local folder:Folder?=nil
 local VFX={}
 local started=false
@@ -28,10 +29,12 @@ local function create(position:Vector3,kind:string,model:Model?): Effect?
 	if #effects>=Config.Visual.MaxEffects or (camera and (camera.CFrame.Position-position).Magnitude>Config.Visual.ViewDistance) then return nil end
 	local now=workspace:GetServerTimeNow()
 	local effect:Effect={parts={},at=now,untilAt=now+(if kind=="Orb" then 20 elseif kind=="Finish" then .7 else .5),origin=position,model=model,kind=kind}
-	local count=if kind=="Orb" then 32 else 8
+	local count=if kind=="Orb" then 32 elseif kind=="Oil" then 1 elseif kind=="Chop" or kind=="Channel" or kind=="OilImpact" then 4 else 8
 	for i=1,count do
 		local p=part(if kind=="Orb" then "RasenganSpiral" else "Rasengan"..kind,Color3.fromRGB(110,211,255),Vector3.one*.2)
-		if kind=="Orb" then
+		if kind=="Oil" or kind=="OilImpact" then p.Shape=Enum.PartType.Ball; p.Color=Color3.fromRGB(82,49,24); p.Material=Enum.Material.SmoothPlastic; p.Size=Vector3.one*.8
+		elseif kind=="Channel" or kind=="Chop" then p.Shape=Enum.PartType.Cylinder; p.Color=Color3.fromRGB(220,211,179)
+		elseif kind=="Orb" then
 			if i<=2 then p.Shape=Enum.PartType.Ball; p.Size=Vector3.one*(if i==1 then .9 else 1.15); p.Transparency=if i==1 then .08 else .78
 			else p.Size=Vector3.new(.035,.035,.29); p.Color=Color3.fromRGB(211,247,255) end
 		elseif kind=="Smoke" then p.Shape=Enum.PartType.Ball; p.Material=Enum.Material.SmoothPlastic; p.Color=Color3.fromRGB(193,207,214)
@@ -72,7 +75,17 @@ local function visible(model:Model,now:number): boolean
 end
 function VFX.Event(message:any)
 	if typeof(message.position)~="Vector3" then return end
-	if message.kind=="Smoke" then create(message.position,"Smoke",nil)
+	if message.kind=="GamakichiOil" or message.kind=="GamakichiOilImpact" or message.kind=="GamakichiChannel" or message.kind=="GamakichiChopImpact" then
+		local kind=if message.kind=="GamakichiOil" then "Oil" elseif message.kind=="GamakichiOilImpact" then "OilImpact" elseif message.kind=="GamakichiChannel" then "Channel" else "Chop"
+		local effect=create(message.position,kind,nil)
+		if effect then
+			effect.destination=if typeof(message.destination)=="Vector3" then message.destination else nil
+			effect.radius=if typeof(message.radius)=="number" then message.radius else 1
+			local source=message.source
+			if typeof(source)=="Instance" then local instance=source :: Instance; if instance:IsA("Model") then effect.caster=instance end end
+			if kind=="Oil" and typeof(message.duration)=="number" then effect.untilAt=effect.at+math.max(.03,message.duration) end
+		end
+	elseif message.kind=="Smoke" then create(message.position,"Smoke",nil)
 	elseif message.kind=="RasenganFinish" then create(message.position,"Finish",nil)
 	elseif message.kind=="RasenganTrail" then create(message.position,"Trail",nil) end
 end
@@ -89,6 +102,16 @@ function VFX.Start()
 	RunService.PreRender:Connect(function()
 		local now=workspace:GetServerTimeNow(); local match=game:GetService("ReplicatedStorage"):FindFirstChild("SurvivalState")
 		local active=match~=nil and match:GetAttribute("Phase")=="InProgress"
+		local tagged:{[Model]:boolean}={}
+		if active then for _,model in game:GetService("CollectionService"):GetTagged("GamakichiOilStatus") do
+			if model:IsA("Model") and model.Parent and ((model:GetAttribute("OilUntil") or 0) :: number)>now then
+				tagged[model]=true
+				if not oilHighlights[model] then
+					local h=Instance.new("Highlight"); h.Name="OilStatus"; h.FillColor=Color3.fromRGB(92,55,21); h.FillTransparency=.45; h.OutlineTransparency=.6; h.DepthMode=Enum.HighlightDepthMode.Occluded; h.Adornee=model; h.Parent=folder; oilHighlights[model]=h
+				end
+			end
+		end end
+		for model,h in oilHighlights do if not tagged[model] then h:Destroy(); oilHighlights[model]=nil end end
 		local function source(model:Model)
 			local humanoid=model:FindFirstChildOfClass("Humanoid"); if not active or not humanoid or humanoid.Health<=0 then removeHelper(model,false); return end
 			local at=model:GetAttribute("RasenganStartedAt"); local ready=model:GetAttribute("RasenganReadyAt"); local cast=model:GetAttribute("NarutoCastId")
@@ -108,7 +131,7 @@ function VFX.Start()
 		for index=#effects,1,-1 do
 			local effect=effects[index]; local model=effect.model
 			local humanoid=if model then model:FindFirstChildOfClass("Humanoid") else nil
-			if not active or now>=effect.untilAt or (model and (not model.Parent or not humanoid or humanoid.Health<=0 or not visible(model,now))) then remove(index); continue end
+			if not active or now>=effect.untilAt or (effect.caster and not effect.caster.Parent) or (model and (not model.Parent or not humanoid or humanoid.Health<=0 or not visible(model,now))) then remove(index); continue end
 			local elapsed=now-effect.at
 			if model then
 				local hand=model:FindFirstChild("RightHand"); if not hand or not hand:IsA("BasePart") then remove(index); continue end
@@ -128,7 +151,13 @@ function VFX.Start()
 				local progress=math.clamp(elapsed/(effect.untilAt-effect.at),0,1)
 				for i,p in effect.parts do
 					local angle=i*math.pi/4; local finish=effect.kind=="Finish"
-					if finish and i==1 then
+					if effect.kind=="Oil" and effect.destination then
+						p.Position=effect.origin:Lerp(effect.destination,progress)+Vector3.new(0,(effect.destination-effect.origin).Magnitude*.05*4*progress*(1-progress),0)
+					elseif effect.kind=="Channel" or effect.kind=="Chop" or effect.kind=="OilImpact" then
+						local radius=(effect.radius or 1)*(if effect.kind=="Channel" then 1 else progress)
+						if effect.kind=="OilImpact" then p.Position=effect.origin+Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius); p.Transparency=progress
+						else p.Size=Vector3.new(.1,radius*2,radius*2); p.CFrame=CFrame.new(effect.origin+Vector3.new(0,.12+i*.02,0))*CFrame.Angles(0,0,math.pi/2); p.Transparency=.7+progress*.3 end
+					elseif finish and i==1 then
 						p.Size=Vector3.new(.12,2+progress*8,2+progress*8); p.CFrame=CFrame.new(effect.origin-Vector3.new(0,2.8,0))*CFrame.Angles(0,0,math.pi/2); p.Transparency=.35+progress*.65
 					else
 						p.Position=effect.origin+Vector3.new(math.cos(angle)*progress*(if finish then 4 else 2),progress*(if finish then -2 else 1.5),math.sin(angle)*progress*(if finish then 4 else 2))

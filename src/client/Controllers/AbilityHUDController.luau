@@ -24,7 +24,7 @@ function HUD.Start()
 	local level = View.label(panel,"Level",UDim2.fromOffset(34,27),UDim2.fromOffset(86,93),17); level.BackgroundTransparency=0; level.BackgroundColor3=View.Background; level.TextColor3=View.Gold
 	local kda = View.label(panel,"KDA",UDim2.fromOffset(160,22),UDim2.fromOffset(130,8),12)
 	local gold = View.label(panel,"Gold",UDim2.fromOffset(160,22),UDim2.fromOffset(766,115),14); gold.TextColor3=View.Gold
-	local points=View.label(panel,"SkillPoints",UDim2.fromOffset(280,20),UDim2.fromOffset(300,8),12); points.TextColor3=View.Gold
+	local points=View.label(panel,"SkillPoints",UDim2.fromOffset(390,20),UDim2.fromOffset(130,8),12); points.TextColor3=View.Gold
  local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="C · Характеристики"; statsToggle.Size=UDim2.fromOffset(190,24); statsToggle.Position=UDim2.new(0,18,1,-180); statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=gui
  local statsPanel=View.frame(gui,"CharacterStats",UDim2.fromOffset(260,226),UDim2.new(0,18,1,-214)); statsPanel.Position=UDim2.new(0,18,.5,0); statsPanel.AnchorPoint=Vector2.new(0,.5); statsPanel.Visible=false; View.border(statsPanel,View.Gold); local statsScale=Instance.new("UIScale"); statsScale.Parent=statsPanel
  local statsText=View.label(statsPanel,"Values",UDim2.new(1,-16,1,-16),UDim2.fromOffset(8,8),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
@@ -37,7 +37,7 @@ function HUD.Start()
 	for index,id in Config.Order do
 		local main = index <= 5; local slot = if main then index-1 else index-6
 		local button = Instance.new("TextButton"); button.Name=id; button.Size=UDim2.fromOffset(if main then 78 else 64,if main then 66 else 31)
-		button.Position=UDim2.fromOffset(if main then 130+slot*82 else 546,if main then 32 else 32+slot*35)
+		button.Position=UDim2.fromOffset(if main then 130+slot*82 else 546,if main then 32 else 8+slot*31)
 		button.BackgroundColor3=View.Card; button.BorderSizePixel=0; button.Text=""; button.Parent=panel; View.border(button,View.Gold)
 		local key=View.label(button,"Key",UDim2.fromOffset(42,16),UDim2.fromOffset(2,1),11); key.Text=Config.Abilities[id].KeyLabel; key.TextColor3=View.Gold
 		local name=View.label(button,"Name",UDim2.new(1,-6,0,if main then 27 else 14),UDim2.fromOffset(3,if main then 17 else 14),if main then 12 else 10)
@@ -84,11 +84,11 @@ function HUD.Start()
 				local main=index<=5; local slot=if main then index-1 else index-6; local button=buttons[id]
 				button.Size=UDim2.fromOffset(if main then (if compact then 58 else 78) else (if compact then 102 else 64),if main then 66 else (if compact then 42 else 31))
 				button.Position=if compact then UDim2.fromOffset(if main then 102+slot*60 else 8+slot*108,if main then 8 else 160)
-					else UDim2.fromOffset(if main then 130+slot*82 else 546,if main then 32 else 32+slot*35)
+					else UDim2.fromOffset(if main then 130+slot*82 else 546,if main then 32 else 8+slot*31)
 			end
 			for index,slot in inventory do
 				slot.Size=UDim2.fromOffset(if compact then 48 else 92,if compact then 28 else 43)
-				slot.Position=if compact then UDim2.fromOffset(254+((index-1)%3)*52,122+math.floor((index-1)/3)*32)
+				slot.Position=if compact then UDim2.fromOffset(102+(index-1)*51,125)
 					else UDim2.fromOffset(642+((index-1)%3)*98,13+math.floor((index-1)/3)*49)
 			end
 			local hpTrack=hpFill.Parent :: Frame; local mpTrack=mpFill.Parent :: Frame
@@ -119,6 +119,10 @@ function HUD.Start()
   for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
 		for id,button in buttons do
 			local remaining=Controller.Remaining(id); local reason=Controller.AbilityUnavailable(id)
+   if id=="GamakichiOil" or id=="GamakichiChop" then
+    local name=button:FindFirstChild("Name") :: TextLabel
+    name.Text=(if id=="GamakichiOil" then "Масло" else "Рубка")..(if remaining>0 then " "..tostring(math.ceil(remaining)) else "")
+   end
    local rank=number("Rank_"..id)
 			button.Active=reason==nil and remaining<=0; button.AutoButtonColor=button.Active
 			button.BackgroundColor3=if button.Active then Color3.fromRGB(67,78,71) else View.Card

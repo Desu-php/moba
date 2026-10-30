@@ -24,6 +24,12 @@ local FighterStateService = { Changed = Instance.new("BindableEvent") }
 local fighters: { [Model]: Fighter } = {}
 local playerConnections: { [Player]: { RBXScriptConnection } } = {}
 local started = false
+local walkSpeeds: {[Model]: number}=setmetatable({}, {__mode="k"})
+local function effectiveSpeed(model: Model,speed: number): number
+ if model:GetAttribute("CombatDisabled")==true then return 0 end
+ local ends=model:GetAttribute("OilUntil"); local multiplier=model:GetAttribute("OilMoveMultiplier")
+ return if typeof(ends)=="number" and ends>Workspace:GetServerTimeNow() and typeof(multiplier)=="number" then speed*math.clamp(multiplier,0,1) else speed
+end
 
 local function restoreMovement(fighter: Fighter)
 	local saved = fighter.movement
@@ -31,7 +37,7 @@ local function restoreMovement(fighter: Fighter)
 	fighter.movement = nil
 	local humanoid, root = fighter.humanoid, fighter.root
 	if humanoid.Parent then
-		humanoid.WalkSpeed = if fighter.character:GetAttribute("CombatDisabled") == true then 0 else saved.walkSpeed
+		humanoid.WalkSpeed = effectiveSpeed(fighter.character,walkSpeeds[fighter.character] or saved.walkSpeed)
 		humanoid.JumpPower = saved.jumpPower
 		humanoid.JumpHeight = saved.jumpHeight
 		humanoid.AutoRotate = saved.autoRotate
@@ -77,6 +83,10 @@ function FighterStateService.Remove(character: Model)
 	restoreMovement(fighter)
 end
 
+function FighterStateService.GetWalkSpeed(character: Model): number
+ local fighter=fighters[character]; local hp=character:FindFirstChildOfClass("Humanoid")
+ return walkSpeeds[character] or (if fighter and fighter.movement then fighter.movement.walkSpeed elseif hp then hp.WalkSpeed else 0)
+end
 function FighterStateService.Get(character: Model): Fighter?
 	return fighters[character]
 end
@@ -85,12 +95,13 @@ function FighterStateService.Reset()
 end
 
 function FighterStateService.SetWalkSpeed(character: Model, speed: number)
+ walkSpeeds[character]=speed
 	local fighter = fighters[character]
 	if fighter and fighter.movement then
 		fighter.movement.walkSpeed = speed
 	else
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then humanoid.WalkSpeed = if character:GetAttribute("CombatDisabled") == true then 0 else speed end
+		if humanoid then humanoid.WalkSpeed = effectiveSpeed(character,speed) end
 	end
 end
 

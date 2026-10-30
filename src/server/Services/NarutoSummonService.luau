@@ -12,6 +12,7 @@ local Damage = require(script.Parent.DamageService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Targets = require(script.Parent.AbilityTargetService)
 local Push = require(script.Parent.AbilityDisplacementService)
+local Oil=require(script.Parent.OilStatusService)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
 	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number }
 local Service = { Spawned = Instance.new("BindableEvent") }
@@ -42,6 +43,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 		if item:IsA("LuaSourceContainer") or item:IsA("Tool") or item:IsA("ForceField") then item:Destroy()
 		elseif item:IsA("BasePart") then item.CanCollide = false; item.CanTouch = false; item.Massless = true end
 	end
+	model:SetAttribute("OilUntil",nil); model:SetAttribute("OilMoveMultiplier",nil); model:SetAttribute("OilMissAt",nil); game:GetService("CollectionService"):RemoveTag(model,"GamakichiOilStatus")
 	model.Name = "ShadowClone"; model:SetAttribute("EntityKind", "Summon"); model:SetAttribute("NativeNarutoClone", true)
 	model:SetAttribute("SummonOwner", player.UserId); model:SetAttribute("CombatDisabled", false)
 	model:SetAttribute("AbilityId", ""); model:SetAttribute("AbilityEntityId", nil); model:SetAttribute("LifeId", nil)
@@ -52,7 +54,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	-- Explicit prototype inheritance policy: copy current/max HP once, without .05 scaling.
-	humanoid.MaxHealth = sourceHumanoid.MaxHealth; humanoid.Health = sourceHumanoid.Health
+	humanoid.WalkSpeed=Stats.Get(player).WalkSpeed; humanoid.MaxHealth = sourceHumanoid.MaxHealth; humanoid.Health = sourceHumanoid.Health
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None; humanoid.BreakJointsOnDeath = false
 	root.Anchored = true; model.PrimaryPart = root
 	local spacing = sourceRoot.Size.X * 2
@@ -108,7 +110,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 						return record.state.round == round and record.state.life == life and Damage.CanDamage(character, target :: Model)
 					end)
 				end
-				Damage.Apply(model, humanoid, record.attackDamage)
+				Damage.ApplyAttack(model, humanoid, record.attackDamage)
 			end
 		end
 		-- Movement is horizontal; the attack check is 3D. Reserve vertical separation
@@ -117,7 +119,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		local moving = flat.Magnitude > horizontalStop + 0.001
 		model:SetAttribute("SummonMoving", moving)
 		if moving then
-			local move = flat.Unit * math.min(flat.Magnitude - horizontalStop, Units.toStuds(Definitions.NativeInference.BaseSpeedWarcraft) * delta)
+			local move = flat.Unit * math.min(flat.Magnitude - horizontalStop, Units.toStuds(Definitions.NativeInference.BaseSpeedWarcraft) * delta * Oil.Movement(model,now))
 			local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances = { model, character }; ray.RespectCanCollide = true
 			local wall = workspace:Blockcast(record.root.CFrame, record.root.Size, move, ray)
 			if not wall then model:PivotTo(model:GetPivot() + move) end

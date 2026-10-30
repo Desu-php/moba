@@ -38,7 +38,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	end
 	if not allowed then return result(false,"RateLimited") end
 	local arity=select("#",...)
-	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="CloneCommand" and abilityId~="ShadowClones")
+	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="CloneCommand" and abilityId~="ShadowClones" and abilityId~="GamakichiOil" and abilityId~="GamakichiChop")
 		or typeof(character)~="Instance"
 		or typeof(abilityId)~="string" or #abilityId>32 or not Config.Abilities[abilityId] then return result(false,"Malformed") end
 	local instance=character :: Instance
@@ -54,7 +54,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	Fighters.Update(fighter,now)
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
  local profile=require(script.Parent.HeroProgressionService).Get(player)
- local line=if abilityId=="CloneCommand" then "ShadowClones" else abilityId
+ local line=if abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
  if not profile or (if abilityId=="CloneCommand" then math.max(profile.Learned.ShadowClones or 0,profile.Learned.Gamakichi or 0) else profile.Learned[line] or 0)<1 then return result(false,"Unlearned") end
 	return result(Naruto.TryCast(player,abilityId,id,now,target))
 end

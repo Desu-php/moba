@@ -69,3 +69,24 @@ if workspace:GetAttribute("GamakichiManual")==true then
   until os.clock()>=deadline or not a.Parent
  end)
 end
+if workspace:GetAttribute("GamakichiSpellsManual")==true then
+ local Gama=require(services.GamakichiService)
+ task.spawn(function()
+  local deadline=os.clock()+240; local lastSerial=0; local lastWave=0
+  while os.clock()<deadline and a.Parent do
+   task.wait(.02)
+   local r=Gama.Get(a)
+   if r then
+    local serial=r.spells.serial
+    if serial~=lastSerial then
+     lastSerial=serial
+     local f=require(services.FighterStateService).Get(a.Character); assert(f and f.logic.attackSerial==0,"G/H click leaked M1")
+     print("[GamaSpellsManual] ACCEPTED",serial,"oil",r.spells.flight~=nil,"channel",r.spells.channel~=nil,"M1",f.logic.attackSerial)
+    end
+    local wave=r.model:GetAttribute("ChannelWave")
+    if typeof(wave)=="number" and wave~=lastWave then lastWave=wave; print("[GamaSpellsManual] WAVE",wave) end
+   end
+  end
+ end)
+ print("[GamaSpellsManual] READY:3 summon, G enemy, H ground; M1 must remain0")
+end

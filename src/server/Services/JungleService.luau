@@ -78,7 +78,7 @@ function Jungle.Update(now: number)
 		local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 		local root = model.PrimaryPart :: BasePart
 		local fighter = Fighters.Get(model)
-		if fighter and fighter.logic.mode ~= "Stunned" then humanoid.WalkSpeed = Config.Stats.WalkSpeed end
+		if fighter and fighter.logic.mode ~= "Stunned" then Fighters.SetWalkSpeed(model,Config.Stats.WalkSpeed) end
 		local target = camp.target
 		if target and not Damage.CanDamage(model, target) then target = nil end
 		if not target and camp.logic.mode ~= "Returning" then
@@ -110,7 +110,7 @@ function Jungle.Update(now: number)
 					if now >= camp.nextAttack then
 						camp.nextAttack = now + Config.Stats.AttackCooldown
 						local victim = target:FindFirstChildOfClass("Humanoid")
-						if victim then Damage.Apply(model, victim, Config.Stats.Damage) end
+						if victim then Damage.ApplyAttack(model, victim, Config.Stats.Damage) end
 					end
 				end
 			end
