@@ -14,7 +14,7 @@ function DamageService.CanAct(model: Model): boolean
 	local state = Teams.GetState()
 	local player = game:GetService("Players"):GetPlayerFromCharacter(model)
 	if state and player and not Teams.IsParticipant(player) then return false end
-	if state and (state.phase ~= "InProgress" or model:GetAttribute("RoundId") ~= state.roundId or not Teams.IsActive(Teams.GetId(model))) then return false end
+	if state and (state.phase ~= "InProgress" or model:GetAttribute("RoundId") ~= state.roundId or not (Teams.IsNeutral(model) or Teams.IsActive(Teams.GetId(model)))) then return false end
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	return humanoid ~= nil and humanoid.Health > 0
 end

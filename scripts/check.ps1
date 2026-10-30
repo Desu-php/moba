@@ -20,9 +20,9 @@ try {
     if ($Mode -ne 'Full') {
         if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        $pure = @('tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau')
+        $pure = @('tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau')
         $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
-        & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau @pure
+        & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau src/shared/Game/JungleRules.luau @pure
         if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
         foreach ($suite in $pure) {
             & (Join-Path $LuauDirectory 'luau.exe') $suite
@@ -65,6 +65,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Tower test Rojo build failed' }
     & $RojoPath build tests/rounds.project.json -o build/round-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Round test Rojo build failed' }
+    & $RojoPath build tests/jungle.project.json -o build/jungle-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Jungle test build failed' }
+    & $RojoPath sourcemap tests/jungle.project.json -o build/jungle-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Jungle sourcemap failed' }
     & $RojoPath sourcemap tests/rounds.project.json -o build/round-sourcemap.json
     if ($LASTEXITCODE -ne 0) { throw 'Round sourcemap failed' }
     & $RojoPath sourcemap tests/towers.project.json -o build/tower-sourcemap.json
@@ -119,9 +123,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Naruto Legend domain type check failed' }
         & $analyzer src/shared/Game/TowerRules.luau src/shared/Game/StructureRules.luau src/shared/Config/TowerConfig.luau tests/TowerRules.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
-        & $analyzer src/shared/Game/RoundProtocol.luau tests/Rounds.spec.luau
+        & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Game/JungleRules.luau tests/Jungle.spec.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau')) {
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -145,6 +149,8 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Hero test type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/tower-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') towers
             if ($LASTEXITCODE -ne 0) { throw 'Tower test type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/jungle-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') jungle
+            if ($LASTEXITCODE -ne 0) { throw 'Jungle fixture types failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/round-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') rounds
             if ($LASTEXITCODE -ne 0) { throw 'Round test type check failed' }
         }

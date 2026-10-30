@@ -18,7 +18,7 @@ local function death(event: Life.Death)
  if awarded[event.model] == event.lifeId then return end
  awarded[event.model] = event.lifeId
  local state = Teams.GetState()
- if not state or event.roundId ~= state.roundId or state.phase ~= "InProgress" or not Teams.IsActive(event.teamId) then return end
+ if not state or event.roundId ~= state.roundId or state.phase ~= "InProgress" or not (Teams.IsActive(event.teamId) or Teams.IsNeutral(event.model)) then return end
  -- Elimination and match shutdown never turn into bounty events.
  if event.killer and not Teams.IsActive(event.killer.teamId) then event.killer = nil end
  local samples: { Rules.PlayerSample } = {}

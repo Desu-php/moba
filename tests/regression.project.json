@@ -35,7 +35,10 @@
         "Survival": {
           "$path": "survival/Driver.client.luau"
         },
-        "$className": "Folder"
+        "$className": "Folder",
+        "Jungle": {
+          "$path": "jungle/Driver.client.luau"
+        }
       }
     },
     "ServerStorage": {
@@ -64,7 +67,10 @@
         "Survival": {
           "$path": "survival/Runner.server.luau"
         },
-        "$className": "Folder"
+        "$className": "Folder",
+        "Jungle": {
+          "$path": "jungle/Runner.server.luau"
+        }
       }
     },
     "ServerScriptService": {

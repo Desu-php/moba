@@ -7,6 +7,11 @@ local Config = require(Shared.Config.GameModeConfig)
 local Rules = require(Shared.Game.MatchState)
 local Roster = require(Shared.Game.MatchRoster)
 local TeamService = {}
+local neutral: { [Model]: boolean } = setmetatable({}, { __mode = "k" })
+function TeamService.RegisterNeutral(model: Model) neutral[model] = true end
+function TeamService.RemoveNeutral(model: Model) neutral[model] = nil end
+function TeamService.IsNeutral(model: Model): boolean return neutral[model] == true end
+local JungleRules = require(Shared.Game.JungleRules)
 local state: Rules.State? = nil
 local map: Folder? = nil
 local teams: { [string]: Team } = {}
@@ -29,6 +34,9 @@ end
 function TeamService.IsEnemy(first: Model, second: Model): boolean
 	local current = state
 	if not current then return first ~= second end -- Isolated M1 regression scene.
+	if neutral[first] or neutral[second] then
+		return JungleRules.hostile(neutral[first] == true, neutral[second] == true, TeamService.IsActive(TeamService.GetId(first)), TeamService.IsActive(TeamService.GetId(second)))
+	end
 	return Rules.enemy(current, TeamService.GetId(first), TeamService.GetId(second))
 end
 function TeamService.GetActiveTeams(): { string }

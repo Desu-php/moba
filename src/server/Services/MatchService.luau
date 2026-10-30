@@ -23,6 +23,7 @@ local MapConfig = require(Shared.Config.MapConfig)
 local Ability = require(script.Parent.AbilityService)
 local Fighters = require(script.Parent.FighterStateService)
 local Life = require(script.Parent.CombatLifeService)
+local Jungle = require(script.Parent.JungleService)
 local MatchService = {}
 local state: Rules.State? = nil
 local folder: Folder? = nil
@@ -62,7 +63,7 @@ local function eliminate(id: string, roundId: number)
 	if not Rules.eliminate(current, id, workspace:GetServerTimeNow()) then return end
 	Teams.Eliminate(id); AI.RemoveTeam(id)
 	if current.phase == "Finished" then
-		Damage.SetEnabled(false); AI.SetRunning(false); Towers.CancelAll(); Ability.Reset(); Fighters.Reset(); Teams.Finish()
+		Damage.SetEnabled(false); Jungle.Stop(); AI.SetRunning(false); Towers.CancelAll(); Ability.Reset(); Fighters.Reset(); Teams.Finish()
 		print("[Match] Winner: " .. (current.winner or "Draw"))
 	end
 	MatchService.Publish()
@@ -77,7 +78,7 @@ function MatchService.Start()
 	local initial = Rules.new(Mode.TeamIds()); state = initial
 	Progression.Start(); Stats.Start(); Rewards.Start()
 	Teams.Start(initial, arena); Bases.Start(arena); Spawner.Start(arena)
-	Towers.Start(arena)
+	Towers.Start(arena); Jungle.Start(arena)
 	Shop.Start(arena)
 	local replicated = Instance.new("Folder"); replicated.Name = "SurvivalState"
 	for _, definition in Config.Teams do
@@ -112,7 +113,7 @@ function MatchService.Start()
 		if Rules.waveDue(current, now, MinionConfig.WaveInterval) then Spawner.Wave(current.wave); MatchService.Publish() end
 		if now >= nextAI then
 			nextAI = now + MinionConfig.UpdateInterval
-			local before = os.clock(); AI.Update(now)
+			local before = os.clock(); AI.Update(now); Jungle.Update(now)
 			workspace:SetAttribute("SurvivalAIUpdateMs", (os.clock() - before) * 1000)
 		end
 		if now >= nextSnapshot then nextSnapshot = now + Config.SnapshotInterval; MatchService.Publish() end

@@ -126,3 +126,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check.ps1 `
 Дальний удар NPC — серверный мгновенный урон с проверкой дальности/видимости и коротким декоративным снарядом на клиентах. Полёт не является отдельным физическим источником урона.
 
 Карта рассчитана на две стороны, по три башни у каждой. Сейчас автоматически назначается Наруто с обычным Расенганом и клонами первого ранга; остальные три линии недоступны. Выбора героев, рейтингов, DataStore, matchmaking и монетизации нет. Клоны временные и уязвимые, без полноценного поиска пути. Численные адаптации и границы соответствия карте: [Naruto Legend](docs/NARUTO-LEGEND.md).
+
+## PC-only / ordinary jungle
+Keyboard and mouse only; desktop window resizing remains supported. Four mirrored forest guardian camps sit between lanes. Guardians aggro within14studs, leash at30, evade/heal on return and respawn45seconds after death while the match is active. A kill gives35Gold and50nearby allied XP using the existing attribution system. Balance is a MOBA prototype adaptation, not a Naruto Legend ability specification. Vertical jungle remains deferred. See docs/JUNGLE.md.
