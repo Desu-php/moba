@@ -55,7 +55,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
  local profile=require(script.Parent.HeroProgressionService).Get(player)
  local line=if abilityId=="CloneCommand" then "ShadowClones" else abilityId
- if not profile or (profile.Learned[line] or 0)<1 then return result(false,"Unlearned") end
+ if not profile or (if abilityId=="CloneCommand" then math.max(profile.Learned.ShadowClones or 0,profile.Learned.Gamakichi or 0) else profile.Learned[line] or 0)<1 then return result(false,"Unlearned") end
 	return result(Naruto.TryCast(player,abilityId,id,now,target))
 end
 function Ability.HandleRequest(player: Player,...: any): (boolean,string)

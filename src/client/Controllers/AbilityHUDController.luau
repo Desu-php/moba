@@ -123,7 +123,7 @@ function HUD.Start()
 			button.Active=reason==nil and remaining<=0; button.AutoButtonColor=button.Active
 			button.BackgroundColor3=if button.Active then Color3.fromRGB(67,78,71) else View.Card
 			local status=button:FindFirstChild("Status") :: TextLabel
-			status.Text=if rank==0 and (id=="Rasengan" or id=="ShadowClones") then "Не изуч." elseif remaining>0 then string.format("%.1f",remaining) elseif not (Config.PrototypeEnabled :: {[string]: boolean})[id] then "Скоро" elseif reason then (if id=="Rasengan" and number("Level")<4 then "Ур. 4" else "—") else "Готово"
+			status.Text=if rank==0 and (id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi") then "Не изуч." elseif remaining>0 then string.format("%.1f",remaining) elseif not (Config.PrototypeEnabled :: {[string]: boolean})[id] then "Скоро" elseif reason then (if id=="Rasengan" and number("Level")<4 then "Ур. 4" else "—") else "Готово"
 			if id~="CloneCommand" then status.Text=tostring(rank).." · "..status.Text end
 		end
 	end)

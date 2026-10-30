@@ -49,7 +49,7 @@ function LifeService.Record(attacker: Model, victim: Model)
  LifeService.Register(victim)
  local life = lives[victim]; if not life then return end
  local player = Players:GetPlayerFromCharacter(attacker)
- if not player and attacker:GetAttribute("NativeNarutoClone") == true then
+ if not player and (attacker:GetAttribute("NativeNarutoClone") == true or attacker:GetAttribute("NativeGamakichi")==true) then
   local owner = attacker:GetAttribute("SummonOwner")
   if typeof(owner) == "number" then player = Players:GetPlayerByUserId(owner) end
  end

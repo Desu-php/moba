@@ -20,7 +20,7 @@ try {
     if ($Mode -ne 'Full') {
         if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        $pure = @('tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau')
+        $pure = @('tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau')
         $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
         & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau src/shared/Game/JungleRules.luau @pure
         if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
@@ -71,6 +71,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Jungle sourcemap failed' }
     & $RojoPath build tests/learning.project.json -o build/learning-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Learning test build failed' }
+    & $RojoPath build tests/gamakichi.project.json -o build/gamakichi-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Gamakichi test build failed' }
+    & $RojoPath sourcemap tests/gamakichi.project.json -o build/gamakichi-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Gamakichi sourcemap failed' }
     & $RojoPath sourcemap tests/learning.project.json -o build/learning-sourcemap.json
     if ($LASTEXITCODE -ne 0) { throw 'Learning sourcemap failed' }
     & $RojoPath sourcemap tests/rounds.project.json -o build/round-sourcemap.json
@@ -129,7 +133,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
         & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Game/JungleRules.luau tests/Jungle.spec.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau')) {
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -157,6 +161,8 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Jungle fixture types failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/learning-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') learning
             if ($LASTEXITCODE -ne 0) { throw 'Learning fixture types failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/gamakichi-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') gamakichi
+            if ($LASTEXITCODE -ne 0) { throw 'Gamakichi fixture types failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/round-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') rounds
             if ($LASTEXITCODE -ne 0) { throw 'Round test type check failed' }
         }

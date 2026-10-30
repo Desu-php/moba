@@ -44,3 +44,28 @@ ok,reason=learning.HandleRequest(b,5,c,life,"ShadowClones",state.roundId)
 assert(not ok and reason=="RateLimited" and profile.SkillPoints==before and next(profile.Learned)==nil,"Flood cannot mutate progression")
 print("[LearningAdmission] ALL PASS: 5 boundary checks; use Player1 for physical learning controls")
 print("[ManualUI] Ready: press Q/1, walk with W, use2 for clones and F/HUD command")
+
+if workspace:GetAttribute("GamakichiManual")==true then
+ local progression=require(services.HeroProgressionService)
+ progression.AddXP(a,100000)
+ local profile=progression.Get(a); assert(profile)
+ local rules=require(RS.Shared.Abilities.SkillLearning)
+ for _=1,9 do assert(rules.learn(profile,"Gamakichi")) end
+ assert(rules.learn(profile,"ShadowClones")); progression.Publish(a)
+ local native=require(services.NarutoAbilityService).Get(a); assert(native)
+ local fighter=require(services.FighterStateService).Get(a.Character); assert(fighter)
+ local initialAttacks=fighter.logic.attackSerial
+ print("[GamakichiManual] READY Player1: Ctrl+3 learn10;3 summon;2 clones;F then enemy. Physical M1 must remain",initialAttacks)
+ task.spawn(function()
+  local deadline=os.clock()+180; local lastTarget: string?=nil
+  repeat
+   task.wait(.05)
+   local command=native.commands.commandedTarget
+   if command and command~=lastTarget then
+    lastTarget=command
+    assert(fighter.logic.attackSerial==initialAttacks,"Command click leaked M1")
+    print("[GamakichiManual] Command accepted; M1 unchanged",fighter.logic.attackSerial,command)
+   end
+  until os.clock()>=deadline or not a.Parent
+ end)
+end

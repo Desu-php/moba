@@ -8,6 +8,7 @@ local Config = require(Shared.Config.AbilityConfig)
 local VFX = require(script.Parent.AbilityVFXController)
 local Rounds = require(script.Parent.RoundController)
 local Learning = require(script.Parent.LearningController)
+local Gama=require(Shared.Abilities.GamakichiState)
 local Controller = { Changed = Instance.new("BindableEvent") }
 local remote: RemoteEvent? = nil
 local serial, pendingId, pendingAt = 0, 0, 0
@@ -48,12 +49,12 @@ function Controller.AbilityUnavailable(id: string): string?
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
 	local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
  local line=if id=="CloneCommand" then "ShadowClones" else id
- if (id=="Rasengan" or id=="ShadowClones" or id=="CloneCommand") and (not state or ((state:GetAttribute("Rank_"..line) or 0) :: number)<1) then return "Не изучено" end
+ if (id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	local mana = model:GetAttribute("Mana")
-	local cost = if id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 else 0
+	local cost = if id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
-	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 then return "Нет клонов" end
+	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
 	return nil
 end
 function Controller.BeginCloneCommand(): boolean
@@ -74,7 +75,7 @@ function Controller.PickCloneTarget(point: Vector2?): Model?
 	local summons = workspace:FindFirstChild("HeroSummons")
 	if summons then
 		for _, model in summons:GetChildren() do
-			if model:GetAttribute("NativeNarutoClone") == true and model:GetAttribute("TeamId") == Players.LocalPlayer:GetAttribute("TeamId") then
+			if (model:GetAttribute("NativeNarutoClone") == true or model:GetAttribute("NativeGamakichi")==true) and model:GetAttribute("TeamId") == Players.LocalPlayer:GetAttribute("TeamId") then
 				table.insert(excluded, model)
 			end
 		end

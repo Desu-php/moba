@@ -10,7 +10,7 @@ local abilities: { [string]: Ability } = {
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand" },
-	PrototypeEnabled = table.freeze({ Rasengan = true, ShadowClones = true, CloneCommand = true }),
+	PrototypeEnabled = table.freeze({ Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true }),
 	InputAliases = table.freeze({ Q = "Rasengan" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,

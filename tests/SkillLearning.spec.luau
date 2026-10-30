@@ -12,7 +12,7 @@ check("provisional ordinary clone unlock",Learning.learn(a,"ShadowClones"))
 check("atomic debit",a.SkillPoints==0 and a.Learned.ShadowClones==1)
 check("independent hero",b.SkillPoints==1 and next(b.Learned)==nil)
 check("no unavailable upgrade spend",not Learning.learn(a,"ShadowClones") and a.SkillPoints==0 and a.Learned.ShadowClones==1)
-for _,id in {"Gamakichi","SageMode","KCM"} do check("unimplemented "..id,Learning.reason(a,id)=="NotImplemented") end
+for _,id in {"SageMode","KCM"} do check("unimplemented "..id,Learning.reason(a,id)=="NotImplemented") end
 check("unknown line",not Learning.learn(a,"Fake"))
 Rules.addXP(a,450)
 check("level4 and three earned points",a.Level==4 and a.SkillPoints==3)

@@ -22,7 +22,9 @@ local Progression = require(script.Parent.HeroProgressionService)
 local Teams = require(script.Parent.TeamService)
 local Summons = require(script.Parent.NarutoSummonService)
 local Displacement = require(script.Parent.AbilityDisplacementService)
-type Session = { q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
+local GamaDomain=require(Shared.Abilities.GamakichiState)
+local Gama=require(script.Parent.GamakichiService)
+type Session = { gama: GamaDomain.State, q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
 	character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
 	preparationStunned: boolean, nextPublish: number, connections: { RBXScriptConnection } }
 local Service = { Visual = Instance.new("BindableEvent") }
@@ -36,14 +38,16 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
 	local session = sessions[player]
-	return if session then { Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt } else {}
+	return if session then { Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt } else {}
 end
 local function publish(player: Player, session: Session, now: number)
 	local model = session.character; if not model or model ~= player.Character then return end
 	local cast = session.q.active
+	model:SetAttribute("Ready_Gamakichi",session.gama.cooldownAt)
+	model:SetAttribute("GamakichiCount",if Gama.Get(player) then 1 else 0)
 	model:SetAttribute("Mana", session.pool.mana); model:SetAttribute("MaxMana", session.pool.maximum)
 	model:SetAttribute("Strength", values(player).strength); model:SetAttribute("NativeStatsProvisional", true)
 	model:SetAttribute("Ready_Rasengan", session.q.cooldownAt); model:SetAttribute("Ready_ShadowClones", session.clones.cooldownAt)
@@ -76,6 +80,7 @@ local function selfStun(session: Session, fighter: Fighters.Fighter, now: number
 	session.selfStun = false
 end
 local function invalidate(player: Player, session: Session)
+	Gama.Remove(player); GamaDomain.cancel(session.gama)
 	session.life += 1; Rasengan.newLife(session.q, session.life); CloneState.newLife(session.clones, session.life)
 	Commands.suspend(session.commands); session.target = nil; session.selfControlUntil = 0
 	publish(player, session, workspace:GetServerTimeNow())
@@ -83,7 +88,7 @@ end
 local function bind(player: Player): Session
 	local existing = sessions[player]; if existing then return existing end
 	local now, owner = workspace:GetServerTimeNow(), tostring(player.UserId)
-	local session: Session = { q = Rasengan.new(owner, roundId(), 0), clones = CloneState.new(owner, roundId(), 0),
+	local session: Session = { gama=GamaDomain.new(), q = Rasengan.new(owner, roundId(), 0), clones = CloneState.new(owner, roundId(), 0),
 		commands = Commands.new(owner, roundId(), 0), pool = Resource.new(values(player), now), character = nil, target = nil,
 		life = 0, selfStun = false, selfControlUntil = 0, preparationStunned = false, nextPublish = 0, connections = {} }
 	sessions[player] = session
@@ -119,8 +124,16 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	end
 	if fighter.logic.mode ~= "Idle" or fighter.logic.nextAttackAt > now or session.selfControlUntil > now
 		or (model:GetAttribute("AbilityId") ~= nil and model:GetAttribute("AbilityId") ~= "") then return false, "Busy" end
-	if id == "Rasengan" then
-		if Stats.Get(player).Level < Definitions.Rasengan.RequiredLevel then return false, "Level" end
+	if id == "Gamakichi" then
+        if targetValue~=nil then return false,"Malformed" end
+        local profile=Progression.Get(player)
+        local cast,reason,debit=GamaDomain.request(session.gama,now,requestId,if profile then profile.Learned.Gamakichi or 0 else 0,session.pool.mana)
+        if not cast then return false,reason end
+        assert(Resource.spend(session.pool,debit))
+        Gama.Spawn(player,model,session.gama,cast,session.commands)
+        publish(player,session,now); return true,"Accepted"
+    elseif id == "Rasengan" then
+        if Stats.Get(player).Level < Definitions.Rasengan.RequiredLevel then return false, "Level" end
 		if targetValue ~= nil then return false, "Malformed" end
 		local cast, reason, debit = Q.request(session.q, now, requestId, session.pool.mana, true)
 		if not cast then return false, reason end
@@ -149,8 +162,9 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	return false, "Unsupported"
 end
 function Service.Reset()
-	Summons.Reset(); Displacement.Reset()
+	Summons.Reset(); Gama.Reset(); Displacement.Reset()
 	for player, session in sessions do
+		session.gama=GamaDomain.new()
 		session.life += 1; Rasengan.reset(session.q, roundId(), session.life); CloneState.reset(session.clones, roundId(), session.life)
 		Commands.newLife(session.commands, roundId(), session.life); session.target = nil; session.selfControlUntil = 0
 		session.pool = Resource.new(values(player), workspace:GetServerTimeNow()); publish(player, session, workspace:GetServerTimeNow())
@@ -218,6 +232,7 @@ function Service.Start()
 	Players.PlayerAdded:Connect(function(player) bind(player) end)
 	Players.PlayerRemoving:Connect(function(player)
 		local session = sessions[player]; if not session then return end
+		Gama.Remove(player)
 		invalidate(player, session); Summons.ClearOwner(player)
 		for _, connection in session.connections do connection:Disconnect() end
 		sessions[player] = nil
@@ -264,6 +279,7 @@ function Service.Start()
 	game:GetService("RunService").Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow(); local delta = math.max(0, now - last); last = now
 		Summons.Update(now, delta, Service.GetStats)
+		Gama.Update(now,delta)
 	end)
 	for _, player in Players:GetPlayers() do bind(player) end
 end
