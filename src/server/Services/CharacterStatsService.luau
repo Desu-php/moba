@@ -7,6 +7,8 @@ local Rules = Logic.configure(Config, require(Shared.Config.ItemConfig).Items)
 local Progression = require(script.Parent.HeroProgressionService)
 local Fighters = require(script.Parent.FighterStateService)
 local Teams = require(script.Parent.TeamService)
+local Layers = require(Shared.Abilities.StatLayers)
+local modifiers: {[Model]: Layers.Layers} = setmetatable({}, {__mode="k"})
 local Stats = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
 local healthConnections: { [Player]: RBXScriptConnection } = {}
@@ -16,7 +18,12 @@ local started = false
 function Stats.Get(player: Player): Logic.Stats
  local model = player.Character
  local bonus = if model then model:GetAttribute("StrengthBonus") else nil
- return Rules.stats(Progression.Get(player) or Rules.new(), if typeof(bonus)=="number" and bonus==bonus and math.abs(bonus)<math.huge then bonus else 0)
+ local values=Rules.stats(Progression.Get(player) or Rules.new(), if typeof(bonus)=="number" and bonus==bonus and math.abs(bonus)<math.huge then bonus else 0)
+ if model and modifiers[model] then
+  local m=Layers.sum(modifiers[model]); values.MaxHealth+=m.health; values.Defense+=m.armor
+  values.WalkSpeed+=m.speed; values.AttackDamageBonus+=m.attack
+ end
+ return values
 end
 function Stats.GetForModel(model: Model): Logic.Stats?
  local player = Players:GetPlayerFromCharacter(model)
@@ -33,10 +40,17 @@ function Stats.RecalculateStats(player: Player, fullHealth: boolean?, healing: n
  local folder = Progression.GetFolder(player)
  if folder then
   local fields: { [string]: number } = { MaxHealth = values.MaxHealth, WalkSpeed = values.WalkSpeed,
-   AttackDamageMultiplier = values.AttackDamageMultiplier, Defense = values.Defense, Level = values.Level, Strength = values.Strength, RawStrength = values.RawStrength, Agility = values.Agility, RawAgility = values.RawAgility, Intelligence = values.Intelligence, MaxMana = values.MaxMana, ManaRegen = values.ManaRegen }
+   AttackDamageMultiplier = values.AttackDamageMultiplier, AttackDamageBonus = values.AttackDamageBonus, Defense = values.Defense, Level = values.Level, Strength = values.Strength, RawStrength = values.RawStrength, Agility = values.Agility, RawAgility = values.RawAgility, Intelligence = values.Intelligence, MaxMana = values.MaxMana, ManaRegen = values.ManaRegen }
   for key, value in fields do folder:SetAttribute(key, value) end
   folder:SetAttribute("CurrentHealth", humanoid.Health)
  end
+end
+function Stats.SetLayer(model: Model,key: string,modifier: Layers.Modifier?)
+ local layers=modifiers[model]
+ if not layers then if not modifier then return end; layers={}; modifiers[model]=layers end
+ Layers.set(layers,key,modifier)
+ local player=Players:GetPlayerFromCharacter(model)
+ if player then Stats.RecalculateStats(player) end
 end
 local function bind(player: Player, model: Model)
  task.spawn(function()

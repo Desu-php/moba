@@ -6,7 +6,7 @@
 export type Snapshot = {
 	roundId: number?,
 	character: Model, profileId: string, revision: number, mode: string,
-	comboStep: number, lastAttackAt: number, nextAttackAt: number, stunUntil: number, attackSerial: number,
+	lastAttackAt: number, nextAttackAt: number, stunUntil: number, attackSerial: number,
 }
 export type Attack = { id: number, requestId: number, step: number, startedAt: number, hitAt: number, endsAt: number }
 export type Event = {

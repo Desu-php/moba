@@ -17,7 +17,7 @@ type Movement = {
 export type Fighter = {
 	character: Model, humanoid: Humanoid, root: BasePart, player: Player?,
 	logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
-	revision: number, connections: { RBXScriptConnection }, movement: Movement?,
+	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?,
 }
 
 local FighterStateService = { Changed = Instance.new("BindableEvent") }
@@ -56,7 +56,7 @@ function FighterStateService.Snapshot(fighter: Fighter)
 	return {
 		character = fighter.character, profileId = fighter.profileId, revision = fighter.revision,
 		roundId = fighter.character:GetAttribute("RoundId"),
-		mode = logic.mode, comboStep = logic.comboStep, lastAttackAt = logic.lastAttackAt,
+		mode = logic.mode, lastAttackAt = logic.lastAttackAt,
 		nextAttackAt = logic.nextAttackAt, stunUntil = logic.stunUntil, attackSerial = logic.attackSerial,
 	}
 end
@@ -64,7 +64,7 @@ end
 function FighterStateService.Publish(fighter: Fighter)
 	fighter.revision += 1
 	fighter.character:SetAttribute("CombatState", fighter.logic.mode)
-	fighter.character:SetAttribute("ComboStep", fighter.logic.comboStep)
+	fighter.character:SetAttribute("ComboStep", nil) -- Retire the legacy replicated combo counter.
 	fighter.character:SetAttribute("CombatNextAttackAt", fighter.logic.nextAttackAt)
 	fighter.character:SetAttribute("CombatStunUntil", fighter.logic.stunUntil)
 	fighter.character:SetAttribute("CombatProfileId", fighter.profileId)
@@ -140,10 +140,10 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 	return fighter
 end
 
-local function applyStun(fighter: Fighter, duration: number, resetCombo: boolean)
+local function applyStun(fighter: Fighter, duration: number, interrupt: boolean)
 	if fighter.humanoid.Health <= 0 or fighter.logic.mode == "Dead" then return end
 	local now = Workspace:GetServerTimeNow()
-	State.Stun(fighter.logic, now, duration, resetCombo)
+	State.Stun(fighter.logic, now, duration, interrupt)
 	local humanoid, root = fighter.humanoid, fighter.root
 	if not fighter.movement then
 		local canOwn = root:CanSetNetworkOwnership()
@@ -168,8 +168,8 @@ local function applyStun(fighter: Fighter, duration: number, resetCombo: boolean
 	FighterStateService.Publish(fighter)
 end
 
-function FighterStateService.Stun(fighter: Fighter, duration: number, resetCombo: boolean)
-	applyStun(fighter, math.clamp(duration, 0, fighter.profile.MaxStunDuration), resetCombo)
+function FighterStateService.Stun(fighter: Fighter, duration: number, interrupt: boolean)
+	applyStun(fighter, math.clamp(duration, 0, fighter.profile.MaxStunDuration), interrupt)
 end
 function FighterStateService.StunSpell(fighter: Fighter, duration: number)
 	if duration ~= duration or duration <= 0 or duration == math.huge then return end

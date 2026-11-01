@@ -11,7 +11,7 @@ local Protocol = require(Shared.Combat.CombatProtocol)
 local State = require(Shared.Combat.CombatState)
 local Fighters = require(script.Parent.FighterStateService)
 local Hitboxes = require(script.Parent.HitboxService)
-local Knockback = require(script.Parent.KnockbackService)
+local AttackRules = require(Shared.Combat.BasicAttackRules)
 local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
 local Oil=require(script.Parent.OilStatusService)
@@ -47,6 +47,8 @@ local function announceStart(fighter: Fighters.Fighter)
 	local attack, remote = fighter.logic.active, eventRemote
 	if not attack or not remote then return end
 	Fighters.Publish(fighter)
+	fighter.attackLifeId = fighter.character:GetAttribute("LifeId")
+	fighter.attackRoundId = fighter.character:GetAttribute("RoundId")
 	CombatService.AttackStarted:Fire(fighter)
 	remote:FireAllClients({ kind = "Started", snapshot = Fighters.Snapshot(fighter), attack = attack })
 	if Debug.LogCombat then
@@ -66,6 +68,10 @@ local function canAttack(fighter: Fighters.Fighter): boolean
 		and Hitboxes.IsFiniteCFrame(fighter.root.CFrame)
 end
 
+local function attackSpeed(fighter: Fighters.Fighter): number
+	local stats = Stats.GetForModel(fighter.character)
+	return AttackRules.speed(fighter.profile, if stats then stats.Agility else 0)
+end
 -- Only request identity and the exact current character may come from the client.
 function CombatService.TryAttack(player: Player, ...: any): string
 	if player.Parent ~= Players then return "Rejected" end
@@ -110,7 +116,7 @@ function CombatService.TryAttack(player: Player, ...: any): string
 		return "Rejected"
 	end
 	Fighters.Update(fighter, now)
-	local result, reason = State.Request(fighter.logic, fighter.profile, now, requestId)
+	local result, reason = State.Request(fighter.logic, fighter.profile, now, requestId, attackSpeed(fighter))
 	if result == "Started" then
 		announceStart(fighter)
 	elseif result == "Buffered" then
@@ -123,11 +129,13 @@ function CombatService.TryAttack(player: Player, ...: any): string
 end
 
 local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
-	if not canAttack(fighter) or Oil.MissesAttack(fighter.character) then return end
+	if Fighters.Get(fighter.character) ~= fighter
+		or fighter.attackLifeId ~= fighter.character:GetAttribute("LifeId")
+		or fighter.attackRoundId ~= fighter.character:GetAttribute("RoundId")
+		or not canAttack(fighter) or Oil.MissesAttack(fighter.character) then return end
 	local profile = fighter.profile
 	local targets, box, size = Hitboxes.GetTargets(fighter.character, fighter.root, profile)
 	local hits = {}
-	local heavy = attack.step == #profile.DamageByComboStep
 	local stats = Stats.GetForModel(fighter.character)
 	local multiplier = if stats then stats.AttackDamageMultiplier else 1
 	for _, humanoid in targets do
@@ -136,15 +144,11 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
 		local victim = if isStructure then nil else Fighters.GetOrCreate(character)
 		if not isStructure and not victim then continue end
-		local dealt = Damage.Apply(fighter.character, humanoid, profile.DamageByComboStep[attack.step] * multiplier)
-		-- ForceField-protected targets must not be stunned or pushed.
+		local dealt = Damage.Apply(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
+		-- Only confirmed server damage is a hit.
 		if dealt <= 0 then continue end
 		local position = character:GetPivot().Position
 		table.insert(hits, { character = character, position = position })
-		if victim and humanoid.Health > 0 then
-			Fighters.Stun(victim, if heavy then profile.FinisherStunDuration else profile.HitStunDuration, heavy)
-			if heavy then Knockback.Apply(fighter.root, victim.root, profile) end
-		end
 	end
 	local remote = eventRemote
 	if remote then
@@ -170,7 +174,7 @@ local function heartbeat()
 		local requestId, valid = State.TakeBuffer(fighter.logic, now)
 		if requestId then
 			if valid and canAttack(fighter) then
-				local result = State.Request(fighter.logic, fighter.profile, now, requestId)
+				local result = State.Request(fighter.logic, fighter.profile, now, requestId, attackSpeed(fighter))
 				if result == "Started" then announceStart(fighter) end
 			elseif fighter.player then
 				reject(fighter.player, requestId, character, "BufferExpired")

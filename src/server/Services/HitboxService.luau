@@ -3,6 +3,7 @@
 local Workspace = game:GetService("Workspace")
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.CombatConfig)
 
+local Damage = require(script.Parent.DamageService)
 local HitboxService = {}
 
 function HitboxService.IsFiniteCFrame(frame: CFrame): boolean
@@ -77,6 +78,7 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
 		if not character or not character:IsA("Model") or character == attacker or humanoid.Health <= 0 then
 			continue
 		end
+		if not Damage.CanDamage(attacker, character) or character:FindFirstChildOfClass("ForceField") then continue end
 		local targetRoot = character:FindFirstChild("HumanoidRootPart")
 		if not targetRoot or not targetRoot:IsA("BasePart") or not HitboxService.IsFiniteCFrame(targetRoot.CFrame) then
 			continue
@@ -88,10 +90,16 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
 		local obstruction = Workspace:Raycast(origin.Position, targetRoot.Position - origin.Position, rayParams)
 		if not obstruction or obstruction.Instance:IsDescendantOf(character) then
 			table.insert(targets, humanoid)
-			if #targets >= profile.MaxTargets then break end
 		end
 	end
-	return targets, box, size
+ -- Choose the closest valid enemy in the aimed volume; overlap iteration order is unspecified.
+ table.sort(targets, function(a: Humanoid, b: Humanoid): boolean
+  local first = (a.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart
+  local second = (b.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart
+  return (first.Position - origin.Position).Magnitude < (second.Position - origin.Position).Magnitude
+ end)
+ while #targets > profile.MaxTargets do table.remove(targets) end
+ return targets, box, size
 end
 
 return HitboxService

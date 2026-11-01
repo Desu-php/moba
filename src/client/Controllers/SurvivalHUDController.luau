@@ -7,6 +7,7 @@ local Minions=require(Shared.Config.MinionConfig)
 local VFX=require(script.Parent.VFXController)
 local Rounds=require(script.Parent.RoundController)
 local View=require(script.Parent.MobaHUDView)
+local Layout=require(script.Parent.HUDLayout)
 local HUD={}
 local started=false
 function HUD.Start()
@@ -15,21 +16,21 @@ function HUD.Start()
 		local state=RS:WaitForChild("SurvivalState",30); if not state then return end
 		local player=Players.LocalPlayer
 		local gui=Instance.new("ScreenGui"); gui.Name="SurvivalHUD"; gui.ResetOnSpawn=false; gui.DisplayOrder=5
-		gui.ScreenInsets=Enum.ScreenInsets.CoreUISafeInsets; gui.Parent=player:WaitForChild("PlayerGui")
-		local panel=View.frame(gui,"MatchPanel",UDim2.fromOffset(760,74),UDim2.new(.5,0,0,4)); panel.AnchorPoint=Vector2.new(.5,0)
+		gui.ScreenInsets=Enum.ScreenInsets.None; gui.Parent=player:WaitForChild("PlayerGui")
+		local panel=View.frame(gui,"MatchPanel",UDim2.fromOffset(Layout.TopWidth,Layout.TopHeight),UDim2.new(.5,0,0,0)); panel.AnchorPoint=Vector2.new(.5,0)
 		local scale=Instance.new("UIScale"); scale.Parent=panel
-		local clock=View.label(panel,"Clock",UDim2.fromOffset(100,26),UDim2.fromOffset(330,7),18)
-		local score=View.label(panel,"Score",UDim2.fromOffset(100,23),UDim2.fromOffset(330,35),18); score.TextColor3=View.Gold
+		local clock=View.label(panel,"Clock",UDim2.fromOffset(140,20),UDim2.fromOffset(390,25),15)
+		local score=View.label(panel,"Score",UDim2.fromOffset(140,27),UDim2.fromOffset(390,0),23); score.TextColor3=View.Gold
 		local status=View.label(gui,"Status",UDim2.fromOffset(460,25),UDim2.new(.5,0,0,82),14); status.AnchorPoint=Vector2.new(.5,0); status.TextColor3=View.Gold
 		local slots: { {frame: Frame,portrait: View.Portrait,name: TextLabel,condition: TextLabel,shade: Frame,team: string,index: number} }={}
 		for side,team in {"Blue","Red"} do
 			for index=1,5 do
-				local x=if side==1 then (index-1)*64+6 else 434+(index-1)*64
-				local cell=View.frame(panel,team..index,UDim2.fromOffset(60,68),UDim2.fromOffset(x,3)); View.border(cell,if side==1 then Color3.fromRGB(81,151,112) else Color3.fromRGB(186,82,74))
-				local portrait=View.portrait(cell,UDim2.fromOffset(58,46),UDim2.fromOffset(1,1))
-				local shade=View.frame(cell,"Dead",UDim2.fromOffset(58,46),UDim2.fromOffset(1,1)); shade.BackgroundTransparency=.35; shade.Visible=false
-				local condition=View.label(cell,"Condition",UDim2.fromOffset(58,22),UDim2.fromOffset(1,13),11); condition.ZIndex=3
-				local name=View.label(cell,"Player",UDim2.fromOffset(58,18),UDim2.fromOffset(1,47),10)
+				local x=if side==1 then (index-1)*76+4 else 536+(index-1)*76
+				local cell=View.frame(panel,team..index,UDim2.fromOffset(72,46),UDim2.fromOffset(x,0)); View.border(cell,if side==1 then Color3.fromRGB(81,151,112) else Color3.fromRGB(186,82,74))
+				local portrait=View.portrait(cell,UDim2.fromOffset(70,44),UDim2.fromOffset(1,0))
+				local shade=View.frame(cell,"Dead",UDim2.fromOffset(70,44),UDim2.fromOffset(1,0)); shade.BackgroundTransparency=.35; shade.Visible=false
+				local condition=View.label(cell,"Condition",UDim2.fromOffset(70,22),UDim2.fromOffset(1,11),11); condition.ZIndex=3
+				local name=View.label(cell,"Player",UDim2.fromOffset(70,13),UDim2.fromOffset(1,30),9)
 				table.insert(slots,{frame=cell,portrait=portrait,name=name,condition=condition,shade=shade,team=team,index=index})
 			end
 		end
@@ -80,9 +81,9 @@ function HUD.Start()
 			notice.Visible=not finished and os.clock()<noticeUntil
 			local camera=workspace.CurrentCamera
 			if camera then
-				local width=camera.ViewportSize.X; scale.Scale=math.min(1,(width-16)/760); endingScale.Scale=math.min(1,(width-24)/420)
-				status.Position=UDim2.new(.5,0,0,78*scale.Scale+7); status.Size=UDim2.fromOffset(math.min(460,width-16),25)
-				notice.Position=UDim2.new(.5,0,0,78*scale.Scale+35); notice.Size=UDim2.fromOffset(math.min(500,width-16),28)
+				local width=camera.ViewportSize.X; scale.Scale=Layout.scale(width,camera.ViewportSize.Y); endingScale.Scale=math.min(1,(width-24)/420)
+				status.Position=UDim2.new(.5,0,0,Layout.TopHeight*scale.Scale+7); status.Size=UDim2.fromOffset(math.min(460,width-16),25)
+				notice.Position=UDim2.new(.5,0,0,Layout.TopHeight*scale.Scale+35); notice.Size=UDim2.fromOffset(math.min(500,width-16),28)
 			end
 		end)
 		local shots=state:WaitForChild("MinionShot") :: RemoteEvent

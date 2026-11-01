@@ -52,7 +52,7 @@ local function warnOnce(key: string, message: string)
 end
 
 local function loadTrack(profile: Config.AttackProfile, step: number): AnimationTrack?
-	local animationKey = profile.AnimationKeys[step]
+	local animationKey = profile.AnimationKey
 	local key = profile.AnimationSet .. "." .. animationKey
 	local cached = tracks[key]
 	if cached then return cached.track end
@@ -102,14 +102,15 @@ local function bindCharacter(model: Model)
 		animator = serverAnimator
 		diedConnection = humanoid.Died:Connect(function() AnimationController.Stop() end)
 		local profile = Config.Profiles[Config.DefaultProfile]
-		for step = 1, #profile.AnimationKeys do loadTrack(profile, step) end
+		loadTrack(profile, 1)
 	end)
 end
 
-function AnimationController.Play(requestId: number, step: number, profile: Config.AttackProfile, startedAt: number): boolean
+function AnimationController.Play(requestId: number, step: number, profile: Config.AttackProfile, startedAt: number, attackDuration: number?): boolean
+	local duration = attackDuration or profile.AttackDuration
 	local now = workspace:GetServerTimeNow()
 	local elapsed = math.max(0, now - startedAt)
-	if elapsed >= profile.AttackDurationByComboStep[step] then return false end
+	if elapsed >= duration then return false end
 	if currentRequest == requestId and currentStep == step then
 		-- Confirm the prediction without replaying the track from frame zero.
 		if currentSet ~= profile.AnimationSet then
@@ -124,15 +125,15 @@ function AnimationController.Play(requestId: number, step: number, profile: Conf
 		if current and current.Length > 0 and math.abs(current.TimePosition - elapsed) > Config.AnimationCorrectionThreshold then
 			current.TimePosition = math.min(elapsed, current.Length)
 		end
-		endsAt = startedAt + profile.AttackDurationByComboStep[step]
-		Motion.Predict(requestId, profile.AnimationKeys[step], startedAt, profile.AttackDurationByComboStep[step])
+		endsAt = startedAt + duration
+		Motion.Predict(requestId, profile.AnimationKey, startedAt, duration)
 		return false
 	end
 	AnimationController.Stop()
 	currentRequest, currentStep, currentSet = requestId, step, profile.AnimationSet
-	endsAt = startedAt + profile.AttackDurationByComboStep[step]
+	endsAt = startedAt + duration
 	logicalPlayCount += 1
-	Motion.Predict(requestId, profile.AnimationKeys[step], startedAt, profile.AttackDurationByComboStep[step])
+	Motion.Predict(requestId, profile.AnimationKey, startedAt, duration)
 	local track = loadTrack(profile, step)
 	if track then
 		current = track

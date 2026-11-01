@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.CombatConfig)
 local Debug = require(Shared.Config.DebugConfig)
+local AttackRules = require(Shared.Combat.BasicAttackRules)
 local Protocol = require(Shared.Combat.CombatProtocol)
 local Animations = require(script.Parent.AnimationController)
 local VFX = require(script.Parent.VFXController)
@@ -19,7 +20,6 @@ local pending: Pending? = nil
 local requestSerial = 0
 local localNextAttackAt = 0
 local localStep = 0
-local localLastAttackAt = 0
 local queuedUntil = 0
 local currentProfile = Config.Profiles[Config.DefaultProfile]
 local seenStarted: { [Model]: number } = setmetatable({}, { __mode = "k" })
@@ -35,7 +35,7 @@ end
 local function reset()
 	Animations.Stop()
 	snapshot, pending = nil, nil
-	localNextAttackAt, localStep, localLastAttackAt, queuedUntil = 0, 0, 0, 0
+	localNextAttackAt, localStep, queuedUntil = 0, 0, 0
 	currentProfile = Config.Profiles[Config.DefaultProfile]
 end
 
@@ -46,8 +46,7 @@ local function reconcile(incoming: Protocol.Snapshot): boolean
 	local profiles: { read [string]: Config.AttackProfile } = Config.Profiles
 	currentProfile = profiles[incoming.profileId] or Config.Profiles[Config.DefaultProfile]
 	localNextAttackAt = incoming.nextAttackAt
-	localStep = incoming.comboStep
-	localLastAttackAt = incoming.lastAttackAt
+	localStep = 1
 	if incoming.mode == "Stunned" or incoming.mode == "Dead" then
 		Animations.Stop()
 		pending = nil
@@ -56,10 +55,15 @@ local function reconcile(incoming: Protocol.Snapshot): boolean
 	return true
 end
 
+local function attackSpeed(): number
+ local stats = Players.LocalPlayer:FindFirstChild("HeroState")
+ local agility = if stats then stats:GetAttribute("Agility") else 0
+ return AttackRules.speed(currentProfile, if typeof(agility) == "number" then agility else 0)
+end
 local function playPrediction(intent: Pending)
 	if intent.played then return end
 	intent.played = true
-	Animations.Play(intent.id, intent.step, currentProfile, intent.startAt)
+	Animations.Play(intent.id, intent.step, currentProfile, intent.startAt, currentProfile.AttackDuration / attackSpeed())
 	VFX.Swing(intent.character, intent.step)
 end
 
@@ -91,7 +95,7 @@ local function onEvent(message: Protocol.Event)
 		if localCharacter then
 			local predicted = pending
 			local alreadyPlayed = predicted and predicted.id == attack.requestId and predicted.played and predicted.step == attack.step
-			Animations.Play(attack.requestId, attack.step, currentProfile, attack.startedAt)
+			Animations.Play(attack.requestId, attack.step, currentProfile, attack.startedAt, attack.endsAt - attack.startedAt)
 			if not alreadyPlayed and workspace:GetServerTimeNow() < attack.endsAt then VFX.Swing(character, attack.step) end
 			if predicted and predicted.id == attack.requestId then pending = nil end
 		else
@@ -102,9 +106,7 @@ local function onEvent(message: Protocol.Event)
 		local attackId, step, hits = message.attackId, message.step, message.hits
 		if not attackId or not step or not hits or (seenHits[character] or 0) >= attackId then return end
 		seenHits[character] = attackId
-		local profiles: { read [string]: Config.AttackProfile } = Config.Profiles
-		local profile = profiles[incoming.profileId] or Config.Profiles[Config.DefaultProfile]
-		local heavy = step == #profile.DamageByComboStep
+		local heavy = false
 		for _, hit in hits do
 			if hit.character.Parent then VFX.Hit(hit.character, hit.position, heavy) end
 		end
@@ -137,7 +139,7 @@ function CombatController.TryAttack(): boolean
 		return false
 	end
 	if now < localNextAttackAt - currentProfile.InputBufferWindow then return false end
-	local step = if localStep >= #currentProfile.DamageByComboStep or now - localLastAttackAt >= currentProfile.ComboResetTime then 1 else localStep + 1
+	local step = 1
 	local dueAt = math.max(now, localNextAttackAt)
 	local intent: Pending = {
 		id = CombatController.NextRequestId(), step = step, sentAt = now,
@@ -148,15 +150,20 @@ function CombatController.TryAttack(): boolean
 	if dueAt <= now then
 		playPrediction(intent)
 		localStep = step
-		localLastAttackAt = now
-		localNextAttackAt = now + (if step == #currentProfile.DamageByComboStep then currentProfile.FinisherCooldown else currentProfile.AttackCooldown)
+		localNextAttackAt = now + currentProfile.AttackCooldown / attackSpeed()
 	end
 	if match then remote:FireServer(intent.id, character, Rounds.Current()) else remote:FireServer(intent.id, character) end
 	return true
 end
 
+-- Holding repeats only once recovery ends. It never fills a future input buffer.
+function CombatController.TryHeldAttack(): boolean
+	if pending or workspace:GetServerTimeNow() < localNextAttackAt then return false end
+	return CombatController.TryAttack()
+end
+
 function CombatController.GetDiagnostics()
-	return { comboStep = localStep, pendingRequestId = if pending then pending.id else 0, queued = queuedUntil > 0 }
+	return { pendingRequestId = if pending then pending.id else 0, queued = queuedUntil > 0 }
 end
 
 function CombatController.Start()

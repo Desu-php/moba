@@ -35,5 +35,6 @@ for rank=1,10 do
  if rank<10 then check("skip2 gate "..rank,Learning.reason(profile,"Gamakichi")=="Level") end
 end
 check("rank cap without spend",Learning.reason(profile,"Gamakichi")=="MaxRank" and profile.SkillPoints==20)
-check("forms remain unavailable",Learning.reason(profile,"SageMode")=="NotImplemented" and Learning.reason(profile,"KCM")=="NotImplemented")
+profile.Learned.SageMode=2
+check("advanced Sage and KCM remain unavailable",Learning.reason(profile,"SageMode")=="NotImplemented" and Learning.reason(profile,"KCM")=="NotImplemented")
 print("PASS Gamakichi: "..count.." assertions")

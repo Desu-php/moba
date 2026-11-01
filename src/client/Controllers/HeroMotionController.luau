@@ -49,7 +49,9 @@ local function bind(model: Model)
 end
 local function active(rig: Rig, now: number): (string, number, number)
 	local model = rig.model
-	local selfPause = model:GetAttribute("RasenganSelfPauseUntil")
+	local sageReady=model:GetAttribute("SageReadyAt")
+ if model:GetAttribute("SagePhase")=="Preparing" and typeof(sageReady)=="number" and now<sageReady then return "SagePrepare",now,1 end
+ local selfPause = model:GetAttribute("RasenganSelfPauseUntil")
 	local ownPause = typeof(selfPause)=="number" and now<selfPause
 	local phase = model:GetAttribute("RasenganPhase")
 	local impact = model:GetAttribute("RasenganImpactAt")
@@ -67,9 +69,9 @@ local function active(rig: Rig, now: number): (string, number, number)
 	if intent and now < intent.at + intent.duration then return intent.key, intent.at, intent.duration end
 	local swingAt = model:GetAttribute("SummonSwingAt")
 	if typeof(swingAt) == "number" and now < swingAt + 0.28 then return "Punch" .. tostring(model:GetAttribute("SummonSwingStep") or 1), swingAt, 0.28 end
-	local ends, at, step = model:GetAttribute("CombatAttackEndsAt"), model:GetAttribute("CombatLastAttackAt"), model:GetAttribute("ComboStep")
-	if typeof(ends) == "number" and typeof(at) == "number" and typeof(step) == "number" and now < ends and step >= 1 then
-		return if step == 4 then "HeavyPunch" else "Punch" .. step, at, ends - at
+	local ends, at = model:GetAttribute("CombatAttackEndsAt"), model:GetAttribute("CombatLastAttackAt")
+	if typeof(ends) == "number" and typeof(at) == "number" and now < ends then
+		return "Punch1", at, ends - at
 	end
 	local velocity = rig.root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
 	return if velocity.Magnitude > 1.5 or model:GetAttribute("SummonMoving") == true then "Run" else "Idle", 0, 1

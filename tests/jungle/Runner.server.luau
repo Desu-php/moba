@@ -113,6 +113,10 @@ local ok, failure = xpcall(function()
 	task.wait(0.2)
 	check("Q stuns neutral before delayed impact", respawnHP.Health>0 and (Fighters.Get(respawn) :: any).logic.mode=="Stunned")
 	waitFor(function() return respawnHP.Health==0 end,2,"Q delayed damage")
+	local native=require(services.NarutoAbilityService).Get(blue); assert(native)
+	check("Q authoritative held state consumed on neutral",native.q.active==nil)
+	-- Character attributes are a throttled HUD snapshot, not the domain transaction.
+	waitFor(function() return (blue.Character :: Model):GetAttribute("RasenganHeld")~=true end,.35,"Q held snapshot cleanup")
 	check("Q consumes held sphere on neutral", (blue.Character :: Model):GetAttribute("RasenganHeld")~=true)
 	local cloneCamp=Jungle.GetAll()[2]; local cloneTarget=cloneCamp.model :: Model
 	local cloneHP=cloneTarget:FindFirstChildOfClass("Humanoid") :: Humanoid

@@ -1,0 +1,36 @@
+{
+  "name": "BasicAttackManual",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "../src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "../src/server"
+      },
+      "BasicAttackManual": {
+        "$path": "basic-attack/Manual.server.luau"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "GameSettingsAvatar": "R15",
+        "LoadCharacterAppearance": false
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "../src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$attributes": {
+        "NarutoQuickFixture": true
+      }
+    }
+  }
+}

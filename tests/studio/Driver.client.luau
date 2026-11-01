@@ -50,7 +50,7 @@ driver.OnClientEvent:Connect(function(sequence: number, mode: string)
 		end
 	elseif mode == "buffer" then
 		if controller.TryAttack() then sent += 1 end
-		task.wait(0.26)
+		task.wait(0.4)
 		if controller.TryAttack() then sent += 1 end
 	elseif mode == "vfxCap" then
 		local character = player.Character
@@ -65,7 +65,7 @@ driver.OnClientEvent:Connect(function(sequence: number, mode: string)
 		sent = sent, plays = animations.GetLogicalPlayCount() - playsBefore,
 		totalPlays = animations.GetLogicalPlayCount(),
 		ownStarts = ownStarts, otherStarts = otherStarts, stuns = stuns, hits = hits,
-		activeEffects = vfx.GetActiveCount(), localStep = controller.GetDiagnostics().comboStep,
+		activeEffects = vfx.GetActiveCount(), localStep = 1,
 	})
 end)
 driver:FireServer(0, {})

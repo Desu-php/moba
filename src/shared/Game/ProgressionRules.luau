@@ -8,7 +8,7 @@ export type Configuration = {
 }
 export type Item = { Name: string, Description: string, Permanent: boolean, Cost: number, DamageBonus: number?, HealthBonus: number?, SpeedBonus: number?, DefenseBonus: number?, Heal: number? }
 export type Profile = { Level: number, CurrentXP: number, SkillPoints: number, Learned: { [string]: number }, TotalKills: number, TotalDeaths: number, TotalMinionKills: number, Assists: number, Owned: { [string]: boolean } }
-export type Stats = { MaxHealth: number, WalkSpeed: number, AttackDamageMultiplier: number, Defense: number, Level: number, Strength: number, RawStrength: number, Agility: number, RawAgility: number, Intelligence: number, MaxMana: number, ManaRegen: number }
+export type Stats = { MaxHealth: number, WalkSpeed: number, AttackDamageMultiplier: number, AttackDamageBonus: number, Defense: number, Level: number, Strength: number, RawStrength: number, Agility: number, RawAgility: number, Intelligence: number, MaxMana: number, ManaRegen: number }
 local Module = {}
 function Module.configure(Config: Configuration, items: { [string]: Item })
 local Rules = {}
@@ -39,7 +39,7 @@ function Rules.stats(profile: Profile, strengthBonus: number?): Stats
  local base = Config.BaseStats
  local attributes = Attributes.values(levels + 1, strengthBonus or 0)
  local result = { MaxHealth = Config.Attributes.BaseHealth + Config.Attributes.HealthPerStrength * attributes.strength, WalkSpeed = base.WalkSpeed,
-  AttackDamageMultiplier = base.AttackDamageMultiplier + math.max(0,attributes.strength - Config.Attributes.Strength) * Config.DamagePerStrength, Defense = base.Defense + attributes.agility * Config.ArmorPerAgility, Level = profile.Level, Strength = attributes.strength, RawStrength = attributes.rawStrength, Agility = attributes.agility, RawAgility = attributes.rawAgility, Intelligence = attributes.intelligence, MaxMana = attributes.maxMana, ManaRegen = attributes.regen }
+  AttackDamageMultiplier = base.AttackDamageMultiplier + math.max(0,attributes.strength - Config.Attributes.Strength) * Config.DamagePerStrength, AttackDamageBonus = 0, Defense = base.Defense + attributes.agility * Config.ArmorPerAgility, Level = profile.Level, Strength = attributes.strength, RawStrength = attributes.rawStrength, Agility = attributes.agility, RawAgility = attributes.rawAgility, Intelligence = attributes.intelligence, MaxMana = attributes.maxMana, ManaRegen = attributes.regen }
  for id, owned in profile.Owned do
   local item = items[id]
   if owned and item and item.Permanent then

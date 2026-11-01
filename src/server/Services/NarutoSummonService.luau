@@ -13,6 +13,7 @@ local Stats = require(script.Parent.CharacterStatsService)
 local Targets = require(script.Parent.AbilityTargetService)
 local Push = require(script.Parent.AbilityDisplacementService)
 local Oil=require(script.Parent.OilStatusService)
+local Navigation = require(script.Parent.CloneNavigation)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
 	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number }
 local Service = { Spawned = Instance.new("BindableEvent") }
@@ -28,7 +29,7 @@ function Service.GetAll(): { [Model]: Record } return records end
 function Service.GetCount(): number local count = 0; for _ in records do count += 1 end; return count end
 function Service.Remove(model: Model)
 	local record = records[model]; if not record then return end
-	records[model] = nil; Domain.remove(record.state, record.clone); Fighters.Remove(model); model:Destroy()
+	Navigation.Remove(model); records[model] = nil; Domain.remove(record.state, record.clone); Fighters.Remove(model); model:Destroy()
 end
 function Service.ClearOwner(player: Player)
 	for model, record in records do if record.owner == player then Service.Remove(model) end end
@@ -44,7 +45,9 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 		elseif item:IsA("BasePart") then item.CanCollide = false; item.CanTouch = false; item.Massless = true end
 	end
 	model:SetAttribute("OilUntil",nil); model:SetAttribute("OilMoveMultiplier",nil); model:SetAttribute("OilMissAt",nil); game:GetService("CollectionService"):RemoveTag(model,"GamakichiOilStatus")
-	model.Name = "ShadowClone"; model:SetAttribute("EntityKind", "Summon"); model:SetAttribute("NativeNarutoClone", true)
+	for _,key in {"SagePhase","SageRank","SageReadyAt","SageExpiresAt","SageAuraUntil"} do model:SetAttribute(key,nil) end
+ game:GetService("CollectionService"):RemoveTag(model,"NarutoSage")
+ model.Name = "ShadowClone"; model:SetAttribute("EntityKind", "Summon"); model:SetAttribute("NativeNarutoClone", true)
 	model:SetAttribute("SummonOwner", player.UserId); model:SetAttribute("CombatDisabled", false)
 	model:SetAttribute("AbilityId", ""); model:SetAttribute("AbilityEntityId", nil); model:SetAttribute("LifeId", nil)
 	model:SetAttribute("RasenganPhase", ""); model:SetAttribute("RasenganSelfPauseUntil", 0)
@@ -67,7 +70,8 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
-		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.DamageByComboStep[1] * stats.AttackDamageMultiplier }
+		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.CloneDamage * stats.AttackDamageMultiplier + stats.AttackDamageBonus }
+	Navigation.Register(model, root, humanoid)
 	Fighters.GetOrCreate(model); Service.Spawned:Fire(model)
 	return model
 end
@@ -78,10 +82,10 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 			or record.state.clones[clone.id] ~= clone then Service.Remove(model); continue end
 		model:SetAttribute("RasenganHeld", clone.hasPayload); model:SetAttribute("RasenganVisible", clone.hasPayload)
 		local fighter = Fighters.Get(model)
-		if fighter and fighter.logic.mode == "Stunned" then model:SetAttribute("SummonMoving", false); continue end
+		if fighter and fighter.logic.mode == "Stunned" then Navigation.Stop(model); continue end
 		local intent = Commands.resolve(record.commands)
 		local character = owner.Character
-		if not character or not Damage.CanAct(character) or intent.mode == "Idle" then model:SetAttribute("SummonMoving", false); continue end
+		if not character or not Damage.CanAct(character) or intent.mode == "Idle" then Navigation.Stop(model); continue end
 		local target: Model? = nil
 		if intent.targetId then
 			for candidate in Fighters.GetAll() do
@@ -90,12 +94,12 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 			if not target or not Damage.CanDamage(model, target) then Commands.invalidateTarget(record.commands, intent.targetId); target = nil end
 		end
 		local destination = if target then target:FindFirstChild("HumanoidRootPart") else character:FindFirstChild("HumanoidRootPart")
-		if not destination or not destination:IsA("BasePart") then continue end
+		if not destination or not destination:IsA("BasePart") then Navigation.Stop(model); continue end
 		local distance = destination.Position - record.root.Position
 		local flat = distance * Vector3.new(1, 0, 1)
 		local stop = if target then Units.toStuds(50) + (record.root.Size.X + destination.Size.X) / 2 else record.root.Size.X * 3
 		if flat.Magnitude > 0.001 then record.root.CFrame = CFrame.lookAt(record.root.Position, record.root.Position + flat) end
-		if target and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
+		if target and Damage.CanDamage(model, target) and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
 			record.nextHit = now + 2 -- Hpal ua1c; M1 damage itself retains current prototype combat balance.
 			model:SetAttribute("SummonSwingAt", now); model:SetAttribute("SummonSwingStep", 1)
 			local humanoid = target:FindFirstChildOfClass("Humanoid")
@@ -113,17 +117,9 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 				Damage.ApplyAttack(model, humanoid, record.attackDamage)
 			end
 		end
-		-- Movement is horizontal; the attack check is 3D. Reserve vertical separation
-		-- inside the same surface-distance budget so followers do not stop out of reach.
-		local horizontalStop = math.sqrt(math.max(0, stop * stop - distance.Y * distance.Y))
-		local moving = flat.Magnitude > horizontalStop + 0.001
+		local moving = Navigation.Step(model, character, target or character, destination, stop, now, delta,
+			Units.toStuds(Definitions.NativeInference.BaseSpeedWarcraft) * Oil.Movement(model, now))
 		model:SetAttribute("SummonMoving", moving)
-		if moving then
-			local move = flat.Unit * math.min(flat.Magnitude - horizontalStop, Units.toStuds(Definitions.NativeInference.BaseSpeedWarcraft) * delta * Oil.Movement(model,now))
-			local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances = { model, character }; ray.RespectCanCollide = true
-			local wall = workspace:Blockcast(record.root.CFrame, record.root.Size, move, ray)
-			if not wall then model:PivotTo(model:GetPivot() + move) end
-		end
 	end
 end
 return Service

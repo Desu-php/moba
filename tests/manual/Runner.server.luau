@@ -90,3 +90,28 @@ if workspace:GetAttribute("GamakichiSpellsManual")==true then
  end)
  print("[GamaSpellsManual] READY:3 summon, G enemy, H ground; M1 must remain0")
 end
+if workspace:GetAttribute("SageManual")==true then
+ local progression=require(services.HeroProgressionService)
+ local rules=require(RS.Shared.Abilities.SkillLearning)
+ local xp=require(RS.Shared.Game.ProgressionRules).configure(require(RS.Shared.Config.ProgressionConfig),require(RS.Shared.Config.ItemConfig).Items)
+ local pa,pb=progression.Get(a),progression.Get(b); assert(pa and pb)
+ while pa.Level<10 do progression.AddXP(a,xp.required(pa.Level)) end
+ while pb.Level<6 do progression.AddXP(b,xp.required(pb.Level)) end
+ assert(rules.learn(pa,"SageMode")); progression.Publish(a); progression.Publish(b)
+ for _,p in {a,b} do
+  task.spawn(function()
+   local deadline=os.clock()+180; local previous=""
+   while os.clock()<deadline and p.Parent do
+    task.wait(.05)
+    local n=require(services.NarutoAbilityService).Get(p)
+    local c=n and n.sage.active
+    local phase=if c then c.phase else ""
+    if phase~=previous then
+     previous=phase
+     print("[SageManual]",p.Name,phase,"rank",if c then c.rank else 0,"mana",if n then n.pool.mana else 0,"M1",if p.Character and require(services.FighterStateService).Get(p.Character) then require(services.FighterStateService).Get(p.Character).logic.attackSerial else -1)
+    end
+   end
+  end)
+ end
+ print("[SageManual] READY: Player1 Ctrl+4 rank2 then4; Player2 Ctrl+4 rank1 then4; compare preparation7/10, HUD, aura and movement")
+end

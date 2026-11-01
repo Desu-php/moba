@@ -1,0 +1,91 @@
+--!strict
+local Config=require("../src/shared/Abilities/NarutoKcmConfig")
+local Module=require("../src/shared/Abilities/NarutoKcmState")
+local D=Module.configure(Config)
+local n=0
+local function check(name: string, value: boolean) assert(value,name); n+=1 end
+local function context(level: number?, rank: number?): Module.Context
+ return {level=level or 20,rank=rank or 2,hagoromo=false,alive=true,fullKurama=false,
+ kuramaCooldown=false,sageRemaining=0,sageAuraPresent=false}
+end
+local function has(events: {Module.Event}, kind: string, amount: number?): boolean
+ for _,e in events do if e.kind==kind and (amount==nil or e.amount==amount) then return true end end
+ return false
+end
+local c=context(); local s=D.new(0)
+check("separate resource initialized600",s.chakra==600)
+local ok,reason,events=D.enter(s,c)
+check("rank2 at20 accepted",ok and reason=="Accepted" and s.chakra==400)
+check("entry event",has(events,"Entered") and has(events,"ChakraChanged",-200))
+check("Gamakichi and Kurama disabled",not D.availability(s,c).gamakichi and not D.availability(s,c).fullKurama)
+check("entry does not expose dash",not D.availability(s,c).dash)
+D.update(s,.49,c); check("no early dash",not D.availability(s,c).dash)
+events=D.update(s,.5,c); check("dash after half second",has(events,"DashReady") and D.availability(s,c).dash)
+D.update(s,.99,c); check("no fractional drain",s.chakra==400)
+D.update(s,1,c); check("40 drain and no idle20 regen",s.chakra==360)
+D.update(s,1,c); D.update(s,0,c); check("duplicate and rollback no debit",s.chakra==360 and s.clock==1)
+D.update(s,0/0,c); D.update(s,math.huge,c); check("invalid clocks ignored",s.clock==1)
+local a=s.active; assert(a)
+check("cancel accepted",D.cancel(s,a.id))
+check("cancel waits for timer",s.active~=nil and s.chakra==360)
+D.update(s,2,c); check("cancel final40 and exit",s.active==nil and s.chakra==320)
+D.update(s,3,c); check("no orphan drain",s.chakra==340)
+check("availability restored",D.availability(s,c).gamakichi and D.availability(s,c).sage)
+ok,reason=D.enter(s,c); check("cooldown respected",not ok and reason=="Cooldown")
+D.update(s,10,c); ok=D.enter(s,c); check("reentry after10",ok)
+check("old callback rejected",not D.cancel(s,a.id) and not D.buffRemoved(s,a.id))
+a=s.active; assert(a); check("current buff removal accepted",D.buffRemoved(s,a.id))
+D.update(s,11,c); check("buff removal nexttick exit",s.active==nil)
+local removed=D.new(0); D.enter(removed,c); local removedCast=removed.active; assert(removedCast)
+D.buffRemoved(removed,removedCast.id); D.update(removed,1,c)
+check("removed buff allows idle20 before final40 under selected ordering",removed.chakra==380 and removed.active==nil)
+for rank=1,3 do
+ local x=D.new(0); local gate=context(Config.MinimumLevels[rank]-1,rank)
+ ok,reason=D.enter(x,gate); check("minimum rank"..rank,not ok and reason=="Level" and x.chakra==600)
+ gate.level=Config.MinimumLevels[rank]
+ ok,reason=D.enter(x,gate)
+ check("rank gate"..rank,if rank==3 then not ok and reason=="Hagoromo" else ok)
+ if rank==3 then gate.hagoromo=true; ok=D.enter(x,gate); check("Hagoromo permits learned3",ok) end
+end
+local gate=context(27,0); ok,reason=D.enter(D.new(0),gate); check("flag not free learnedrank",not ok and reason=="Unlearned")
+gate=context(); gate.alive=false; ok,reason=D.enter(D.new(0),gate); check("dead rejected",not ok and reason=="Dead")
+gate=context(); gate.fullKurama=true; ok,reason=D.enter(D.new(0),gate); check("fullKurama external gate",not ok and reason=="FormBusy")
+s=D.new(0); s.chakra=200; ok=D.enter(s,c); check("exact200 enters",ok and s.chakra==0)
+events=D.update(s,1,c); check("depletion clampszero",s.chakra==0 and s.active==nil and has(events,"Exited"))
+s=D.new(0); s.chakra=199; ok=D.enter(s,c); check("failedentry no debit",not ok and s.chakra==199)
+s=D.new(0); D.enter(s,c); c.sageRemaining=20; c.sageAuraPresent=true
+events=D.update(s,.5,c); check("Sage reapplied on morph",has(events,"ReapplySage") and c.sageRemaining==20)
+a=s.active; assert(a); D.cancel(s,a.id); events=D.update(s,1,c)
+check("Sage reapplied on exit without reset",has(events,"ReapplySage") and c.sageRemaining==20)
+s=D.new(0); D.enter(s,c); c.sageRemaining=1
+D.update(s,.5,c); a=s.active; assert(a); D.cancel(s,a.id); events=D.update(s,1,c)
+check("expired Sage not revived",not has(events,"ReapplySage"))
+c=context(); s=D.new(0); D.enter(s,c); c.alive=false; events=D.update(s,.25,c)
+check("death immediate safe cleanup",s.active==nil and s.chakra==400 and has(events,"Exited"))
+D.update(s,1,c); check("death no stale drain",s.chakra==420)
+c=context(); s=D.new(0); D.enter(s,c); D.setSharingCount(s,2)
+events=D.close(s,c); check("close cleansactive and grants",s.closed and s.active==nil and s.sharedUnits==0 and has(events,"RevokeSharing"))
+check("close idempotent",#D.close(s,c)==0)
+D.update(s,100,c); ok=D.enter(s,c); check("closed session inert",not ok and s.chakra==400 and not D.setSharingCount(s,1))
+local x=D.new(0); D.update(x,1,c); check("two owners isolated",x.chakra==620 and s.chakra==400)
+s=D.new(0); c=context(1,0); s.chakra=995; D.update(s,1,c)
+check("threshold may overshoot",s.chakra==1015)
+D.setSharingCount(s,2); D.update(s,2,c); check("threshold skips sharing drain",s.chakra==1015)
+s=D.new(0); D.setSharingCount(s,2); D.update(s,1,c); check("idle regen before sharing debit",s.chakra==612)
+s=D.new(0); s.chakra=0; D.setSharingCount(s,6); events=D.update(s,1,c)
+check("insufficient sharing revokes not negative",s.chakra==20 and s.sharedUnits==0 and has(events,"RevokeSharing"))
+c=context(16,1); s=D.new(0); ok,reason,events=D.convert(s,c)
+check("conversion independent pool to mana event",ok and s.chakra==400 and has(events,"RestoreOrdinaryMana",200))
+c.level=15; ok=D.convert(s,c); check("conversion level16",not ok and s.chakra==400)
+c.level=16; s.chakra=199; ok=D.convert(s,c); check("conversion requires200",not ok and s.chakra==199)
+c=context(); c.fullKurama=true; s=D.new(0); D.update(s,10,c); check("external Kurama suppresses idle regen",s.chakra==600)
+c=context(); s=D.new(0); D.enter(s,c); D.update(s,10,c)
+check("catchup depletes after ten drains",s.chakra==0 and s.active==nil)
+D.update(s,11,c); check("regen resumes after depletion",s.chakra==20)
+s=D.new(0); events=D.update(s,1000000,c); check("huge gap rejected atomically",s.chakra==600 and s.clock==0 and has(events,"ClockGap"))
+for at=60,180,60 do D.update(s,at,c) end; check("bounded idle replay reaches threshold",s.chakra==2900)
+s=D.new(0); D.setSharingCount(s,5); D.update(s,60,c); check("steady shared pool bounded catchup",s.chakra==600 and s.clock==60)
+s=D.new(0); c.level=0/0; ok=D.enter(s,c); D.update(s,2,c)
+check("invalid context inert",not ok and s.chakra==600 and s.clock==0)
+check("raw stats explicit boundary",Config.Policy.MorphStats=="runtime-policy-required-preserve-progression-and-upgrades" and Config.RawMorphProfiles[1].attackBase==35)
+print("ALL PASS: "..n.." NarutoKcm domain checks; native morph parity not certified")

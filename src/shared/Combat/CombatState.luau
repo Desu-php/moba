@@ -3,9 +3,7 @@
 -- Pure state machine. No timers, Instances, network calls or client authority.
 export type Mode = "Idle" | "Attacking" | "Stunned" | "Dead"
 export type Profile = {
-	read ComboResetTime: number, read AttackCooldown: number, read FinisherCooldown: number,
-	read InputBufferWindow: number, read DamageByComboStep: { read number },
-	read HitDelayByComboStep: { read number }, read AttackDurationByComboStep: { read number },
+	read AttackCooldown: number, read InputBufferWindow: number, read HitDelay: number, read AttackDuration: number,
 }
 export type Attack = {
 	id: number, requestId: number, step: number, startedAt: number,
@@ -13,7 +11,7 @@ export type Attack = {
 }
 export type Buffer = { requestId: number, dueAt: number, expiresAt: number }
 export type Fighter = {
-	mode: Mode, comboStep: number, lastAttackAt: number, nextAttackAt: number,
+	mode: Mode, lastAttackAt: number, nextAttackAt: number,
 	stunUntil: number, attackSerial: number, active: Attack?, buffered: Buffer?,
 }
 
@@ -21,7 +19,7 @@ local CombatState = {}
 
 function CombatState.new(): Fighter
 	return {
-		mode = "Idle", comboStep = 0, lastAttackAt = 0, nextAttackAt = 0,
+		mode = "Idle", lastAttackAt = 0, nextAttackAt = 0,
 		stunUntil = 0, attackSerial = 0, active = nil, buffered = nil,
 	}
 end
@@ -41,14 +39,7 @@ function CombatState.Update(state: Fighter, now: number): boolean
 	return false
 end
 
-function CombatState.NextStep(state: Fighter, profile: Profile, now: number): number
-	if state.comboStep >= #profile.DamageByComboStep or now - state.lastAttackAt >= profile.ComboResetTime then
-		return 1
-	end
-	return state.comboStep + 1
-end
-
-function CombatState.Request(state: Fighter, profile: Profile, now: number, requestId: number): (string, string?)
+function CombatState.Request(state: Fighter, profile: Profile, now: number, requestId: number, speedMultiplier: number?): (string, string?)
 	CombatState.Update(state, now)
 	if state.mode == "Dead" or state.mode == "Stunned" then
 		return "Rejected", state.mode
@@ -64,17 +55,16 @@ function CombatState.Request(state: Fighter, profile: Profile, now: number, requ
 		end
 		return "Rejected", "Cooldown"
 	end
-	local step = CombatState.NextStep(state, profile, now)
-	local cooldown = if step == #profile.DamageByComboStep then profile.FinisherCooldown else profile.AttackCooldown
+	local speed = speedMultiplier or 1
+	if speed ~= speed or speed <= 0 or speed == math.huge then return "Rejected", "InvalidSpeed" end
 	state.attackSerial += 1
-	state.comboStep = step
 	state.lastAttackAt = now
-	state.nextAttackAt = now + math.max(cooldown, profile.AttackDurationByComboStep[step])
+	state.nextAttackAt = now + math.max(profile.AttackCooldown, profile.AttackDuration) / speed
 	state.mode = "Attacking"
 	state.active = {
-		id = state.attackSerial, requestId = requestId, step = step, startedAt = now,
-		hitAt = now + profile.HitDelayByComboStep[step],
-		endsAt = now + profile.AttackDurationByComboStep[step], hitClaimed = false,
+		id = state.attackSerial, requestId = requestId, step = 1, startedAt = now,
+		hitAt = now + profile.HitDelay / speed,
+		endsAt = now + profile.AttackDuration / speed, hitClaimed = false,
 	}
 	return "Started", nil
 end
@@ -97,7 +87,7 @@ function CombatState.TakeBuffer(state: Fighter, now: number): (number?, boolean)
 	return buffer.requestId, now <= buffer.expiresAt and state.mode == "Idle"
 end
 
-function CombatState.Stun(state: Fighter, now: number, duration: number, resetCombo: boolean)
+function CombatState.Stun(state: Fighter, now: number, duration: number, _interrupt: boolean)
 	if state.mode == "Dead" then
 		return
 	end
@@ -107,15 +97,10 @@ function CombatState.Stun(state: Fighter, now: number, duration: number, resetCo
 	-- Overlap replaces the deadline, rather than stacking durations or old timers.
 	state.stunUntil = math.max(state.stunUntil, now + duration)
 	state.nextAttackAt = math.max(state.nextAttackAt, state.stunUntil)
-	if resetCombo then
-		state.comboStep = 0
-		state.lastAttackAt = 0
-	end
 end
 
 function CombatState.Kill(state: Fighter)
 	state.mode = "Dead"
-	state.comboStep = 0
 	state.lastAttackAt = 0
 	state.nextAttackAt = 0
 	state.stunUntil = 0

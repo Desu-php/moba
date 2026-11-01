@@ -1,6 +1,6 @@
 param(
     [ValidateSet('Fast','Targeted','Full','Record','Gate')][string]$Mode = 'Targeted',
-    [ValidateSet('Hero','Terminal','Tower','Progression','Survival','M1','Manual')][string]$Suite,
+    [ValidateSet('Hero','Terminal','Tower','Progression','Survival','M1','Manual','Sage','CloneRanks')][string]$Suite,
     [string]$LogPath,
     [ValidateSet('Standalone','Unified')][string]$Launch = 'Standalone',
     [string]$RojoPath,
@@ -13,20 +13,20 @@ $root = Split-Path $PSScriptRoot -Parent
 $cache = Join-Path $root 'build/verification'
 New-Item -ItemType Directory -Force $cache | Out-Null
 $timer = [Diagnostics.Stopwatch]::StartNew()
-$areas = @{ Hero='hero'; Terminal='rounds'; Tower='towers'; Progression='progression'; Survival='survival'; M1='studio'; Manual='manual' }
+$areas = @{ Hero='hero'; Terminal='rounds'; Tower='towers'; Progression='progression'; Survival='survival'; M1='studio'; Manual='manual'; Sage='sage'; CloneRanks='clone-ranks' }
 function Inputs([string]$scope,[string]$launchKind = 'Standalone') {
     $files = @(Get-ChildItem (Join-Path $root 'src') -Recurse -File)
     if ($scope -eq 'Fast') {
         $files = @(Get-ChildItem (Join-Path $root 'src/shared/Abilities') -File) + @(Get-ChildItem (Join-Path $root 'src/shared/Combat') -File) + @(Get-ChildItem (Join-Path $root 'src/shared/Config') -File)
-        foreach ($relative in @('src/shared/Combat/HeroPoses.luau','src/shared/Config/AbilityConfig.luau','src/shared/Config/HeroConfig.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1')) { $files += Get-Item (Join-Path $root $relative) }
+        foreach ($relative in @('src/shared/Combat/HeroPoses.luau','src/shared/Config/AbilityConfig.luau','src/shared/Config/HeroConfig.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/CombatState.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1')) { $files += Get-Item (Join-Path $root $relative) }
     } elseif ($scope -eq 'Targeted') {
         $files += @(Get-ChildItem (Join-Path $root 'tests/hero') -File)
-        foreach ($relative in @('tests/hero-fast.project.json','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1','default.project.json')) { $files += Get-Item (Join-Path $root $relative) }
+        foreach ($relative in @('tests/hero-fast.project.json','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/CombatState.spec.luau','src/shared/Game/ProgressionRules.luau','src/shared/Game/JungleRules.luau','scripts/check.ps1','scripts/verify.ps1','default.project.json')) { $files += Get-Item (Join-Path $root $relative) }
     } elseif ($areas.ContainsKey($scope)) {
         # Hero also exercises the client's target picker; include its controller.
         $dir = Join-Path $root ('tests/' + $areas[$scope])
         if (Test-Path -LiteralPath $dir) { $files += @(Get-ChildItem $dir -Recurse -File) }
-        $projectName = @{Hero='hero';Terminal='rounds';Tower='towers';Progression='progression';Survival='survival';M1='studio';Manual='manual'}[$scope]
+        $projectName = @{Hero='hero';Terminal='rounds';Tower='towers';Progression='progression';Survival='survival';M1='studio';Manual='manual'; Sage='sage'; CloneRanks='clone-ranks'}[$scope]
         $project = Join-Path $root ('tests/' + $projectName + '.project.json')
         if (Test-Path -LiteralPath $project) { $files += Get-Item $project }
         if ($launchKind -eq 'Unified') {
@@ -57,7 +57,7 @@ if ($Mode -eq 'Record') {
     if (-not $Suite -or -not $LogPath) { throw 'Record requires -Suite and -LogPath.' }
     $log = Get-Item -LiteralPath $LogPath
     $text = [IO.File]::ReadAllText($log.FullName)
-    $prefix = @{Hero='HeroTests';Terminal='RoundTests';Tower='TowerTests';Progression='ProgressionTests';Survival='SurvivalTests';M1='M1Tests';Manual='ManualReview'}[$Suite]
+    $prefix = @{Hero='HeroTests';Terminal='RoundTests';Tower='TowerTests';Progression='ProgressionTests';Survival='SurvivalTests';M1='M1Tests';Manual='ManualReview'; Sage='SageTests'; CloneRanks='CloneRankTests'}[$Suite]
     if ($text -notmatch ('\[' + $prefix + '\] ALL PASS:') -or $text -match ('\[' + $prefix + '\] FAILED')) { throw 'Log does not contain an unfailed completed suite.' }
     $files = Inputs $Suite $Launch
     if (($files | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc -gt $log.CreationTimeUtc) { throw 'Evidence predates an input file; rerun the affected suite.' }
@@ -74,7 +74,7 @@ $fingerprint = Fingerprint (Inputs $scope)
 $toolFiles = @((Get-Item $RojoPath)) + @(Get-ChildItem $LuauDirectory -Filter '*.exe' -File) + @(Get-ChildItem $LuauLspDirectory -Filter '*.exe' -File) + @((Get-Item (Join-Path $LuauLspDirectory 'globalTypes.d.luau')))
 $toolStamp = ($toolFiles | Sort-Object FullName | ForEach-Object { $_.FullName + ':' + (Get-FileHash $_.FullName).Hash }) -join '|'
 $previous = ReadRecord $scope
-$products = if ($scope -eq 'Fast') { @() } elseif ($scope -eq 'Targeted') { @('rasengan-fast.rbxlx') } else { @('gamakichi-spells-tests.rbxlx','gamakichi-tests.rbxlx','learning-tests.rbxlx','jungle-tests.rbxlx','regression.rbxlx','anime-battlegrounds.rbxlx','hero-tests.rbxlx','round-tests.rbxlx','tower-tests.rbxlx','progression-tests.rbxlx','survival-tests.rbxlx','combat-regression-stage3.rbxlx') }
+$products = if ($scope -eq 'Fast') { @() } elseif ($scope -eq 'Targeted') { @('rasengan-fast.rbxlx') } else { @('basic-attack-manual.rbxlx','navigation-tests.rbxlx','clone-ranks-tests.rbxlx','sage-tests.rbxlx','gamakichi-spells-tests.rbxlx','gamakichi-tests.rbxlx','learning-tests.rbxlx','jungle-tests.rbxlx','regression.rbxlx','anime-battlegrounds.rbxlx','hero-tests.rbxlx','round-tests.rbxlx','tower-tests.rbxlx','progression-tests.rbxlx','survival-tests.rbxlx','combat-regression-stage3.rbxlx') }
 $present = @($products | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root ('build/' + $_))) }).Count -eq 0
 if ($present -and $previous) {
     foreach ($product in $products) {

@@ -1,13 +1,15 @@
 --!strict
 -- Initial point/+1 per level follow documented native defaults. Clone unlock is MVP policy.
 export type Profile = { Level: number, SkillPoints: number, Learned: { [string]: number } }
+local RankPolicy = require("./NarutoRankPolicy")
 local Learning = {}
+Learning.NativePolicy = table.freeze({ CloneFirstLevel=1, CloneFirstLevelStatus="CallerSelectedNativeBoundary" })
 Learning.Order = table.freeze({ "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM" })
 local lines: { [string]: { max: number, runtime: number, levels: { number } } } = {
 	Rasengan = { max=3, runtime=1, levels={4,11,18} },
-	ShadowClones = { max=4, runtime=1, levels={1} }, -- Provisional initial unlock; inherited native field unresolved.
+	ShadowClones = { max=4, runtime=3, levels={1,5,9,13} }, -- Provisional initial unlock; inherited native field unresolved.
 	Gamakichi = { max=10, runtime=10, levels={1,3,5,7,9,11,13,15,17,19} }, -- Provisional AOsf first-level policy.
-	SageMode = { max=3, runtime=0, levels={6,10,14} },
+	SageMode = { max=3, runtime=2, levels={6,10,14} },
 	KCM = { max=3, runtime=0, levels={13,20,27} },
 }
 function Learning.reason(profile: Profile, id: string): string?
@@ -15,7 +17,11 @@ function Learning.reason(profile: Profile, id: string): string?
 	local rank = profile.Learned[id] or 0
 	if rank >= line.max then return "MaxRank" end
 	if rank >= line.runtime then return "NotImplemented" end
-	local required = line.levels[rank+1]; if not required then return "SourceUnknown" end
+	if id=="Rasengan" or id=="ShadowClones" then
+        local plan,reason=RankPolicy.purchasePlan(profile,id,rank+1,Learning.NativePolicy.CloneFirstLevel)
+        return if plan then nil else reason
+    end
+    local required = line.levels[rank+1]; if not required then return "SourceUnknown" end
 	if profile.Level < required then return "Level" end
 	if profile.SkillPoints <= 0 then return "NoPoints" end
 	return nil

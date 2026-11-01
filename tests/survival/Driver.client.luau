@@ -9,7 +9,7 @@ driver.OnClientEvent:Connect(function(sequence: number, mode: string)
 	if mode == "attack" or mode == "combo" then
 		for _ = 1, if mode == "combo" then 4 else 1 do
 			attack:FireServer(controller.NextRequestId(), player.Character, ReplicatedStorage:WaitForChild("SurvivalState"):GetAttribute("RoundId"))
-			task.wait(0.4)
+			task.wait(0.55)
 		end
 	end
 	local state = ReplicatedStorage:FindFirstChild("SurvivalState")

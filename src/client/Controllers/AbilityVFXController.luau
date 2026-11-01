@@ -13,6 +13,7 @@ local effects:{Effect}={}
 local orbs:{[Model]:Effect}={}
 local helpers:{[Model]:Helper}={}
 local oilHighlights:{[Model]:Highlight}={}
+local sageHighlights:{[Model]:Highlight}={}
 local folder:Folder?=nil
 local VFX={}
 local started=false
@@ -102,7 +103,22 @@ function VFX.Start()
 	RunService.PreRender:Connect(function()
 		local now=workspace:GetServerTimeNow(); local match=game:GetService("ReplicatedStorage"):FindFirstChild("SurvivalState")
 		local active=match~=nil and match:GetAttribute("Phase")=="InProgress"
-		local tagged:{[Model]:boolean}={}
+		local sageTagged:{[Model]:boolean}={}
+        if active then for _,model in game:GetService("CollectionService"):GetTagged("NarutoSage") do
+            if model:IsA("Model") and model.Parent then
+                local hp=model:FindFirstChildOfClass("Humanoid")
+                local untilAt=model:GetAttribute("SageAuraUntil")
+                if hp and hp.Health>0 and typeof(untilAt)=="number" and now<untilAt then
+                    sageTagged[model]=true
+                    if not sageHighlights[model] then
+                        local h=Instance.new("Highlight"); h.Name="SageAura"; h.Adornee=model; h.DepthMode=Enum.HighlightDepthMode.Occluded
+                        h.FillColor=Color3.fromRGB(231,140,42); h.OutlineColor=Color3.fromRGB(250,195,75); h.FillTransparency=.88; h.OutlineTransparency=.45; h.Parent=folder; sageHighlights[model]=h
+                    end
+                end
+            end
+        end end
+        for model,h in sageHighlights do if not sageTagged[model] then h:Destroy(); sageHighlights[model]=nil end end
+        local tagged:{[Model]:boolean}={}
 		if active then for _,model in game:GetService("CollectionService"):GetTagged("GamakichiOilStatus") do
 			if model:IsA("Model") and model.Parent and ((model:GetAttribute("OilUntil") or 0) :: number)>now then
 				tagged[model]=true

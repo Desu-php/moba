@@ -19,7 +19,12 @@ function Poses.sample(key: string, time: number, phase: number): Pose
 		pose.Waist = angles(0.23, 0, math.sin(time * 32) * 0.035); pose.Neck = angles(-0.25)
 		pose.LeftShoulder = angles(-0.3, 0, -0.35); pose.RightShoulder = angles(-0.3, 0, 0.35)
 		pose.LeftKnee = angles(-0.22); pose.RightKnee = angles(-0.22)
-	elseif key == "ShadowClones" then
+	elseif key=="SagePrepare" then
+        pose.Waist=angles(.08); pose.Neck=angles(-.08)
+        pose.LeftShoulder=angles(.9,-.15,.6); pose.RightShoulder=angles(.9,.15,-.6)
+        pose.LeftElbow=angles(1.6); pose.RightElbow=angles(1.6)
+        pose.LeftWrist=angles(0,0,.3); pose.RightWrist=angles(0,0,-.3)
+    elseif key == "ShadowClones" then
 		local seal = math.clamp(phase / 0.16, 0, 1) * (1 - math.clamp((phase - 0.62) / 0.38, 0, 1))
 		local sign = math.sin(phase * math.pi * 6) * 0.2 * seal
 		pose.LeftShoulder = angles(1.05 * seal, -0.15, 0.7 * seal); pose.RightShoulder = angles(1.05 * seal, 0.15, -0.7 * seal)

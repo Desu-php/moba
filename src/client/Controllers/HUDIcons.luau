@@ -1,0 +1,55 @@
+--!strict
+-- Original code-drawn Naruto symbols. No uploaded images or Valve assets.
+local Icons = {}
+local palettes: {[string]: Color3} = {
+	Rasengan=Color3.fromRGB(32,133,190), ShadowClones=Color3.fromRGB(183,104,39),
+	Gamakichi=Color3.fromRGB(148,66,50), SageMode=Color3.fromRGB(186,96,42),
+	KCM=Color3.fromRGB(198,151,34), CloneCommand=Color3.fromRGB(86,129,148),
+	GamakichiOil=Color3.fromRGB(87,127,52), GamakichiChop=Color3.fromRGB(126,83,62),
+	IronBlade=Color3.fromRGB(82,119,137), GuardianArmor=Color3.fromRGB(107,101,137),
+	SwiftBoots=Color3.fromRGB(117,85,51), HealingPotion=Color3.fromRGB(91,144,82),
+}
+function Icons.draw(parent: GuiObject, id: string): Frame
+	local canvas=Instance.new("Frame"); canvas.Name="Icon"; canvas.Size=UDim2.fromScale(1,1)
+	canvas.BackgroundColor3=palettes[id] or Color3.fromRGB(65,87,105); canvas.BorderSizePixel=0; canvas.Parent=parent
+	local gradient=Instance.new("UIGradient"); gradient.Rotation=65
+	gradient.Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(55,60,78)); gradient.Parent=canvas
+	local function shape(name: string,x: number,y: number,w: number,h: number,round: boolean,rotation: number?): Frame
+		local f=Instance.new("Frame"); f.Name=name; f.AnchorPoint=Vector2.new(.5,.5); f.Position=UDim2.fromScale(x,y); f.Size=UDim2.fromScale(w,h)
+		f.BackgroundColor3=Color3.fromRGB(224,237,226); f.BorderSizePixel=0; f.Rotation=rotation or 0; f.Parent=canvas
+		if round then local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(1,0); c.Parent=f end
+		return f
+	end
+	if id=="Rasengan" then
+		for i=1,4 do
+			local r=shape("ChakraRing",.5,.5,.18+i*.14,.18+i*.14,true); r.BackgroundTransparency=1
+			local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(159,232,255); stroke.Thickness=2; stroke.Parent=r
+		end
+		shape("Core",.5,.5,.22,.22,true); shape("Flow",.5,.5,.78,.045,false,-35)
+	elseif id=="ShadowClones" or id=="CloneCommand" then
+		for i=1,3 do local x=.19+(i-1)*.30; shape("Head",x,.37,.18,.22,true); shape("Body",x,.66,.23,.30,true) end
+		if id=="CloneCommand" then shape("Command",.5,.20,.74,.035,false) end
+	elseif id=="Gamakichi" or id=="GamakichiOil" then
+		shape("Frog",.5,.57,.74,.49,true); shape("Eye",.27,.31,.22,.25,true); shape("Eye",.73,.31,.22,.25,true)
+		shape("Mouth",.5,.63,.44,.045,false).BackgroundColor3=palettes[id]
+		if id=="GamakichiOil" then shape("Oil",.5,.81,.17,.24,true) end
+	elseif id=="SageMode" then
+		for _,x in {.28,.72} do
+			shape("EyeMark",x,.49,.32,.28,true).BackgroundColor3=Color3.fromRGB(78,36,28)
+			shape("Eye",x,.49,.24,.12,true); shape("Pupil",x,.49,.15,.035,false).BackgroundColor3=Color3.fromRGB(33,30,25)
+		end
+	elseif id=="KCM" then
+		for i=1,5 do shape("Flame",.18+(i-1)*.16,.43,.13,.52,true,(i-3)*18) end
+		shape("Seal",.5,.73,.40,.27,true).BackgroundColor3=Color3.fromRGB(77,49,22)
+	elseif id=="GuardianArmor" then
+		shape("Plate",.5,.46,.54,.58,true); shape("Shoulder",.20,.29,.25,.22,true); shape("Shoulder",.80,.29,.25,.22,true)
+	elseif id=="SwiftBoots" then
+		shape("Boot",.45,.37,.29,.50,false,-12); shape("Sole",.57,.65,.56,.22,true)
+	elseif id=="HealingPotion" then
+		shape("Bottle",.5,.50,.46,.57,true); shape("Cork",.5,.18,.26,.15,false)
+	else
+		shape("Blade",.54,.44,.14,.76,false,38); shape("Guard",.36,.67,.44,.09,false,38); shape("Grip",.24,.83,.10,.27,false,38)
+	end
+	return canvas
+end
+return Icons

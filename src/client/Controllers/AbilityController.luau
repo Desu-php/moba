@@ -50,10 +50,11 @@ function Controller.AbilityUnavailable(id: string): string?
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
 	local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
  local line=if id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
- if (id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
+ if (id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	local mana = model:GetAttribute("Mana")
-	local cost = if id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
+ if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
+ local cost = if id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
 	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
  if (id=="GamakichiOil" or id=="GamakichiChop") and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет Гамакичи" end

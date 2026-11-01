@@ -17,7 +17,7 @@ remote.OnClientEvent:Connect(function(id: number,mode: string,line: string?)
 	local panel=if gui then gui:FindFirstChild("Abilities") else nil
 	local cloneButton=if panel then panel:FindFirstChild("ShadowClones") else nil
 	local plus=if cloneButton then cloneButton:FindFirstChild("Learn") else nil
-	local stats=if gui then gui:FindFirstChild("CharacterStats") else nil
+	local stats=if panel then panel:FindFirstChild("CharacterStats") else nil
 	local values=if stats then stats:FindFirstChild("Values") else nil
 	remote:FireServer(id,{cloneRank=state:GetAttribute("Rank_ShadowClones"),qRank=state:GetAttribute("Rank_Rasengan"),points=state:GetAttribute("SkillPoints"),
 		plus=plus~=nil and (plus :: GuiObject).Visible,stats=values~=nil and (values :: TextLabel).Text or "",unlearned=Abilities.AbilityUnavailable("ShadowClones")})

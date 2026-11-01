@@ -41,7 +41,7 @@ local function body(player: Player): (Model, Humanoid, BasePart)
 end
 
 local function prepare(attacker: Player, victim: Player, victimPosition: Vector3?)
-	task.wait(Profile.ComboResetTime + 0.2)
+	task.wait(Profile.AttackCooldown + 0.2)
 	for _, player in { attacker, victim } do
 		local character, humanoid, root = body(player)
 		local regen = character:FindFirstChild("Health")
@@ -82,7 +82,15 @@ local function check(name: string, condition: boolean)
 end
 
 local function waitDamage(player: Player, expected: number)
-	waitUntil(function() return health(player) == expected end, 2, "Expected health " .. expected .. ", got " .. health(player))
+	local ok,why=pcall(function() waitUntil(function() return health(player) == expected end, 2, "Expected health " .. expected .. ", got " .. health(player)) end)
+	if not ok then
+		local diagnostics={}
+		for _,p in Players:GetPlayers() do
+			local c,h,r=body(p);local f=Fighters.Get(c)
+			table.insert(diagnostics,{name=p.Name,health=h.Health,position={r.Position.X,r.Position.Y,r.Position.Z},look={r.CFrame.LookVector.X,r.CFrame.LookVector.Y,r.CFrame.LookVector.Z},mode=if f then f.logic.mode else "missing",serial=if f then f.logic.attackSerial else -1,nextAttack=if f then f.logic.nextAttackAt else 0,now=workspace:GetServerTimeNow()})
+		end
+		error(tostring(why).." STATE "..game:GetService("HttpService"):JSONEncode(diagnostics))
+	end
 end
 
 local success, failure = xpcall(function()
@@ -98,45 +106,40 @@ local success, failure = xpcall(function()
 
 	prepare(first, second)
 	local total = 0
-	for step, damage in Profile.DamageByComboStep do
-		local startedAt = os.clock()
+	for step, damage in { Profile.Damage, Profile.Damage, Profile.Damage, Profile.Damage } do
 		command(first, "attack")
 		if step == 1 then check("windup delays damage", health(second) == 100) end
 		total += damage
 		waitDamage(second, 100 - total)
 		local victim = Fighters.Get(second.Character :: Model)
 		assert(victim)
-		check("step " .. step .. " damage and stun", victim.logic.mode == "Stunned")
-		check("attacker combo step " .. step, (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == step)
-		if step < 4 then
-			task.wait(math.max(0, Profile.AttackCooldown + 0.05 - (os.clock() - startedAt)))
-		else
-			local _, _, root = body(second)
-			check("finisher has bounded server knockback", root.AssemblyLinearVelocity.Magnitude > 10 and root.AssemblyLinearVelocity.Magnitude < Profile.MaxKnockbackSpeed + 5)
-			check("finisher resets victim combo", victim.logic.comboStep == 0)
-			check("finisher owns victim physics on server", root:GetNetworkOwner() == nil)
-		end
+		check("repeat " .. step .. " damage without stun", victim.logic.mode == "Idle")
+		check("one animation on repeat " .. step, ((Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.active :: any).step == 1)
+		-- Admission can lag the driver send during client startup. Cadence is owned
+		-- by the server's accepted attack, not the fixture's pre-network timestamp.
+		local attacker=Fighters.Get(first.Character :: Model);assert(attacker)
+		waitUntil(function()return workspace:GetServerTimeNow()>=attacker.logic.nextAttackAt+.03 end,2,"Server attack recovery deadline")
 	end
-	check("complete combo damage 27", health(second) == 73 and health(first) == 100)
-	task.wait(Profile.FinisherCooldown + 0.1)
+	check("four equal attacks deal 32", health(second) == 68 and health(first) == 100)
+	task.wait(Profile.AttackCooldown + 0.1)
 	command(first, "attack")
-	waitUntil(function() return (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == 1 end, 1, "Finisher did not reset")
-	check("next combo starts at step 1", true)
+	waitUntil(function() return (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.active ~= nil end, 1, "Repeat did not start")
+	check("next repeat has one animation", true)
 
 	prepare(second, first)
 	local observerBefore = command(first, "stats")
 	command(second, "attack")
-	waitDamage(first, 95)
+	waitDamage(first, 92)
 	check("reciprocal PvP damage", health(second) == 100)
 	local observer = command(first, "stats")
-	check("remote attack does not advance observer combo", observer.localStep == observerBefore.localStep and observer.totalPlays == observerBefore.totalPlays and observer.ownStarts == observerBefore.ownStarts)
-	check("both clients receive confirmed combat events", observer.otherStarts > 0 and observer.hits > 0 and observer.stuns > 0)
+	check("remote attack does not play observer animation", observer.localStep == observerBefore.localStep and observer.totalPlays == observerBefore.totalPlays and observer.ownStarts == observerBefore.ownStarts)
+	check("both clients receive confirmed combat events", observer.otherStarts > 0 and observer.hits > 0 and observer.stuns == 0)
 
 	prepare(first, second)
 	command(first, "burst")
-	waitDamage(second, 95)
+	waitDamage(second, 92)
 	task.wait(0.45)
-	check("remote flood cannot skip steps or damage repeatedly", health(second) == 95 and (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == 1)
+	check("remote flood cannot damage repeatedly", health(second) == 92)
 	check("stun expires and movement restores", (Fighters.Get(second.Character :: Model) :: Fighters.Fighter).logic.mode == "Idle" and secondHumanoid.WalkSpeed > 0)
 
 	prepare(first, second)
@@ -146,39 +149,40 @@ local success, failure = xpcall(function()
 
 	prepare(first, second)
 	command(first, "replay")
-	waitDamage(second, 95)
+	waitDamage(second, 92)
 	task.wait(0.4)
-	check("replayed request cannot start an extra attack", health(second) == 95)
+	check("replayed request cannot start an extra attack", health(second) == 92)
 
 	prepare(first, second)
 	local reply = command(first, "controllerBurst")
-	waitDamage(second, 95)
+	waitDamage(second, 92)
 	check("prediction confirms without replay", reply.sent == 1 and reply.plays == 1)
 
 	prepare(first, second)
 	command(first, "buffer")
-	waitDamage(second, 90)
-	check("early click buffers exactly one next attack", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == 2)
+	waitDamage(second, 84)
+	check("early click buffers exactly one next attack", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.active ~= nil)
 	task.wait(0.5)
-	check("buffer does not auto-chain a third attack", health(second) == 90)
+	check("buffer does not auto-chain a third attack", health(second) == 84)
 
 	prepare(first, second)
 	command(first, "attack")
-	waitDamage(second, 95)
+	waitDamage(second, 92)
+	Fighters.Stun(Fighters.Get(second.Character :: Model) :: Fighters.Fighter, 0.4, false)
 	command(second, "attack")
-	task.wait(0.16)
+	task.wait(0.2)
 	check("stunned player cannot start an attack", health(first) == 100)
-	task.wait(Profile.ComboResetTime + 0.15)
+	task.wait(Profile.AttackCooldown + 0.15)
 	command(first, "attack")
-	waitDamage(second, 90)
-	check("pause restarts at first damage step", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == 1)
+	waitDamage(second, 84)
+	check("pause preserves one attack", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.active ~= nil)
 
 	prepare(first, second)
 	command(first, "attack")
 	task.wait(0.04)
 	command(second, "attack")
 	task.wait(0.4)
-	check("first impact interrupts victim windup", health(first) == 100 and health(second) == 95)
+	check("ordinary hit allows reciprocal windup", health(first) == 92 and health(second) == 92)
 
 	prepare(first, second, Vector3.new(0, 3, 4))
 	command(first, "attack")
@@ -216,7 +220,7 @@ local success, failure = xpcall(function()
 	backWall.Size = Vector3.new(12, 10, 0.5)
 	backWall.Position = Vector3.new(0, 5, -5.5)
 	backWall.Parent = workspace
-	Fighters.Stun(Fighters.Get(second.Character :: Model) :: Fighters.Fighter, Profile.FinisherStunDuration, true)
+	Fighters.Stun(Fighters.Get(second.Character :: Model) :: Fighters.Fighter, 0.65, true)
 	Knockback.Apply(knockAttacker, knockTarget, Profile)
 	task.wait(0.05)
 	local horizontal = knockTarget.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
@@ -232,22 +236,23 @@ local success, failure = xpcall(function()
 	shield:Destroy()
 
 	prepare(first, second)
-	local character = second.Character :: Model
-	character.Archivable = true
-	local npc = character:Clone()
-	npc.Name = "TestThirdTarget"
-	npc.Parent = workspace
-	for _, descendant in npc:GetDescendants() do
-		if descendant:IsA("BaseScript") then descendant:Destroy() end
-	end
-	local npcRoot = npc:FindFirstChild("HumanoidRootPart") :: BasePart
-	local npcHumanoid = npc:FindFirstChildOfClass("Humanoid") :: Humanoid
+	-- A cloned R15 Humanoid can restore collision flags while entering a physics
+	-- state and shove the intended closest victim. Use a stationary hurtbox,
+	-- like the manual targeting fixture, so this tests selection rather than shoving.
+	local npc = Instance.new("Model");npc.Name="TestThirdTarget"
+	local npcRoot=Instance.new("Part");npcRoot.Name="HumanoidRootPart";npcRoot.Size=Vector3.new(2,4,2)
+	npcRoot.CanCollide=false;npcRoot.Parent=npc
+	local npcHumanoid=Instance.new("Humanoid");npcHumanoid.RequiresNeck=false;npcHumanoid.EvaluateStateMachine=false;npcHumanoid.Parent=npc
 	npcRoot.CFrame = CFrame.new(1.8, 3, -3.5)
 	npcRoot.Anchored = true
 	npcHumanoid.Health = 100
+	npc.PrimaryPart=npcRoot;npc.Parent=workspace
+	local _,_,nearestOrigin=body(first)
+	local _,_,nearestVictim=body(second)
+	check("nearest fixture order is stable before impact",(nearestVictim.Position-nearestOrigin.Position).Magnitude<(npcRoot.Position-nearestOrigin.Position).Magnitude)
 	command(first, "attack")
-	waitDamage(second, 95)
-	check("one swing hits multiple unique humanoids", npcHumanoid.Health == 95)
+	waitDamage(second, 92)
+	check("one swing hits only closest humanoid", npcHumanoid.Health == 100)
 	npc:Destroy()
 
 	prepare(first, second)
@@ -255,8 +260,9 @@ local success, failure = xpcall(function()
 	targetRoot:SetNetworkOwner(second)
 	local originalSpeed = secondHumanoid.WalkSpeed
 	command(first, "attack")
-	waitDamage(second, 95)
-	check("stun immobilizes real player with server ownership", secondHumanoid.WalkSpeed == 0 and targetRoot:GetNetworkOwner() == nil)
+	waitDamage(second, 92)
+	Fighters.Stun(Fighters.Get(second.Character :: Model) :: Fighters.Fighter, 0.25, false)
+	check("spell stun immobilizes real player with server ownership", secondHumanoid.WalkSpeed == 0 and targetRoot:GetNetworkOwner() == nil)
 	task.wait(0.1)
 	Fighters.Stun(Fighters.Get(second.Character :: Model) :: Fighters.Fighter, 0.4, false)
 	task.wait(0.2)
@@ -276,8 +282,8 @@ local success, failure = xpcall(function()
 	first:LoadCharacterAsync()
 	prepare(first, second)
 	command(first, "controller")
-	waitDamage(second, 95)
-	check("respawn resets combo and client prediction", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.comboStep == 1 and Fighters.Get(oldCharacter) == nil)
+	waitDamage(second, 92)
+	check("respawn replaces fighter and client prediction", (Fighters.Get(first.Character :: Model) :: Fighters.Fighter).logic.active ~= nil and Fighters.Get(oldCharacter) == nil)
 
 	local effects = command(first, "vfxCap")
 	check("VFX has a hard concurrent cap", effects.activeEffects <= VFXConfig.MaxEffects)
