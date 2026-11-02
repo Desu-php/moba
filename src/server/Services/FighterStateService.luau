@@ -9,6 +9,7 @@ local State = require(Shared.Combat.CombatState)
 local Life = require(script.Parent.CombatLifeService)
 local Heroes = require(Shared.Config.HeroConfig)
 local Structures = require(Shared.Game.StructureRules)
+local Sleep = require(Shared.Abilities.SleepState)
 
 type Movement = {
 	walkSpeed: number, jumpPower: number, jumpHeight: number, autoRotate: boolean,
@@ -16,7 +17,7 @@ type Movement = {
 }
 export type Fighter = {
 	character: Model, humanoid: Humanoid, root: BasePart, player: Player?,
-	logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
+	sleep: Sleep.Status?, logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
 	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?,
 }
 
@@ -32,6 +33,7 @@ local function effectiveSpeed(model: Model,speed: number): number
 end
 
 local function restoreMovement(fighter: Fighter)
+	if fighter.sleep and fighter.sleep.active then return end
 	local saved = fighter.movement
 	if not saved then return end
 	fighter.movement = nil
@@ -78,6 +80,7 @@ function FighterStateService.Remove(character: Model)
 	local fighter = fighters[character]
 	if not fighter then return end
 	fighters[character] = nil
+ fighter.sleep=nil; character:SetAttribute("SleepUntil",nil)
 	State.Kill(fighter.logic)
 	for _, connection in fighter.connections do connection:Disconnect() end
 	restoreMovement(fighter)
@@ -116,7 +119,7 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 	end
 	local fighter: Fighter = {
 		character = character, humanoid = humanoid, root = root, player = Players:GetPlayerFromCharacter(character),
-		logic = State.new(), profileId = Config.DefaultProfile, profile = Config.Profiles[Config.DefaultProfile],
+		sleep = nil, logic = State.new(), profileId = Config.DefaultProfile, profile = Config.Profiles[Config.DefaultProfile],
 		revision = 0, connections = {}, movement = nil,
 	}
 	local heroId = character:GetAttribute("HeroId")
@@ -140,10 +143,7 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 	return fighter
 end
 
-local function applyStun(fighter: Fighter, duration: number, interrupt: boolean)
-	if fighter.humanoid.Health <= 0 or fighter.logic.mode == "Dead" then return end
-	local now = Workspace:GetServerTimeNow()
-	State.Stun(fighter.logic, now, duration, interrupt)
+local function lockMovement(fighter: Fighter)
 	local humanoid, root = fighter.humanoid, fighter.root
 	if not fighter.movement then
 		local canOwn = root:CanSetNetworkOwnership()
@@ -165,6 +165,27 @@ local function applyStun(fighter: Fighter, duration: number, interrupt: boolean)
 		if vertical ~= vertical or math.abs(vertical) == math.huge then vertical = 0 end
 		root.AssemblyLinearVelocity = Vector3.new(0, math.clamp(vertical, -fighter.profile.MaxKnockbackSpeed, fighter.profile.MaxKnockbackSpeed), 0)
 	end
+end
+function FighterStateService.Sleep(fighter: Fighter, now: number)
+ if fighter.humanoid.Health<=0 then return end
+ fighter.sleep=Sleep.new(now)
+ fighter.logic.active=nil; fighter.logic.buffered=nil
+ if fighter.logic.mode=="Attacking" then fighter.logic.mode="Idle" end
+ fighter.character:SetAttribute("SleepUntil",now+3)
+ lockMovement(fighter); FighterStateService.Publish(fighter)
+end
+function FighterStateService.WakeSleep(fighter: Fighter)
+ local status=fighter.sleep; if not status then return end
+ Sleep.wake(status,true,0); fighter.sleep=nil
+ fighter.character:SetAttribute("SleepUntil",nil)
+ if fighter.logic.mode~="Stunned" then restoreMovement(fighter) end
+ FighterStateService.Publish(fighter)
+end
+local function applyStun(fighter: Fighter, duration: number, interrupt: boolean)
+	if fighter.humanoid.Health <= 0 or fighter.logic.mode == "Dead" then return end
+	local now = Workspace:GetServerTimeNow()
+	State.Stun(fighter.logic, now, duration, interrupt)
+	lockMovement(fighter)
 	FighterStateService.Publish(fighter)
 end
 
@@ -177,6 +198,7 @@ function FighterStateService.StunSpell(fighter: Fighter, duration: number)
 end
 
 function FighterStateService.Update(fighter: Fighter, now: number)
+ if fighter.sleep and (fighter.humanoid.Health<=0 or Sleep.update(fighter.sleep,now)) then FighterStateService.WakeSleep(fighter) end
 	if fighter.humanoid.Health <= 0 then
 		if fighter.logic.mode ~= "Dead" then
 			State.Kill(fighter.logic)
@@ -185,6 +207,7 @@ function FighterStateService.Update(fighter: Fighter, now: number)
 		end
 		return
 	end
+	if fighter.sleep and fighter.sleep.active then lockMovement(fighter) end
 	if State.Update(fighter.logic, now) then
 		if fighter.logic.mode ~= "Stunned" then restoreMovement(fighter) end
 		FighterStateService.Publish(fighter)

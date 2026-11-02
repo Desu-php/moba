@@ -14,7 +14,6 @@ local Hitboxes = require(script.Parent.HitboxService)
 local AttackRules = require(Shared.Combat.BasicAttackRules)
 local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
-local Oil=require(script.Parent.OilStatusService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Structures = require(Shared.Game.StructureRules)
 local Teams = require(script.Parent.TeamService)
@@ -49,7 +48,12 @@ local function announceStart(fighter: Fighters.Fighter)
 	Fighters.Publish(fighter)
 	fighter.attackLifeId = fighter.character:GetAttribute("LifeId")
 	fighter.attackRoundId = fighter.character:GetAttribute("RoundId")
-	CombatService.AttackStarted:Fire(fighter)
+	local candidates=Hitboxes.GetTargets(fighter.character,fighter.root,fighter.profile)
+    for _,hp in candidates do
+        local target=hp.Parent
+        if target and target:IsA("Model") and Damage.CanDamage(fighter.character,target) then Damage.AttackAttempt:Fire(fighter.character,target) end
+    end
+    CombatService.AttackStarted:Fire(fighter)
 	remote:FireAllClients({ kind = "Started", snapshot = Fighters.Snapshot(fighter), attack = attack })
 	if Debug.LogCombat then
 		print(string.format("[Combat] %s M1-%d request=%d", fighter.character.Name, attack.step, attack.requestId))
@@ -59,6 +63,7 @@ end
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
 		and Damage.CanAct(fighter.character)
+		and not (fighter.sleep and fighter.sleep.active)
 		and ((fighter.character:GetAttribute("NarutoPausedUntil") or 0) :: number) <= Workspace:GetServerTimeNow()
 		and (fighter.character:GetAttribute("AbilityId") == nil or fighter.character:GetAttribute("AbilityId") == "")
 		and fighter.humanoid.Health > 0
@@ -132,7 +137,7 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 	if Fighters.Get(fighter.character) ~= fighter
 		or fighter.attackLifeId ~= fighter.character:GetAttribute("LifeId")
 		or fighter.attackRoundId ~= fighter.character:GetAttribute("RoundId")
-		or not canAttack(fighter) or Oil.MissesAttack(fighter.character) then return end
+		or not canAttack(fighter) then return end
 	local profile = fighter.profile
 	local targets, box, size = Hitboxes.GetTargets(fighter.character, fighter.root, profile)
 	local hits = {}
@@ -144,7 +149,7 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
 		local victim = if isStructure then nil else Fighters.GetOrCreate(character)
 		if not isStructure and not victim then continue end
-		local dealt = Damage.Apply(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
+		local dealt = Damage.ApplyAttack(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
 		-- Only confirmed server damage is a hit.
 		if dealt <= 0 then continue end
 		local position = character:GetPivot().Position

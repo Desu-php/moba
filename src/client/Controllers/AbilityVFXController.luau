@@ -29,12 +29,12 @@ local function create(position:Vector3,kind:string,model:Model?): Effect?
 	local camera=workspace.CurrentCamera
 	if #effects>=Config.Visual.MaxEffects or (camera and (camera.CFrame.Position-position).Magnitude>Config.Visual.ViewDistance) then return nil end
 	local now=workspace:GetServerTimeNow()
-	local effect:Effect={parts={},at=now,untilAt=now+(if kind=="Orb" then 20 elseif kind=="Finish" then .7 else .5),origin=position,model=model,kind=kind}
-	local count=if kind=="Orb" then 32 elseif kind=="Oil" then 1 elseif kind=="Chop" or kind=="Channel" or kind=="OilImpact" then 4 else 8
+	local effect:Effect={parts={},at=now,untilAt=now+(if kind=="Area" then 3.5 elseif kind=="Orb" then 20 elseif kind=="Finish" then .7 else .5),origin=position,model=model,kind=kind}
+	local count=if kind=="Orb" then 32 elseif kind=="Oil" then 1 elseif kind=="Area" or kind=="Chop" or kind=="Channel" or kind=="OilImpact" then 4 else 8
 	for i=1,count do
 		local p=part(if kind=="Orb" then "RasenganSpiral" else "Rasengan"..kind,Color3.fromRGB(110,211,255),Vector3.one*.2)
 		if kind=="Oil" or kind=="OilImpact" then p.Shape=Enum.PartType.Ball; p.Color=Color3.fromRGB(82,49,24); p.Material=Enum.Material.SmoothPlastic; p.Size=Vector3.one*.8
-		elseif kind=="Channel" or kind=="Chop" then p.Shape=Enum.PartType.Cylinder; p.Color=Color3.fromRGB(220,211,179)
+		elseif kind=="Area" or kind=="Channel" or kind=="Chop" then p.Shape=Enum.PartType.Cylinder; p.Color=Color3.fromRGB(220,211,179)
 		elseif kind=="Orb" then
 			if i<=2 then p.Shape=Enum.PartType.Ball; p.Size=Vector3.one*(if i==1 then .9 else 1.15); p.Transparency=if i==1 then .08 else .78
 			else p.Size=Vector3.new(.035,.035,.29); p.Color=Color3.fromRGB(211,247,255) end
@@ -87,7 +87,9 @@ function VFX.Event(message:any)
 			if kind=="Oil" and typeof(message.duration)=="number" then effect.untilAt=effect.at+math.max(.03,message.duration) end
 		end
 	elseif message.kind=="Smoke" then create(message.position,"Smoke",nil)
-	elseif message.kind=="RasenganFinish" then create(message.position,"Finish",nil)
+	elseif message.kind=="RasenshurikenArea" then
+  local e=create(message.position,"Area",nil);if e then e.radius=message.radius;e.caster=message.source end
+ elseif message.kind=="RasenganFinish" then create(message.position,"Finish",nil)
 	elseif message.kind=="RasenganTrail" then create(message.position,"Trail",nil) end
 end
 function VFX.GetDiagnostics(model:Model): (boolean,boolean)
@@ -153,7 +155,12 @@ function VFX.Start()
 				local hand=model:FindFirstChild("RightHand"); if not hand or not hand:IsA("BasePart") then remove(index); continue end
 				local center=hand.CFrame*CFrame.new(0,-.55,-.7)
 				for i,p in effect.parts do
-					if i<=2 then p.CFrame=center
+					local variant=model:GetAttribute("RasenganVariant")
+                    local scale=if variant=="Odama" then 1.7 else 1
+                    if i<=2 then p.CFrame=center; p.Size=Vector3.one*(if i==1 then .9 else 1.15)*scale
+                    elseif variant=="Rasenshuriken" and i>=29 then
+                        p.Size=Vector3.new(.12,.24,2.4);p.Transparency=.2
+                        p.CFrame=center*CFrame.Angles(0,now*18+(i-29)*math.pi/2,0)*CFrame.new(0,0,1.3)
 					else
 						local ring=math.floor((i-3)/10); local segment=(i-3)%10
 						local rotation=center*CFrame.Angles(ring*math.pi/3+now*2,now*4,ring*.7)
@@ -169,8 +176,9 @@ function VFX.Start()
 					local angle=i*math.pi/4; local finish=effect.kind=="Finish"
 					if effect.kind=="Oil" and effect.destination then
 						p.Position=effect.origin:Lerp(effect.destination,progress)+Vector3.new(0,(effect.destination-effect.origin).Magnitude*.05*4*progress*(1-progress),0)
-					elseif effect.kind=="Channel" or effect.kind=="Chop" or effect.kind=="OilImpact" then
-						local radius=(effect.radius or 1)*(if effect.kind=="Channel" then 1 else progress)
+					elseif effect.kind=="Area" or effect.kind=="Channel" or effect.kind=="Chop" or effect.kind=="OilImpact" then
+						local radius=(effect.radius or 1)*(if effect.kind=="Area" then 1+math.min(elapsed/1.6,1)*2/3 elseif effect.kind=="Channel" then 1 else progress)
+                        if effect.kind=="Area" and effect.caster then effect.origin=effect.caster:GetPivot().Position end
 						if effect.kind=="OilImpact" then p.Position=effect.origin+Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius); p.Transparency=progress
 						else p.Size=Vector3.new(.1,radius*2,radius*2); p.CFrame=CFrame.new(effect.origin+Vector3.new(0,.12+i*.02,0))*CFrame.Angles(0,0,math.pi/2); p.Transparency=.7+progress*.3 end
 					elseif finish and i==1 then

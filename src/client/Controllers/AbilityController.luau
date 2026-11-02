@@ -18,12 +18,13 @@ local correctionModel: Model? = nil
 local correctionUntil = 0
 local lastReason = ""
 local selectingCommand: string? = nil
-local function needsTarget(id: string): boolean return id=="CloneCommand" or id=="GamakichiOil" or id=="GamakichiChop" end
+local function needsTarget(id: string): boolean return id=="ShadowSleep" or id=="CloneCommand" or id=="GamakichiOil" or id=="GamakichiChop" end
 function Controller.CancelCloneCommand()
 	selectingCommand = nil; Players.LocalPlayer:SetAttribute("SelectingCloneTarget", nil); lastReason = ""
 end
 function Controller.IsSelectingCloneTarget(): boolean return selectingCommand~=nil end
 function Controller.Remaining(id: string): number
+ if id=="ShadowSleep" then id="ShadowClones" end
 	local model = Players.LocalPlayer.Character; if not model then return 0 end
 	local deadline = model:GetAttribute("Ready_" .. id)
 	return math.max(0, math.max(if typeof(deadline) == "number" then deadline else 0,
@@ -37,6 +38,7 @@ function Controller.Unavailable(summonOrder: boolean?): string?
 	if Input:GetFocusedTextBox() then return "Ввод текста" end
 	local match = ReplicatedStorage:FindFirstChild("SurvivalState")
 	if not match or match:GetAttribute("Phase") ~= "InProgress" then return "Ожидание матча" end
+	if ((model:GetAttribute("SleepUntil") or 0) :: number)>workspace:GetServerTimeNow() then return "Sleep" end
 	if not summonOrder and model:GetAttribute("CombatState") == "Stunned" then return "Контроль" end
 	if not summonOrder and model:GetAttribute("AbilityId") ~= "" and model:GetAttribute("AbilityId") ~= nil then return "Подготовка" end
 	local nextM1 = model:GetAttribute("CombatNextAttackAt")
@@ -53,9 +55,16 @@ function Controller.AbilityUnavailable(id: string): string?
  if (id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="MeditationToggle" or id=="MeditationRecall" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	if id=="MeditationRecall" and (model:GetAttribute("MeditationCloneCount") or 0)==0 then return "Нет медитирующих клонов" end
-	local mana = model:GetAttribute("Mana")
+	if id=="Odama" or id=="Rasenshuriken" then
+  local rank=if state then (state:GetAttribute("Rank_Rasengan") or 0) :: number else 0
+  local untilAt=(model:GetAttribute("RasenganVariantUntil") or 0) :: number
+  local wanted=if id=="Odama" then "Rasengan" else "Odama"
+  if rank<(if id=="Odama" then 2 else 3) or model:GetAttribute("RasenganVariant")~=wanted or untilAt<=workspace:GetServerTimeNow() then return "No selection window" end
+ end
+ if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Requires clones II" end
+ local mana = model:GetAttribute("Mana")
  if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
- local cost = if id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
+ local cost = if id=="Odama" or id=="Rasenshuriken" or id=="ShadowSleep" then 200 elseif id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
 	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
  if (id=="GamakichiOil" or id=="GamakichiChop") and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет Гамакичи" end
@@ -117,9 +126,13 @@ function Controller.TryCast(id: string, selectedTarget: any): boolean
 	Controller.Changed:Fire(); return true
 end
 function Controller.GetMessage(): string
- if lastReason~="" then return lastReason end
  local model=Players.LocalPlayer.Character
- return if model and model:GetAttribute("MeditationMode")==true then "Медитация: 4 — подготовка с клонами · J — вернуть чакру · → — прямой режим" else ""
+ if model and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>workspace:GetServerTimeNow() then
+  local variant=model:GetAttribute("RasenganVariant")
+  return if variant=="Odama" then "X: Rasenshuriken (III)" else "Z: Odama (II+)"
+ end
+ if lastReason~="" then return lastReason end
+ return if model and model:GetAttribute("MeditationMode")==true then "Meditation: 4 / J recall / Right direct" else ""
 end
 function Controller.Start()
 	if remote then return end

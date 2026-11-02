@@ -1,12 +1,12 @@
 --!strict
--- Ordinary A014 only. No shared JASS-style caster/target state and no Roblox instances.
+-- Prepared melee state. Variant admission is separate; no shared caster/target globals.
 -- request returns a debit command exactly once; the application must commit it atomically.
 export type Configuration = {
 	read ManaCost: number, read Cooldown: number, read Preparation: number,
 	read HoldDuration: number, read AttackControlDelay: number, read ImpactDelay: number, read Stun: number,
 }
 export type Cast = {
-	id: number, ownerId: string, round: number, life: number, requestId: number,
+	variant: string, stun: number, impactDelay: number, id: number, ownerId: string, round: number, life: number, requestId: number,
 	startedAt: number, readyAt: number, expiresAt: number, phase: string,
 	targetId: string?, controlAt: number?, controlled: boolean, impactAt: number?, impacted: boolean,
 }
@@ -40,7 +40,7 @@ function Module.configure(config: Configuration)
 		if now < state.cooldownAt then return nil, "Cooldown", 0 end
 		if mana < config.ManaCost then return nil, "Mana", 0 end
 		state.serial += 1
-		local cast: Cast = { id = state.serial, ownerId = state.ownerId, round = state.round, life = state.life,
+		local cast: Cast = { variant = "Rasengan", stun = config.Stun, impactDelay = config.ImpactDelay, id = state.serial, ownerId = state.ownerId, round = state.round, life = state.life,
 			requestId = requestId, startedAt = now, readyAt = now + config.Preparation,
 			expiresAt = now + config.HoldDuration, phase = "Preparing", targetId = nil,
 			controlAt = nil, controlled = false, impactAt = nil, impacted = false }
@@ -70,9 +70,9 @@ function Module.configure(config: Configuration)
 		local at = cast.controlAt
 		if not finite(now) or not Module.current(state, cast) or cast.phase ~= "Consumed" or cast.controlled
 			or not at or now < at then return nil, 0 end
-		cast.controlled = true; cast.impactAt = now + config.ImpactDelay
+		cast.controlled = true; cast.impactAt = now + cast.impactDelay
 		-- A0JT is applied before the one-second damage wait (JASS 48693-48789).
-		return cast.targetId, config.Stun
+		return cast.targetId, cast.stun
 	end
 	function Rules.claimImpact(state: State, cast: Cast, now: number): string?
 		local at = cast.impactAt

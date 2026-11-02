@@ -47,6 +47,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:SetAttribute("OilUntil",nil); model:SetAttribute("OilMoveMultiplier",nil); model:SetAttribute("OilMissAt",nil); game:GetService("CollectionService"):RemoveTag(model,"GamakichiOilStatus")
 	for _,key in {"SagePhase","SageRank","SageReadyAt","SageExpiresAt","SageAuraUntil"} do model:SetAttribute(key,nil) end
  game:GetService("CollectionService"):RemoveTag(model,"NarutoSage")
+ model:SetAttribute("SleepUntil",nil); model:SetAttribute("RasenganVariant",nil); model:SetAttribute("RasenganVariantUntil",nil)
  model.Name = "ShadowClone"; model:SetAttribute("EntityKind", "Summon"); model:SetAttribute("NativeNarutoClone", true)
 	model:SetAttribute("SummonOwner", player.UserId); model:SetAttribute("CombatDisabled", false)
 	model:SetAttribute("AbilityId", ""); model:SetAttribute("AbilityEntityId", nil); model:SetAttribute("LifeId", nil)
@@ -82,7 +83,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 			or record.state.clones[clone.id] ~= clone then Service.Remove(model); continue end
 		model:SetAttribute("RasenganHeld", clone.hasPayload); model:SetAttribute("RasenganVisible", clone.hasPayload)
 		local fighter = Fighters.Get(model)
-		if fighter and fighter.logic.mode == "Stunned" then Navigation.Stop(model); continue end
+		if fighter and (fighter.logic.mode == "Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(model); continue end
 		local intent = Commands.resolve(record.commands)
 		local character = owner.Character
 		if not character or not Damage.CanAct(character) or intent.mode == "Idle" then Navigation.Stop(model); continue end

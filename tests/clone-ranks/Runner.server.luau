@@ -34,7 +34,9 @@ local ok,err=xpcall(function()
  local accepted,reason=Ability.HandleRequest(a,1,actor,"ShadowClones",Vector3.zero,match.roundId)
  check("rankII advanced point denied",not accepted and reason=="AdvancedPointPolicyUnknown" and sa.pool.mana>=1000 and sa.clones.cooldownAt==0)
  accepted=Ability.HandleRequest(a,2,actor,"ShadowClones",other,match.roundId)
- check("enemy Sleep not replaced",not accepted and sa.clones.cooldownAt==0)
+  check("enemy Sleep is wakeable status",accepted and sa.clones.cooldownAt>0 and other:GetAttribute("SleepUntil")~=nil)
+ local Fighters=require(services.FighterStateService);local victim=Fighters.Get(other);assert(victim);Fighters.WakeSleep(victim)
+ sa.clones.cooldownAt=0 -- Fixture only: continue testing ordinary rank counts.
  task.wait(.5)
  local mana=sa.pool.mana
  check("rankII self through real boundary",Ability.HandleRequest(a,3,actor,"ShadowClones",match.roundId))

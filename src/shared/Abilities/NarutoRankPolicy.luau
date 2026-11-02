@@ -48,24 +48,18 @@ function Policy.cloneRank(rank: number): (ClonePlan?, string)
 	return { count = cloneCounts[rank], cooldown = cloneCooldowns[rank], manaCost = 200, lifetime = 20 }, "BaseVerified"
 end
 function Policy.castReason(id: string, rank: number, variant: string): string?
-	local maximum = maxRank(id)
-	if not maximum then return "UnknownAbility" end
-	if not integer(rank, 1, maximum) then return "Rank" end
-	if id == "Rasengan" then
-		if variant ~= "Ordinary" then return "VariantNotImplemented" end
-		if rank > 1 then return "RasenganRankEffectsUnknown" end
-		return nil
-	end
-	if variant == "EnemySleep" then
-		return if rank < 2 then "Target" else "NativeSleepPolicyUnknown"
-	end
-	if variant == "OrdinaryPoint" then
-		return if rank == 1 then nil else "AdvancedPointPolicyUnknown"
-	end
-	if variant ~= "OrdinarySelf" then return "VariantNotImplemented" end
-	-- Rank IV self-target can select mass summons. Do not disguise it as seven.
-	if rank == 4 then return "NativeManaOrderingUnknown" end
-	return nil
+ local maximum=maxRank(id); if not maximum then return "UnknownAbility" end
+ if not integer(rank,1,maximum) then return "Rank" end
+ if id=="Rasengan" then
+  if variant=="Ordinary" then return nil end
+  if variant=="Odama" then return if rank>=2 then nil else "Rank" end
+  if variant=="Rasenshuriken" then return if rank==3 then nil else "Rank" end
+  return "VariantNotImplemented"
+ end
+ if variant=="EnemySleep" then return if rank>=2 then nil else "Target" end
+ if variant=="OrdinaryPoint" then return if rank==1 then nil else "AdvancedPointPolicyUnknown" end
+ if variant~="OrdinarySelf" then return "VariantNotImplemented" end
+ return nil
 end
 function Policy.ordinaryClonePlan(rank: number, variant: string): (ClonePlan?, string)
 	local reason = Policy.castReason("ShadowClones", rank, variant)

@@ -6,7 +6,7 @@ local Structures = require(script.Parent.StructureService)
 local TowerRewards = require(script.Parent.TowerRewardService)
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Rules = require(Shared.Game.ProgressionRules).configure(require(Shared.Config.ProgressionConfig), require(Shared.Config.ItemConfig).Items)
-local DamageService = { Applied = Instance.new("BindableEvent") }
+local DamageService = { Applied = Instance.new("BindableEvent"), AttackAttempt = Instance.new("BindableEvent") }
 local enabled = true
 local Oil=require(script.Parent.OilStatusService)
 function DamageService.SetEnabled(value: boolean) enabled = value end
@@ -47,6 +47,7 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 	return dealt
 end
 function DamageService.ApplyAttack(attacker: Model,humanoid: Humanoid,amount: number): number
+ local target=humanoid.Parent; if target and target:IsA("Model") and DamageService.CanDamage(attacker,target) then DamageService.AttackAttempt:Fire(attacker,target) end
  if Oil.MissesAttack(attacker) then return 0 end
  return DamageService.Apply(attacker,humanoid,amount)
 end

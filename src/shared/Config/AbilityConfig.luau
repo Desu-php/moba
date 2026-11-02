@@ -3,6 +3,9 @@ export type Ability = { Name: string, Key: string, KeyLabel: string, Cooldown: n
 local abilities: { [string]: Ability } = {
  MeditationToggle={Name="Медитация",Key="Right",KeyLabel="→",Cooldown=0,Windup=0,Duration=0},
  MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="J",Cooldown=5,Windup=0,Duration=0},
+ Odama={Name="Odama (window)",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
+ Rasenshuriken={Name="Rasenshuriken (window)",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
+ ShadowSleep={Name="Sleep (enemy)",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
  GamakichiOil={Name="Масло",Key="G",KeyLabel="G",Cooldown=25,Windup=0,Duration=6},
  GamakichiChop={Name="Рубящий канал",Key="H",KeyLabel="H",Cooldown=30,Windup=.5,Duration=3.5},
 	Rasengan = { Name = "Расенган I", Key = "One", KeyLabel = "1 / Q", Cooldown = 60, Windup = 2, Duration = 15 },
@@ -14,8 +17,8 @@ local abilities: { [string]: Ability } = {
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand", "GamakichiOil", "GamakichiChop" },
-	PrototypeEnabled = table.freeze({ Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
-	InputAliases = table.freeze({ Q = "Rasengan", Right = "MeditationToggle", J = "MeditationRecall" }),
+	PrototypeEnabled = table.freeze({ Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
+	InputAliases = table.freeze({ Q = "Rasengan", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },

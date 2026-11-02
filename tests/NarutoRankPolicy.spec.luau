@@ -57,18 +57,18 @@ for rank = 1, 3 do
 end
 check(Policy.castReason("Rasengan", 1, "Ordinary") == nil, "base Q admitted")
 for rank = 2, 3 do
-	check(Policy.castReason("Rasengan", rank, "Ordinary") == "RasenganRankEffectsUnknown", "no fake later Q rank")
+	check(Policy.castReason("Rasengan", rank, "Ordinary") == nil, "later ranks preserve ordinary Q")
 end
 for rank = 1, 3 do
-	check(Policy.castReason("Rasengan", rank, "Odama") == "VariantNotImplemented", "no Odama unlock")
+	check(Policy.castReason("Rasengan", rank, "Odama") == (if rank<2 then "Rank" else nil), "Odama rank gate")
 end
 check(Policy.castReason("ShadowClones", 1, "EnemySleep") == "Target", "rank I no enemy")
 for rank = 2, 4 do
-	check(Policy.castReason("ShadowClones", rank, "EnemySleep") == "NativeSleepPolicyUnknown", "sleep not stun")
+	check(Policy.castReason("ShadowClones", rank, "EnemySleep") == nil, "wakeable Sleep adapter admitted")
 	check(Policy.castReason("ShadowClones", rank, "OrdinaryPoint") == "AdvancedPointPolicyUnknown", "advanced point closed")
 end
 check(Policy.ordinaryClonePlan(1, "OrdinaryPoint") ~= nil, "base point retained")
-check(select(2, Policy.ordinaryClonePlan(4, "OrdinarySelf")) == "NativeManaOrderingUnknown", "mass boundary closed")
+check(Policy.ordinaryClonePlan(4, "OrdinarySelf") ~= nil, "IV self uses explicit transaction policy")
 check(Policy.castReason("ShadowClones", 4, "MassClones") == "VariantNotImplemented", "no mass bypass")
 check(Policy.castReason("ShadowClones", 2, "Fake") == "VariantNotImplemented", "unknown variant denied")
 check(table.isfrozen(Policy), "API immutable")

@@ -141,7 +141,8 @@ function HUD.Start()
    end
    if hovered==id then
     local name=Config.Abilities[id].Name
-    if id=="ShadowClones" then name="Теневые клоны "..({"I","II","III"})[math.clamp(rank,1,3)] end
+    if id=="ShadowClones" then name="Теневые клоны "..({"I","II","III","IV"})[math.clamp(rank,1,4)] end
+    if id=="ShadowClones" then name..=" | T: Sleep" elseif id=="Rasengan" then name="Rasengan "..({"I","II","III"})[math.clamp(rank,1,3)].." | Z / X" end
     tooltipText.Text=name.."  ["..Config.Abilities[id].KeyLabel.."]\nРанг: "..rank.."\n"..(if not enabled then "Ветка закрыта" elseif remaining>0 then string.format("Перезарядка: %.1f с",remaining) elseif reason then tostring(reason) else "Готово").."\n"..tostring(if state then state:GetAttribute("LearnReason_"..id) or "" else "")
    end
   end

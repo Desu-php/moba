@@ -76,7 +76,7 @@ end
 function Service.TrySpell(player: Player,id: string,request: number,now: number,target: any): (boolean,string)
  local r=records[player]
  if not r or r.character~=player.Character or not Domain.live(r.state,r.cast,now) or not Damage.CanAct(r.character) or not Damage.CanAct(r.model) then return false,"Unavailable" end
- local fighter=Fighters.Get(r.model); if not fighter or fighter.logic.mode=="Stunned" then return false,"Busy" end
+ local fighter=Fighters.Get(r.model); if not fighter or (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then return false,"Busy" end
  if not Hitboxes.IsFiniteCFrame(r.root.CFrame) then return false,"Unavailable" end
  local point: Vector3
  local selected: Model?=nil
@@ -109,7 +109,7 @@ function Service.Update(now: number,delta: number)
   if player.Parent~=Players or player.Character~=r.character or not Damage.CanAct(r.character)
    or not r.model.Parent or r.humanoid.Health<=0 or not Domain.live(r.state,r.cast,now) then Service.Remove(player); continue end
   local fighter=Fighters.Get(r.model)
-  if fighter and fighter.logic.mode=="Stunned" then r.hitAt=nil; r.target=nil; Spells.cancel(r.spells); r.oilTarget=nil; r.center=nil; publish(r); continue end
+  if fighter and (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then r.hitAt=nil; r.target=nil; Spells.cancel(r.spells); r.oilTarget=nil; r.center=nil; publish(r); continue end
   r.humanoid.Health=math.min(r.humanoid.MaxHealth,r.humanoid.Health+r.cast.profile.regen*delta)
   if Spells.claimOil(r.spells,now) then
    local target=r.oilTarget; r.oilTarget=nil

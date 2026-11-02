@@ -36,12 +36,12 @@ for rank=1,3 do
  local duplicate,reason=W.begin(a,now+2,rank,plan.count,plan.cooldown)
  check("replay cannot start second burst "..rank,not duplicate and reason=="Replay")
  if rank>1 then check("advanced point closed "..rank,Policy.ordinaryClonePlan(rank,"OrdinaryPoint")==nil) end
- check("enemy branch remains closed "..rank,Policy.ordinaryClonePlan(rank,"EnemySleep")==nil)
+ check("enemy branch rank guard "..rank,(Policy.ordinaryClonePlan(rank,"EnemySleep")~=nil)==(rank>=2))
 end
 local points=p.SkillPoints; p.Level=30
-check("IV cannot spend a point",not Learning.learn(p,"ShadowClones") and p.SkillPoints==points and p.Learned.ShadowClones==3)
+check("IV enabled with ordinary and mass policy",Learning.learn(p,"ShadowClones") and p.SkillPoints==points-1 and p.Learned.ShadowClones==4)
 p.Learned.Rasengan=1
-check("Q II cannot spend on metadata alone",not Learning.learn(p,"Rasengan") and p.SkillPoints==points)
+check("Q II learned for window adapter",Learning.learn(p,"Rasengan") and p.SkillPoints==points-2)
 local old=previous; assert(old)
 Clone.newLife(a,2)
 check("death invalidates old payload",not old.hasPayload and Clone.takePayload(a,old,130,"Enemy",true,false)==nil)

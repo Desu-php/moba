@@ -199,7 +199,7 @@ function AI.Update(now: number)
 		if npc.humanoid.Health <= 0 then dead(npc); continue end
 		if npc.root.Position.Y < MapConfig.Origin.Y - 15 then AI.Remove(model); continue end
 		local fighter = Fighters.Get(model)
-		if not fighter or fighter.logic.mode == "Stunned" then
+		if not fighter or fighter.logic.mode == "Stunned" or (fighter.sleep and fighter.sleep.active) then
 			npc.progressAt = now; npc.lastPosition = npc.root.Position; continue
 		end
 		if not Damage.CanAct(model) then continue end
