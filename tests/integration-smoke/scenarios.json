@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "kind": "pending-acceptance-specification",
+  "baseRevision": "78bb59a071963599df04e807829122157190517c",
+  "status": "NOT RUN",
+  "clients": 2,
+  "ownsStudio": "integrator-only-official-MCP",
+  "testOnly": true,
+  "timeoutsSeconds": {
+    "clients": 45,
+    "replication": 3,
+    "routeProgress": 12,
+    "respawn": 10,
+    "sagePreparation": 12,
+    "oneMeditationLifetime": 38
+  },
+  "tracks": [
+    {
+      "id": "LAND",
+      "owner": "landscape-worker",
+      "status": "NOT RUN",
+      "cases": ["LAND-01", "LAND-02"],
+      "reuse": ["tests/navigation/Runner.server.luau", "tests/navigation/Lifecycle.server.luau"],
+      "requires": ["reviewed new geometry", "real navmesh", "real server LOS"],
+      "evidence": ["three lanes", "corridor and obstacle routes", "blocked damage", "moving and unreachable target", "bounded path metrics"]
+    },
+    {
+      "id": "MINION",
+      "owner": "minion-visuals-worker",
+      "status": "NOT RUN",
+      "cases": ["MINION-01", "MINION-02"],
+      "reuse": ["tests/manual/Runner.server.luau", "tests/towers/Runner.server.luau"],
+      "requires": ["reviewed actual movement/attack state fields", "both faction visuals"],
+      "evidence": ["state-driven animation deadlines", "server-owned damage", "identity and reward preservation", "cancel/death cleanup", "two-client visual observation"]
+    },
+    {
+      "id": "SAGE",
+      "owner": "sage-III-meditation-worker",
+      "status": "NOT RUN",
+      "cases": ["SAGE-01", "SAGE-02"],
+      "reuse": ["tests/sage/Runner.server.luau", "tests/learning/Driver.client.luau"],
+      "requires": ["explicit initial-mana/recall policy", "rank-III HP policy or rank remains closed", "per-owner clone identity"],
+      "evidence": ["real preparation", "direct versus meditation transaction", "one current-mana return", "one real 35s expiry", "growth/item/layer composition"]
+    },
+    {
+      "id": "KCM",
+      "owner": "kcm-worker",
+      "status": "NOT RUN",
+      "cases": ["KCM-01", "KCM-02"],
+      "reuse": ["tests/NarutoKcm.spec.luau", "tests/sage/Runner.server.luau", "tests/learning/Driver.client.luau"],
+      "requires": ["reviewed enabled runtime ranks", "explicit morph policy", "source availability matrix", "current adapter API"],
+      "evidence": ["entry and real drain/cancel tick", "separate chakra/mana", "preserved progression/items", "layered Sage", "rejected unsupported rank/form", "wired conversion/dash only"]
+    },
+    {
+      "id": "ADV",
+      "owner": "advanced-rasengan-sleep-clone-IV-worker",
+      "status": "NOT RUN",
+      "cases": ["ADV-01", "ADV-02"],
+      "reuse": ["tests/hero/Runner.server.luau", "tests/clone-ranks/Runner.server.luau", "tests/basic-attack/Manual.server.luau"],
+      "requires": ["supported path matrix", "native cost/wake/threshold policy", "per-cast damage and release state"],
+      "evidence": ["actual input and current-stat impact", "distinct self/target and melee/ranged paths", "Sleep wake", "IV atomic threshold transaction", "closed unsupported capabilities"]
+    }
+  ],
+  "sharedLast": ["SHARED-01", "SHARED-02"],
+  "terminalTrigger": "actual core Humanoid death, not direct phase mutation",
+  "recordFields": ["revision", "affectedHashes", "policy", "fixtureGeneration", "startedAt", "endedAt", "elapsedSeconds", "assertions", "evidence", "result"],
+  "resultStates": ["PASS", "FAIL", "BLOCKED", "NOT RUN", "REUSED", "NOT IMPLEMENTED"],
+  "runnerStatus": "NOT IMPLEMENTED: bind reviewed worker fixtures after patch arrival; this manifest does not execute assertions"
+}

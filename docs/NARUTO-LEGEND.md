@@ -1,4 +1,23 @@
-# Naruto Legend base abilities — domain slice
+# Naruto Legend base abilities — source reference and implementation history
+
+## Current baseline: 78bb59a (2026-11-02 audit)
+
+The sections below retain the original domain/rank-I implementation history;
+their former-ten-level-cap and disabled-branch statements describe those older
+slices, not the current game. Current progression has cap 30, one initial skill
+point and one per gained level, manual learning, and level-based STR/AGI/INT growth.
+
+Current playable scope is ordinary Rasengan I; ordinary self-clones I–III;
+Gamakichi I–X with oil/adult chopping; and direct Sage I–II. KCM remains pure
+domain only with runtime and learning disabled. Clone rank I is learned rather
+than freely granted. Whole-line `RuntimeReady=false` in the source catalog means
+the complete source line remains unfinished, not that every bounded ability is off.
+
+See [NARUTO-KIT-BACKLOG.md](NARUTO-KIT-BACKLOG.md) for the current five-line gap
+matrix and remaining evidence, [LEARNING-STATS.md](LEARNING-STATS.md) for current
+progression, [NARUTO-RANK-POLICY.md](NARUTO-RANK-POLICY.md), [GAMAKICHI.md](GAMAKICHI.md),
+[GAMAKICHI-SPELLS.md](GAMAKICHI-SPELLS.md), and [SAGE.md](SAGE.md) for bounded policies.
+These playable slices do not establish complete Naruto Legend parity.
 
 Source: `Naruto_Legend_1_7a_FIX20_3.w3x`, SHA256
 `8c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8`.
