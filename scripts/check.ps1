@@ -20,7 +20,7 @@ try {
     if ($Mode -ne 'Full') {
         if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        $pure = @('tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau')
+        $pure = @('tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau')
         $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
         & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau src/shared/Game/JungleRules.luau @pure
         if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
@@ -59,6 +59,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture build failed' }
     & $RojoPath sourcemap tests/meditation.project.json -o build/meditation-sourcemap.json
     if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture sourcemap failed' }
+    & $RojoPath build tests/advanced.project.json -o build/advanced-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Advanced fixture build failed' }
+    & $RojoPath sourcemap tests/advanced.project.json -o build/advanced-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Advanced fixture sourcemap failed' }
+    & $RojoPath build tests/kcm.project.json -o build/kcm-qa.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'KCM fixture build failed' }
+    & $RojoPath sourcemap tests/kcm.project.json -o build/kcm-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'KCM fixture sourcemap failed' }
     & $RojoPath build tests/studio.project.json -o build/combat-regression-stage3.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Studio test Rojo build failed' }
     & $RojoPath build tests/survival.project.json -o build/survival-tests.rbxlx
@@ -165,7 +173,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Minion poses/map scenery pure type check failed' }
         & $analyzer src/shared/Abilities/MeditationState.luau tests/Meditation.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Meditation pure type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau')) {
+        & $analyzer src/shared/Abilities/AbilityInputRules.luau tests/AbilityInputRules.spec.luau src/shared/Abilities/NarutoKcmAdapter.luau tests/NarutoKcmAdapter.spec.luau src/shared/Abilities/NarutoKcmGameplay.luau tests/NarutoKcmGameplay.spec.luau tests/NarutoAdvanced.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Combined Naruto integration domain types failed' }
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -183,6 +193,10 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/meditation-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') meditation
             if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/advanced-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') advanced
+            if ($LASTEXITCODE -ne 0) { throw 'Advanced fixture type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/kcm-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') kcm
+            if ($LASTEXITCODE -ne 0) { throw 'KCM fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/test-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') studio
             if ($LASTEXITCODE -ne 0) { throw 'Roblox-aware Studio test type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/survival-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') survival

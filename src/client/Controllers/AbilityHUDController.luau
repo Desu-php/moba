@@ -117,7 +117,9 @@ function HUD.Start()
    end
    slot.name.Text=if id then Items.Items[id].Name else "—"
   end
-  message.Text=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
+  local notice=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
+  local formStatus=Controller.GetFormStatus()
+  message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
   for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
   for id,button in buttons do

@@ -36,5 +36,8 @@ for rank=1,10 do
 end
 check("rank cap without spend",Learning.reason(profile,"Gamakichi")=="MaxRank" and profile.SkillPoints==20)
 profile.Learned.SageMode=2
-check("advanced Sage and KCM remain unavailable",Learning.reason(profile,"SageMode")=="NotImplemented" and Learning.reason(profile,"KCM")=="NotImplemented")
+check("integrated SageIII and KCM are eligible",Learning.reason(profile,"SageMode")==nil and Learning.reason(profile,"KCM")==nil)
+local points=profile.SkillPoints
+check("integrated SageIII spends one point",Learning.learn(profile,"SageMode") and profile.SkillPoints==points-1)
+check("no invented SageIV purchase",not Learning.learn(profile,"SageMode") and profile.SkillPoints==points-1)
 print("PASS Gamakichi: "..count.." assertions")

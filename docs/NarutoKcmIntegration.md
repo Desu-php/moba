@@ -5,7 +5,7 @@ Base: d7c513332eddd5a615b4bac3069316301ab7cbe8. No runtime wiring is included.
 ## Existing interfaces checked
 
 - `NarutoResources`: ordinary mana pool (`mana`, `maximum`, `regen`, `at`), mutable domain functions.
-- `SkillLearning`: authoritative `Profile.Level`, `Learned.KCM`; configured minimums 13/20/27, KCM runtime currently disabled. This patch deliberately does not enable learning.
+- `SkillLearning`: authoritative `Profile.Level`, `Learned.KCM`; configured minimums 13/20/27, KCM gameplay composition now enables represented ranks1–3; see `NarutoKcmGameplay.md`.
 - `GamakichiState`: per-owner state/cast identity pattern. KCM uses independent owner state and monotonically increasing cast ids.
 - Source: `docs/source/naruto-progression-and-branches-contract.txt`, forms section A017 and Kurama resource. No local AGENTS.md or .agents/skills was found in the source checkout or Documents parent.
 
@@ -51,4 +51,4 @@ luau-analyze src/shared/Abilities/NarutoKcmConfig.luau src/shared/Abilities/Naru
 luau tests/NarutoKcm.spec.luau
 ```
 
-59 deterministic domain checks pass. Coverage includes all rank gates, Hagoromo, exact entry cost, CD, fractional/no duplicate drain, dash delay, delayed cancellation/removal, depletion/clamp, death, closed sessions, stale ids, owner isolation, Sage layering/expiration, conversion, threshold overshoot/sharing quirks, bounded catchup, invalid clocks/context. These are headless domain tests, not Studio/network/morph validation.
+64 deterministic domain checks pass. The optional headless adapter and its separate validation are documented in `NarutoKcmAdapterIntegration.md`. Coverage includes all rank gates, Hagoromo, exact entry cost, CD, fractional/no duplicate drain, dash delay, delayed cancellation/removal, depletion/clamp, death, closed sessions, stale ids, owner isolation, Sage layering/expiration, conversion, threshold overshoot/sharing quirks, bounded catchup, invalid clocks/context. These are headless domain tests, not Studio/network/morph validation.

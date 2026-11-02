@@ -2,6 +2,7 @@
 -- Pure domain. Runtime owns Instances, authoritative learned rank, mana and Sage layer.
 export type Context = {level: number, rank: number, hagoromo: boolean, alive: boolean,
  fullKurama: boolean, kuramaCooldown: boolean, sageRemaining: number, sageAuraPresent: boolean}
+export type Balance = {chakra: number, cooldownAt: number}
 export type Active = {id: number, rank: number, nextDrainAt: number, dashAt: number,
  dashReady: boolean, cancelPresent: boolean, buffPresent: boolean}
 export type State = {chakra: number, clock: number, nextResourceAt: number, cooldownAt: number,
@@ -29,11 +30,14 @@ function M.configure(config: Config)
   table.insert(events,{kind="Exited",id=a.id,rank=a.rank,reason=reason})
   if c.alive and reason~="Closed" then sage(events,c) end
  end
- function D.new(now: number): State
+ function D.new(now: number, balance: Balance?): State
   assert(finite(now),"finite clock required")
-  return {chakra=config.InitialChakra,clock=now,nextResourceAt=now+1,cooldownAt=now,serial=0,
+  if balance then assert(finite(balance.chakra) and balance.chakra>=0 and finite(balance.cooldownAt),"invalid balance") end
+  return {chakra=if balance then balance.chakra else config.InitialChakra,clock=now,nextResourceAt=now+1,
+   cooldownAt=if balance then balance.cooldownAt else now,serial=0,
    closed=false,sharedUnits=0,active=nil}
  end
+ function D.balance(s: State): Balance return {chakra=s.chakra,cooldownAt=s.cooldownAt} end
  -- Process elapsed whole ticks. Context must be advanced at each authoritative context change.
  -- On a long gap caller supplies historically correct context or chooses a runtime suspension policy.
  function D.update(s: State, now: number, c: Context): {Event}
@@ -79,16 +83,20 @@ function M.configure(config: Config)
   return events
  end
  -- Update first, then issue commands at exactly state.clock; prevents retroactive context/costs.
+ function D.canEnter(s: State, c: Context): (boolean,string)
+  if s.closed then return false,"Closed" end
+  if not valid(c) then return false,"Malformed" end
+  if not c.alive then return false,"Dead" end
+  if s.active or c.fullKurama then return false,"FormBusy" end
+  if c.rank==0 then return false,"Unlearned" end
+  if c.level<config.MinimumLevels[c.rank] then return false,"Level" end
+  if c.rank==3 and not c.hagoromo then return false,"Hagoromo" end
+  if s.clock<s.cooldownAt then return false,"Cooldown" end
+  if s.chakra<config.EntryCost then return false,"Chakra" end
+  return true,"Accepted"
+ end
  function D.enter(s: State, c: Context): (boolean,string,{Event})
-  if s.closed then return false,"Closed",{} end
-  if not valid(c) then return false,"Malformed",{} end
-  if not c.alive then return false,"Dead",{} end
-  if s.active or c.fullKurama then return false,"FormBusy",{} end
-  if c.rank==0 then return false,"Unlearned",{} end
-  if c.level<config.MinimumLevels[c.rank] then return false,"Level",{} end
-  if c.rank==3 and not c.hagoromo then return false,"Hagoromo",{} end
-  if s.clock<s.cooldownAt then return false,"Cooldown",{} end
-  if s.chakra<config.EntryCost then return false,"Chakra",{} end
+  local accepted,reason=D.canEnter(s,c); if not accepted then return false,reason,{} end
   s.serial+=1; s.chakra-=config.EntryCost; s.cooldownAt=s.clock+config.Cooldown
   s.active={id=s.serial,rank=c.rank,nextDrainAt=s.clock+1,dashAt=s.clock+config.DashDelay,
    dashReady=false,cancelPresent=true,buffPresent=true}
@@ -127,7 +135,7 @@ function M.configure(config: Config)
  function D.availability(s: State, c: Context)
   local active=s.active~=nil and not s.closed
   return {kcm=not s.closed and not active and not c.fullKurama, gamakichi=not s.closed and not active,
-   sage=not s.closed and not active, dash=active and s.active~=nil and s.active.dashReady,
+   sage=not s.closed, dash=active and s.active~=nil and s.active.dashReady,
    sharing=active, fullKurama=not s.closed and not active and c.level>=21 and not c.kuramaCooldown}
  end
  return D
