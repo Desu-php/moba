@@ -20,7 +20,7 @@ try {
     if ($Mode -ne 'Full') {
         if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        $pure = @('tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau')
+        $pure = @('tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau')
         $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
         & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau src/shared/Game/JungleRules.luau @pure
         if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
@@ -51,6 +51,14 @@ try {
     }
     & $RojoPath build default.project.json -o build/anime-battlegrounds.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Production Rojo build failed' }
+    & $RojoPath build tests/minions.project.json -o build/minion-visual-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture build failed' }
+    & $RojoPath sourcemap tests/minions.project.json -o build/minion-visual-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture sourcemap failed' }
+    & $RojoPath build tests/meditation.project.json -o build/meditation-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture build failed' }
+    & $RojoPath sourcemap tests/meditation.project.json -o build/meditation-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture sourcemap failed' }
     & $RojoPath build tests/studio.project.json -o build/combat-regression-stage3.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Studio test Rojo build failed' }
     & $RojoPath build tests/survival.project.json -o build/survival-tests.rbxlx
@@ -153,7 +161,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Tower pure logic type check failed' }
         & $analyzer src/shared/Game/RoundProtocol.luau src/shared/Game/JungleRules.luau tests/Jungle.spec.luau tests/Rounds.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Round pure logic type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau')) {
+        & $analyzer src/shared/Combat/MinionPoses.luau tests/MinionPoses.spec.luau src/shared/Game/MapSceneryPlan.luau tests/MapScenery.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Minion poses/map scenery pure type check failed' }
+        & $analyzer src/shared/Abilities/MeditationState.luau tests/Meditation.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Meditation pure type check failed' }
+        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -167,6 +179,10 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Roblox-aware Luau type check failed' }
         Push-Location tests
         try {
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/minion-visual-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') minions
+            if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/meditation-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') meditation
+            if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/test-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') studio
             if ($LASTEXITCODE -ne 0) { throw 'Roblox-aware Studio test type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/survival-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') survival

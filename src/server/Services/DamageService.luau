@@ -20,10 +20,6 @@ function DamageService.CanAct(model: Model): boolean
 	return humanoid ~= nil and humanoid.Health > 0
 end
 function DamageService.CanDamage(attacker: Model, target: Model): boolean
-	function DamageService.ApplyAttack(attacker: Model,humanoid: Humanoid,amount: number): number
- if Oil.MissesAttack(attacker) then return 0 end
- return DamageService.Apply(attacker,humanoid,amount)
-end
 return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
 		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true or target:GetAttribute("NativeMeditationClone")==true)
 		and target:GetAttribute("IsDestroyed") ~= true

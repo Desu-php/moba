@@ -3,6 +3,10 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CombatController = require(script.Parent.CombatController)
+local AbilityConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.AbilityConfig)
+local interruptKeys: { [string]: boolean } = {}
+for _, ability in AbilityConfig.Abilities do interruptKeys[ability.Key] = true end
+for key in (AbilityConfig.InputAliases :: { [string]: string }) do interruptKeys[key] = true end
 
 local InputController = {}
 local started = false
@@ -16,8 +20,7 @@ function InputController.Start()
 	started = true
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		-- A skill/command key interrupts a held attack; it cannot manufacture M1.
-		if table.find({ Enum.KeyCode.Q, Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three,
-			Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.F, Enum.KeyCode.G, Enum.KeyCode.H }, input.KeyCode) then held = false end
+		if interruptKeys[input.KeyCode.Name] then held = false end
 		if gameProcessed or UserInputService:GetFocusedTextBox() or game:GetService("Players").LocalPlayer:GetAttribute("ShopOpen") == true then
 			return
 		end
