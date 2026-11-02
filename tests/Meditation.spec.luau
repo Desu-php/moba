@@ -1,0 +1,46 @@
+--!strict
+local M=require("../src/shared/Abilities/MeditationState")
+local S=require("../src/shared/Abilities/SageState")
+local P=require("../src/shared/Combat/HeroPoses")
+local count=0
+local function check(name: string, ok: boolean) assert(ok,name); count+=1 end
+for _,case in {{1,30,"Ordinary",1},{2,30,"Ordinary",1},{3,17,"Ordinary",1},{3,18,"Ordinary",2},{3,18,"KCM",1},{3,19,"KCM",2},{1,21,"Kurama",2},{3,30,"Kurama",2}} do
+ local n=M.plan(case[1] :: number,case[2] :: number,case[3] :: M.Form)
+ check("count boundary "..tostring(case[1])..tostring(case[2])..tostring(case[3]),n==case[4] and n<=2)
+end
+check("malformed rank",M.plan(0/0,18,"Ordinary")==0 and M.plan(4,30,"Ordinary")==0)
+check("malformed level",M.plan(3,math.huge,"Ordinary")==0)
+local a,b=M.new("A",1,1),M.new("B",1,1)
+local clones=M.spawn(a,100,3,18,"Ordinary"); local clone=clones[1]
+check("two ordinary HP independent pools",#clones==2 and clones[1]~=clones[2] and clone.maximum==500 and clone.regen==20)
+check("zero initial mana is policy",clone.mana==0 and M.Policy.InitialManaProvisional)
+check("35 sec timed life",clone.expiresAt==135)
+M.update(a,clone,102.5); check("current mana accrues",clone.mana==50)
+M.update(a,clone,101); check("clock rollback no gain",clone.mana==50)
+M.update(a,clone,0/0); check("invalid clock no gain",clone.mana==50)
+check("wrong owner cannot claim",M.settle(b,clone,103,true)==0 and M.live(a,clone))
+check("death transfers current not max",M.settle(a,clone,103,true)==60)
+check("Died then expiration no double credit",M.settle(a,clone,135,true)==0 and not M.live(a,clone))
+check("other clone still live",M.live(a,clones[2]))
+check("expiry clamps regen and mana",M.settle(a,clones[2],200,true)==500)
+local k=M.spawn(a,200,1,21,"Kurama")
+check("Kurama explicit profile",#k==2 and k[1].maximum==2000 and k[1].regen==100 and k[1].mana==0)
+check("Kurama current transfer",M.settle(a,k[1],205,true)==500)
+check("invalid owner no credit but consumes",M.settle(a,k[2],210,false)==0 and M.settle(a,k[2],211,true)==0)
+local old=M.spawn(a,300,1,6,"Ordinary")[1]
+M.invalidate(a,1,2)
+check("new life invalidates old clone",not M.live(a,old) and M.settle(a,old,320,true)==0)
+local oldEpoch=M.spawn(a,400,1,6,"Ordinary")[1]
+M.invalidate(a,2,3)
+check("new epoch invalidates old clone",M.settle(a,oldEpoch,435,true)==0 and next(a.clones)==nil)
+local newer=M.spawn(a,500,1,6,"Ordinary")[1]
+check("IDs never recycled on cleanup",newer.id>oldEpoch.id and M.settle(a,oldEpoch,535,true)==0)
+check("fresh owner still receives",M.settle(a,newer,505,true)==100)
+check("NaN spawn no entities",#M.spawn(a,0/0,1,6,"Ordinary")==0)
+local state=S.new("A",1,1)
+local cast=S.request(state,0,1,3,18,25,true); assert(cast)
+check("mode captured at cast with .1 clone delay",cast.meditation and cast.cloneSpawnAt==.1 and cast.readyAt==4 and not cast.clonesSpawned)
+check("meditation activates Sage",S.activate(state,4)==cast)
+local pose=P.sample("Meditation",1,0)
+check("visible meditation pose",pose.LeftHip~=nil and pose.RightKnee~=nil and pose.LeftElbow~=nil)
+print("PASS Meditation: "..count.." assertions")

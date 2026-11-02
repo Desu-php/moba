@@ -49,9 +49,10 @@ function Controller.AbilityUnavailable(id: string): string?
 	local unavailable = Controller.Unavailable(id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
 	local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
- local line=if id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
- if (id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
+ local line=if id=="MeditationToggle" or id=="MeditationRecall" then "SageMode" elseif id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
+ if (id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="MeditationToggle" or id=="MeditationRecall" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
+	if id=="MeditationRecall" and (model:GetAttribute("MeditationCloneCount") or 0)==0 then return "Нет медитирующих клонов" end
 	local mana = model:GetAttribute("Mana")
  if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
  local cost = if id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
@@ -115,7 +116,11 @@ function Controller.TryCast(id: string, selectedTarget: any): boolean
 	else remote:FireServer(serial, model, id, Rounds.Current()) end
 	Controller.Changed:Fire(); return true
 end
-function Controller.GetMessage(): string return lastReason end
+function Controller.GetMessage(): string
+ if lastReason~="" then return lastReason end
+ local model=Players.LocalPlayer.Character
+ return if model and model:GetAttribute("MeditationMode")==true then "Медитация: 4 — подготовка с клонами · J — вернуть чакру · → — прямой режим" else ""
+end
 function Controller.Start()
 	if remote then return end
 	Rounds.Watch(function() pendingId = 0; corrections = {}; correctionModel = nil; Controller.CancelCloneCommand(); Controller.Changed:Fire() end)

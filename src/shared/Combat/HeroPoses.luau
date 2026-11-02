@@ -19,7 +19,14 @@ function Poses.sample(key: string, time: number, phase: number): Pose
 		pose.Waist = angles(0.23, 0, math.sin(time * 32) * 0.035); pose.Neck = angles(-0.25)
 		pose.LeftShoulder = angles(-0.3, 0, -0.35); pose.RightShoulder = angles(-0.3, 0, 0.35)
 		pose.LeftKnee = angles(-0.22); pose.RightKnee = angles(-0.22)
-	elseif key=="SagePrepare" then
+	elseif key=="Meditation" then
+        local breath=math.sin(time*2)*.025
+        pose.Waist=angles(.05+breath); pose.Neck=angles(-.1-breath)
+        pose.LeftHip=angles(1.2,0,-.6); pose.RightHip=angles(1.2,0,.6)
+        pose.LeftKnee=angles(-1.7); pose.RightKnee=angles(-1.7)
+        pose.LeftShoulder=angles(.4,0,.3); pose.RightShoulder=angles(.4,0,-.3)
+        pose.LeftElbow=angles(.9); pose.RightElbow=angles(.9)
+    elseif key=="SagePrepare" then
         pose.Waist=angles(.08); pose.Neck=angles(-.08)
         pose.LeftShoulder=angles(.9,-.15,.6); pose.RightShoulder=angles(.9,.15,-.6)
         pose.LeftElbow=angles(1.6); pose.RightElbow=angles(1.6)

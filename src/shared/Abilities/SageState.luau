@@ -1,11 +1,13 @@
 --!strict
--- A09J direct mode. Native inherited values are separated from explicit fields.
+-- A09J. Native inherited values are separated from explicit fields.
 local S={}
 S.Mana=25; S.Cooldown=150
 S.Source=table.freeze({MinimumLevels={6,10,14},Preparation={10,7,4},ManaRestore={200,350,500},Attack={10,30,50},SpeedWarcraft=105})
-S.Policy=table.freeze({RuntimeRanks=2,Armor={3,7},ArmorProvisional=true,Health={150,200},CleanupSeconds=51,AuraSeconds=47,CapacityDoesNotHeal=true,MeditationImplemented=false})
+-- Rank III HP is a product policy (tooltip 300), NOT certified A07Y inheritance.
+-- See forms contract: AIl2 original override 150 vs native 300 is unresolved.
+S.Policy=table.freeze({RuntimeRanks=3,Armor={3,7,15},ArmorProvisional=true,Health={150,200,300},Rank3HealthProvisional=true,Rank3HealthBasis="Tooltip300_NativeInheritanceUnresolved",CleanupSeconds=51,AuraSeconds=47,CapacityDoesNotHeal=true,MeditationImplemented=true})
 export type Modifier={health: number,armor: number,attack: number,speedWarcraft: number}
-export type Cast={id: number,owner: string,round: number,life: number,rank: number,phase: string,readyAt: number,expiresAt: number,auraUntil: number,activated: boolean}
+export type Cast={id: number,owner: string,round: number,life: number,rank: number,phase: string,readyAt: number,expiresAt: number,auraUntil: number,activated: boolean,meditation: boolean,cloneSpawnAt: number,clonesSpawned: boolean}
 export type State={owner: string,round: number,life: number,serial: number,lastRequest: number,cooldownAt: number,active: Cast?}
 local function finite(x: number): boolean return x==x and math.abs(x)<math.huge end
 function S.new(owner: string,round: number,life: number): State return {owner=owner,round=round,life=life,serial=0,lastRequest=0,cooldownAt=0,active=nil} end
@@ -13,7 +15,7 @@ function S.modifier(rank: number): Modifier?
  if rank%1~=0 or rank<1 or rank>S.Policy.RuntimeRanks then return nil end
  return {health=S.Policy.Health[rank],armor=S.Policy.Armor[rank],attack=S.Source.Attack[rank],speedWarcraft=S.Source.SpeedWarcraft}
 end
-function S.request(state: State,now: number,request: number,rank: number,level: number,mana: number): (Cast?,string,number)
+function S.request(state: State,now: number,request: number,rank: number,level: number,mana: number,meditation: boolean?): (Cast?,string,number)
  if not finite(now) or not finite(request) or request<1 or request%1~=0 then return nil,"Malformed",0 end
  if request<=state.lastRequest then return nil,"Replay",0 end
  state.lastRequest=request
@@ -24,7 +26,7 @@ function S.request(state: State,now: number,request: number,rank: number,level: 
  if not finite(mana) or mana<S.Mana then return nil,"Mana",0 end
  state.serial+=1; state.cooldownAt=now+S.Cooldown
  local ready=now+S.Source.Preparation[rank]
- local cast: Cast={id=state.serial,owner=state.owner,round=state.round,life=state.life,rank=rank,phase="Preparing",readyAt=ready,expiresAt=ready+S.Policy.CleanupSeconds,auraUntil=ready+S.Policy.AuraSeconds,activated=false}
+ local cast: Cast={id=state.serial,owner=state.owner,round=state.round,life=state.life,rank=rank,phase="Preparing",readyAt=ready,expiresAt=ready+S.Policy.CleanupSeconds,auraUntil=ready+S.Policy.AuraSeconds,activated=false,meditation=meditation==true,cloneSpawnAt=now+.1,clonesSpawned=false}
  state.active=cast; return cast,"Accepted",S.Mana
 end
 function S.live(state: State,cast: Cast): boolean return state.active==cast and state.owner==cast.owner and state.round==cast.round and state.life==cast.life end

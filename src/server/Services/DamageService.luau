@@ -25,7 +25,7 @@ function DamageService.CanDamage(attacker: Model, target: Model): boolean
  return DamageService.Apply(attacker,humanoid,amount)
 end
 return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
-		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true)
+		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true or target:GetAttribute("NativeMeditationClone")==true)
 		and target:GetAttribute("IsDestroyed") ~= true
 		and Structures.CanReceive(target)
 end

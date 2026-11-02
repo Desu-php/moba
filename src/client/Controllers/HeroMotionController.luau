@@ -49,6 +49,7 @@ local function bind(model: Model)
 end
 local function active(rig: Rig, now: number): (string, number, number)
 	local model = rig.model
+	if model:GetAttribute("NativeMeditationClone")==true then return "Meditation",now,1 end
 	local sageReady=model:GetAttribute("SageReadyAt")
  if model:GetAttribute("SagePhase")=="Preparing" and typeof(sageReady)=="number" and now<sageReady then return "SagePrepare",now,1 end
  local selfPause = model:GetAttribute("RasenganSelfPauseUntil")
