@@ -6,6 +6,7 @@ local Config=require(Shared.Abilities.NarutoKcmConfig)
 local Domain=require(Shared.Abilities.NarutoKcmState).configure(Config)
 local Adapter=require(Shared.Abilities.NarutoKcmAdapter)
 local Gameplay=require(Shared.Abilities.NarutoKcmGameplay)
+local Kurama=require(script.Parent.NarutoKuramaService)
 local Units=require(Shared.Abilities.WorldUnits)
 local Stats=require(script.Parent.CharacterStatsService)
 local Progression=require(script.Parent.HeroProgressionService)
@@ -39,9 +40,9 @@ local function snapshot(owner: string): Adapter.Snapshot?
   canCast=live and not (fighter.sleep and fighter.sleep.active) and fighter.logic.mode=="Idle" and fighter.logic.nextAttackAt<=workspace:GetServerTimeNow()
    and not fighter.root.Anchored and not h.busy(p),
   context={level=profile.Level,rank=profile.Learned.KCM or 0,hagoromo=r.hagoromo.granted,alive=live,
-   fullKurama=false,kuramaCooldown=false,sageRemaining=left,sageAuraPresent=aura},
+   fullKurama=Kurama.IsActive(p),kuramaCooldown=Kurama.IsLocked(p),sageRemaining=left,sageAuraPresent=aura},
   allowed={kcm=(profile.Learned.KCM or 0)>0 and not r.sageEntryBlocked,gamakichi=(profile.Learned.Gamakichi or 0)>0,
-   sage=(profile.Learned.SageMode or 0)>0,dash=true,sharing=false,fullKurama=false}}
+   sage=(profile.Learned.SageMode or 0)>0,dash=true,sharing=false,fullKurama=profile.Level>=21}}
 end
 local function owned(token: Adapter.Token): Model?
  local model=models[token]; local p=Players:GetPlayerByUserId(tonumber(token.owner) or 0)
@@ -52,10 +53,12 @@ end
 function S.Start(h: Hooks)
  if runtime then return end; hooks=h
  local ports: Adapter.Ports={now=function() return workspace:GetServerTimeNow() end,read=snapshot,
+  kuramaPulse=function(token) local r=records[token.owner]; if r then Kurama.Pulse(r.player) end end,
   publish=function(token,chakra,mask,cooldownAt)
    local model=owned(token); if not model then return end
    model:SetAttribute("KuramaChakra",chakra); model:SetAttribute("KuramaChakraThreshold",900+100*Stats.Get(records[token.owner].player).Level)
    model:SetAttribute("Ready_KCM",cooldownAt)
+   model:SetAttribute("KuramaFormAllowed",mask.fullKurama)
    model:SetAttribute("KcmAllowed",mask.kcm); model:SetAttribute("KcmDashReady",mask.dash)
    model:SetAttribute("KcmGamakichiAllowed",mask.gamakichi); model:SetAttribute("KcmSageAllowed",mask.sage)
   end,
@@ -82,6 +85,7 @@ function S.Start(h: Hooks)
    if not model or not m or model:GetAttribute("LifeId")~=token.life or round()~=token.epoch then return false end
    models[token]=model
    Stats.SetLayer(model,"NarutoKcm",{health=m.health,armor=m.armor,attack=m.attack,speed=Units.toStuds(m.speedWarcraft)})
+   model:SetAttribute("RikudoActive",rank==3)
    model:SetAttribute("KcmRank",rank); model:SetAttribute("KcmPolicy",Gameplay.Policy.Id)
    return true
   end,
@@ -89,12 +93,19 @@ function S.Start(h: Hooks)
    local model=models[token]
    if model then
     Stats.SetLayer(model,"NarutoKcm",nil)
+    model:SetAttribute("RikudoActive",false)
     model:SetAttribute("KcmActive",false); model:SetAttribute("KcmDashReady",false); model:SetAttribute("KcmRank",0)
    end
    local visual=visuals[token]; if visual then visual:Destroy(); visuals[token]=nil end
   end,
  }
  runtime=Adapter.configure(Domain,ports,policy)
+ Kurama.Start({
+  chakra=function(p) local r=records[tostring(p.UserId)]; return if runtime and r and r.token then runtime.Chakra(r.token) else nil end,
+  spend=function(p,amount) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.SpendChakra(r.token,amount) end,
+  kcm=function(p) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.IsActive(r.token) end,
+  busy=h.busy,restoreMana=h.restoreMana,
+ })
 end
 local function record(p: Player): Record
  assert(runtime)
@@ -132,16 +143,22 @@ local function refresh(p: Player): Record?
  end
  return r
 end
-function S.IsAbility(id: string): boolean return id=="KCM" or id=="KcmCancel" or id=="KcmDash" or id=="KuramaConvert" end
+function S.IsAbility(id: string): boolean return id=="KuramaForm" or id=="KCM" or id=="KcmCancel" or id=="KcmDash" or id=="KuramaConvert" end
 -- A09J activation disables A017; the source KCM exit action can restore it.
 -- Keep this admission action separate from independently composed stat layers.
 function S.SageActivated(p: Player)
  local r=records[tostring(p.UserId)]; if r then r.sageEntryBlocked=true end
 end
-function S.MeditationForm(p: Player): "Ordinary" | "KCM"
+function S.MeditationForm(p: Player): "Ordinary" | "KCM" | "Kurama"
+ if Kurama.IsActive(p) then return "Kurama" end
  local r=records[tostring(p.UserId)]
  return if runtime and r and r.token and runtime.IsActive(r.token) then "KCM" else "Ordinary"
 end
+function S.IsRikudo(p: Player): boolean
+ local r=records[tostring(p.UserId)]
+ return runtime~=nil and r~=nil and r.token~=nil and runtime.ActiveRank(r.token)==3
+end
+function S.OnAttackStarted(p: Player,hasTarget: boolean) Kurama.AttackStarted(p,hasTarget) end
 function S.Blocked(model: Model,id: string): boolean
  local player=Players:GetPlayerFromCharacter(model)
  return player~=nil and S.MeditationForm(player)=="KCM" and id=="Gamakichi"
@@ -150,7 +167,8 @@ function S.TryCast(p: Player,id: string,request: number,now: number,target: any)
  local r=refresh(p); local h=hooks; if not runtime or not r or not r.token or not h then return false,"Unavailable" end
  if request<=r.lastRequest then return false,"Replay" end; r.lastRequest=request
  local token=r.token; local model=p.Character; if not model then return false,"Unavailable" end
- if id=="KCM" then
+ if id=="KuramaForm" then return Kurama.TryCast(p,request,now,target)
+ elseif id=="KCM" then
   if target~=nil then return false,"Malformed" end
   local ok,reason=runtime.Enter(token)
   return ok,reason
@@ -199,14 +217,17 @@ function S.TryCast(p: Player,id: string,request: number,now: number,target: any)
  model:SetAttribute("Ready_KcmDash",r.dash.cooldownAt)
  return true,"Accepted"
 end
-function S.Update() if runtime then for _,p in Players:GetPlayers() do refresh(p) end end end
+function S.Update()
+ if runtime then for _,p in Players:GetPlayers() do refresh(p) end; Kurama.Update(workspace:GetServerTimeNow()) end
+end
 function S.Remove(p: Player)
  assert(runtime)
  local key=tostring(p.UserId); local r=records[key]
  if r and r.token then runtime.Remove(r.token); models[r.token]=nil end
- records[key]=nil
+ Kurama.Remove(p); records[key]=nil
 end
 function S.Reset()
+ Kurama.Reset()
  if runtime then runtime.Reset() end
  for _,r in records do r.token=nil; r.dash=Gameplay.newDash(); r.hagoromo=Gameplay.newHagoromo(); r.epoch=round(); r.lastRequest=0; r.sageEntryBlocked=false end
  table.clear(models); table.clear(visuals)

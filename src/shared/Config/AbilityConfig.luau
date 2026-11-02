@@ -6,6 +6,7 @@ local abilities: { [string]: Ability } = {
  Odama={Name="Odama (window)",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
  Rasenshuriken={Name="Rasenshuriken (window)",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
  ShadowSleep={Name="Sleep (enemy)",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
+ KuramaForm={Name="Курама",Key="Six",KeyLabel="6",Cooldown=160,Windup=0,Duration=30},
  KcmDash={Name="KCM Dash",Key="E",KeyLabel="E",Cooldown=40,Windup=0,Duration=0},
  KcmCancel={Name="KCM Cancel",Key="X",KeyLabel="X",Cooldown=0,Windup=0,Duration=0},
  KuramaConvert={Name="Kurama Chakra",Key="Left",KeyLabel="Left",Cooldown=0,Windup=0,Duration=0},
@@ -20,8 +21,8 @@ local abilities: { [string]: Ability } = {
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand", "GamakichiOil", "GamakichiChop" },
-	PrototypeEnabled = table.freeze({ KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
-	InputAliases = table.freeze({ Q = "Rasengan", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
+	PrototypeEnabled = table.freeze({ KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
+	InputAliases = table.freeze({ Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },

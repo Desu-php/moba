@@ -37,6 +37,13 @@ function M.update(state: State, clone: Clone, now: number)
  clone.mana=math.min(clone.maximum,clone.mana+(at-clone.updatedAt)*clone.regen); clone.updatedAt=at
 end
 -- Claim before calling adapters: concurrent Died/expiration/recall can pay only once.
+function M.restore(state: State, clone: Clone, now: number, amount: number): boolean
+ if not M.live(state,clone) or not finite(now) or now<clone.updatedAt or now>=clone.expiresAt
+  or not finite(amount) or amount<=0 then return false end
+ M.update(state,clone,now)
+ clone.mana=math.min(clone.maximum,clone.mana+amount)
+ return true
+end
 function M.settle(state: State, clone: Clone, now: number, ownerValid: boolean): number
  if not M.live(state,clone) or not finite(now) then return 0 end
  M.update(state,clone,now); clone.settled=true; state.clones[clone.id]=nil

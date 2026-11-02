@@ -10,14 +10,14 @@ export type Token = {read owner: string, read life: number, read epoch: number, 
 export type Event = {kind: string, id: number?, rank: number?, reason: string?, amount: number?}
 export type Balance = {chakra: number, cooldownAt: number}
 export type Rules<S> = {
- new: (number, Balance?) -> S, balance: (S) -> Balance,
+ new: (number, Balance?) -> S, balance: (S) -> Balance, spend: (S,number) -> boolean,
  update: (S, number, Context) -> {Event}, close: (S, Context) -> {Event},
  canEnter: (S, Context) -> (boolean,string), enter: (S, Context) -> (boolean,string,{Event}),
  cancel: (S, number) -> boolean, buffRemoved: (S, number) -> boolean,
  convert: (S, Context) -> (boolean,string,{Event}), availability: (S, Context) -> Availability,
 }
 export type Ports = {
- now: () -> number, read: (string) -> Snapshot?,
+ now: () -> number, read: (string) -> Snapshot?, kuramaPulse: ((Token)->())?,
  publish: (Token, number, Availability, number) -> (), -- domain-owned cooldown deadline
  effect: (Token, string, number) -> (), -- Entered / DashReady / Exited, cast-scoped.
  reapplySage: (Token) -> (), restoreMana: (Token, number) -> (),
@@ -85,6 +85,7 @@ function Adapter.configure<S>(rules: Rules<S>, ports: Ports, policy: MorphPolicy
    elseif e.kind=="DashReady" and e.id==r.castId and rules.availability(r.state,s.context).dash then
     ports.effect(r.token,"DashReady",e.id :: number)
    elseif e.kind=="ReapplySage" then reapply=true
+   elseif e.kind=="KuramaPulse" then local pulse=ports.kuramaPulse; if pulse then pulse(r.token) end
    elseif e.kind=="RestoreOrdinaryMana" then ports.restoreMana(r.token,e.amount :: number)
    elseif e.kind=="RevokeSharing" then ports.revokeSharing(r.token)
    elseif e.kind=="ClockGap" then ports.fault(r.token,"ClockGap") end
@@ -171,6 +172,18 @@ function Adapter.configure<S>(rules: Rules<S>, ports: Ports, policy: MorphPolicy
   for _,e in list do if e.kind=="Entered" then r.castId=e.id; ports.effect(token,"Entered",e.id :: number) end end
   events(r,list,current); publish(r,current); r.busy=false
   return true,"Accepted"
+ end
+ function A.Chakra(token: Token): number?
+  local r=records[token.owner]; return if r and r.token==token then rules.balance(r.state).chakra else nil
+ end
+ function A.SpendChakra(token: Token,amount: number): boolean
+  local r,s=acquire(token); if not r or not s then return false end
+  local ok=s.canCast and rules.spend(r.state,amount); publish(r,s); r.busy=false; return ok
+ end
+ function A.ActiveRank(token: Token): number
+  local r=records[token.owner]; if not r or r.token~=token then return 0 end
+  local s=ports.read(token.owner)
+  return if s and same(r,s) and s.eligible and s.context.alive then r.morphRank or 0 else 0
  end
  function A.IsActive(token: Token): boolean
   local r=records[token.owner]; if not r or r.token~=token then return false end

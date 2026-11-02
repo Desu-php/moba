@@ -16,6 +16,7 @@ for _, active in { false, true } do
 	check("J", active, "MeditationRecall")
 	check("E", active, "KcmDash")
 	check("Left", active, "KuramaConvert")
+	check("Six", active, "KuramaForm")
 	check("Unknown", active, nil)
 end
 for _, id in aliases do

@@ -1,0 +1,72 @@
+NARUTO LEGEND 1.7A FIX20.3 — KURAMA / SHARING / RIKUDO RAW AUDIT
+2026-11-02. Static exact uploaded map only; no implementation or map execution.
+Provided by the parent raw-source expert; preserved evidence, not independently re-extracted in this checkout.
+Map SHA256: 8c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Refs: extracted/war3map.j 1-based lines; w3u/w3a rawcode records. Complements naruto-forms-contract.txt.
+
+A. FULL KURAMA IS Ewar, NOT Ewrd
+A01F derives ANcr. Explicit Eme1=Hpal, Emeu=Ewar, buff B03V, native mana0, CD160, ahdu30; Ncr5/Ncr6=0. Some native morph fields inherited; exact retention/reversion semantics are not certified.
+Ewar raw unit profile: base HP2800; armor20; attack base100; attack cooldown2; attack range150; speed375; mana base1300.
+STR16/+1.4, AGI15/+1.1, INT14/+1.0; uabi=A011,A01F,AInv; uhab empty.
+Do not replace with Ewrd (Rikudo HPbase300/armor15/attackbase110/speed370).
+Empty learned list in form object is NOT proof the engine erases learned Q/W/E: metamorph ability retention native boundary.
+A011 native object ANcl: mana300, CD100, point-target Ncl2=2, range2500. Full downstream technique not re-audited here.
+A01F script44650–44685, registered EFFECT44688:
+requires separate chakra>=2500; failure stop/reposition1, no confirmed native cooldown refund.
+Success hides KCM A017; flag229=1; spend2500; enable agr_nar; KuramaFormCD=true; wait25, then poll B03V absent; remove A0KR/A0KQ, disable agr_nar, clear cooldownflag, show A017.
+Do not equate script25s to form lifetime: native ahdu30 explicitly supports30s, polling may end later if buff persists.
+No explicit general cleanup of A0KP or every form auxiliary in this handler. Modern per-form teardown should be documented, not attributed to source.
+sec_obhiy66665–66680/66865–66878: while resource<threshold900+100*heroLevel, B03V grants20HP+20mana to allied nonstructures within400 every1s. Outer threshold gating means this heal is skipped if resource at/above threshold. No alive filter in group predicate; engine handles dead units.
+
+B. agr_nar ATTACK PROC
+Conditions40458–40502: ((attacker==globalNaruto AND XReal407==1) OR attackerTypeEwar OR attackerTypeo006).
+No required B03V inside condition, no initial target enemy/alive/building restriction.
+Action40503 draws GetRandomReal(1,100); requires roll<=12 AND attacker not illusion.
+Do not replace with integer12% and call it exact: continuous uniform1..100 threshold12 nominal11/99, engine endpoint details matter.
+On success disable whole trigger; snapshot attacker position; cosmetic terrain ripple/dummy; wait.20; enumerate enemies of attacker within300 around SNAPSHOT position, exclude structures. Each damage=attacker CURRENT maxHP/25 (4%), NORMAL/UNIVERSAL. It does not use victimHP or original hit damage.
+Set global flag39=1, wait.50, clear flag, cleanup/re-enable. Thus global.70s proc suppression after success. Per-caster isolation proposed safety; do not claim original per-targetICD.
+Registration40527–40532 EVENT_PLAYER_UNIT_ATTACKED, starts disabled, enabled by successful Kurama cast44666; disabled only after its buff-end cleanup44675. Illusions of Ewar meet initial type condition but fail later nonillusion check.
+Timing tests: attack-start proc not landed hit; move caster during.2s keeps AoEcenter; change maxHP changes damage; only successfulproc suppresses; structures not AoEd but attacking structure may still trigger.
+
+C. THREE-HEAD A0KP
+Grant44774–44785 only during Sage alternate-clone mode (YReal445==1) while B03V active; creates2 stored nmbg, timedlife35; grantsA0KP.
+Object A0KP ANcl: cooldown600, range0, Ncl1=1, mana omitted/inherited; not certifiedfree.
+Condition44729–44731 ONLY GetSpellAbilityId()==A0KP. No local pair-alive/resource/form check; event registered allplayers EFFECT44733–44747.
+Action44720–44727 kills both stored handles, removesA0KP, addsA0KR armor10 andA0KQ attack80.
+nmbg death handler44227–44296 returns CURRENT clone mana to globalNaruto. Three-head consumption therefore also triggers that transfer if nativeKillUnit/death event executes; no explicit subtractchakra.
+Admission despite missing/deadstoredclones is a source bug boundary: require pair-alive validation only as explicit safer adaptation, not sourcefact.
+End A01F removes both bonuses. Does not locally removeA0KP. No new Ewar-replacement rawcode: appearance comes from bonuses/art, not confirmed third hero-form unit.
+
+D. SHARING A0JW
+Object ANcl: cooldown1, Ncl2=2 point targeting. amcs and aran absent. Tooltip range500 not serialized override; native/inherited cost/range unresolved.
+Trigger44565/44634–44642 EFFECT; enabled KCM44468 and disabled KCMexit44392. Source uses globalNaruto for resource, not a percast owner pool.
+Handler44594–44629 resets ONE global NarutoGiveChakraTime=100, enumeratesAoE200: IsUnitAlly_v2(caster,target) AND FilteredUnits_2.
+Filter4225–4232: HP>0; not structure; not illusion; rawtype !=Hpb2/Huth; target !=POSL_UNIT262/POSL_UNIT240; target not any of Si_Unit2/3/4 (Susanoo).
+Not restricted to heroes; ordinary allied living nonillusion units can get ability grants.
+Nonself recipient not already in group107: add A0FT,A092,Asp5; ifhero add15STR and15AGI; group-add. Group membership suppresses repeatgrant.
+A0FT derives AIsr, isr2=.35 explicit.
+A092 derives Aasl, aare10 and Slo1=.10 explicit. Native aura/slow-family field: do not assert arbitrary direct additive movement without native metadata/targeting resolution.
+Asp5 original Asp5; aite1, cooldown0, projectileSpeed0, attachmentcount2. Native spell-immunity/resistance/visual behavior unresolved; no extra numeric resistance field serialized. Keep raw granted ability identity.
+Self: immediate RestoreHealth350, RemoveAmaterasu(caster,25), start1s timer, perunit Chakra_Self bool. SpellTime4538 increments before return: callbacks1/2 heal350; callback61 clearslockout/cleans timer. Total1050 nominal at0/1/2s, not tooltip150*3. No group107/self attributegrant.
+RemoveAmaterasu10763–10783 removes Bapl/B04J from ALL units within25 (no allyfilter). Then5534–5575 iterates PLAYING players; within radius/2=12.5 kills rawtypes opeo,nina,nmtw,nmsn,nbzw,nehy. Not generic cleanse-all-debuffs. Native HPclamp applies; do not convert flatheal topercentage.
+Every cast creates another1s Trig_peredaha_pokrova_timer44582–44592, all decrement SAME global100; repeated casts accelerate expiry. On chakra<=0 or timer<=0 sets0, removes group107 grants, destroys own timer. One ownedgrant expiry timer is a documented improvement.
+Separate sec_obhiy66865–66878 pays4*CountUnitsInGroup107 eachsecond only inside chakra<threshold block. If insufficient, alternate remover66621–66626 removes Asp5/A092 and subtracts15stats but NOT A0FT, unlike standard cleanup44370–44375.
+KCMexit disables new sharing casts but does not itself remove existing recipients. Existing timers/drain remain.
+Down-arrow44690–44718 setsduration0 and fullcleanup; reenables command2s later.
+Deathhandler44247–44264 groupmember cleanup removes A092/A0FT/Asp5, subtracts15STR/AGI and removesmember.
+Fullcleanup subtracts15 unconditionally although grant onlyadds stats toheroes; native ModifyHeroStat onnonhero boundary.
+Proposed safety: perowner grants, one timer, reasoned cleanup/removal of exactlyowned modifiers. Do not call sharedglobal timer bugs desiredbalance.
+
+E. RIKUDO ACTIVE STATE VS HAGOROMO UNLOCK
+Hagoromo=CReal224, NOT activeRikudo228. Exhaustive literal228 refs: 44449 sets1 on successful A017rank3 AND224==1; 44415 sets0 during KCMtimer exit; 44325 reads0 to decide Sageexpiry readiness/loadout cleanup. Generic CReal array initial0; no other literal228 writes found. Thus228 transient session marker, not permanentunlock.
+A017 Emeu rank3=Ewrd. Entry44444–44459 setsYReal446=0,YReal303=1,228=1; exposesA0I6,A0I9,A0HW,A0IA,A0HY,A0HZ,A0I8,A0I0; hidesA09J,A0I7. Commonentry hidesA01F/A017/A005 and exposesA0MK after.5.
+Exit44377–44424 resets272/303/228; removesBEme/A0MJ; hidesA0MK/A0I6/A0I9/A0HW/A0IA/A0HY/A0HZ/A0I0; showsA017/A005/A09J; iflevel>=21 show/readdA01F unlessKuramaFormCD. Does NOT explicitly toggleA0I7/A0I8; native formability change separate.
+Ewrd raw uabi=A0MJ,A0JW,A01F,A0I6,A0I8,A0I7,A0MK,AInv; uhab=A017. HPbase300,MPbase2300,armor15,attackbase110,attackcooldown1.8,range80,speed370; STR16/growth1,AGI15/growth.8,INT14/growth1.7. Morph statretention/inventorygrowth unresolved.
+A0I7 selftarget43395–43405 setsY448=0,hidesI7/showsI8,stop. Other target creates3orb visuals, after1s sets3periodicstates2; downstream orbitdamage graph NOT certified. Objectmana600/CD100/range1100, not tooltip1200.
+A0I8 EFFECT43447–43464 hidesI8/showsI7,setsY448=1. ObjectCD1,nativecostomitted.
+Rodattack gate43570–43594: attackerNaruto,typeEwrd,targetenemy nonhero nonstructure,Y448==0,Y449==0.
+Realroll1..100<=10; onproc43758–43794 hidesI8/showsI7,sets448=1/449=1; dummy nlkl castsA0JT20 (10s), after.5 sets232=1; after9.5 clears449/232/removesdummy. No heroic targetseal. Not exact integer10%.
+Bounded toggle/proc evidence, not full orbit/rod periodic mechanics certification.
+
+ACCEPTANCE
+Keep Ewar/Ewrd distinct; unlock224 versus active228; independent Sage/KCM layers. Kurama resource admission,30s versus25+poll,cleanup/pendingthreehead. Sharing selfheal0/1/2, no selfstats, nonhero/illusionfilter,duplicates,ownerdeath/dispel/expiry. No guessed costs,movement,resistance,orbitdamage,morphretention. Isolate twoNarutos; removeowned modifiers once, do not reproduce globalcross-player bugs.

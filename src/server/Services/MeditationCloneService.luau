@@ -8,6 +8,14 @@ type Record={model: Model, humanoid: Humanoid, owner: Player, character: Model, 
 local records: {[Model]: Record}={}
 local Service={}
 function Service.GetAll(): {[Model]: Record} return records end
+-- Kurama pulses credit the owned domain pool, never just its replicated display.
+function Service.RestoreMana(model: Model, amount: number): boolean
+ local record=records[model]
+ if not record or not model:IsDescendantOf(workspace) or record.humanoid.Health<=0 or not record.valid() then return false end
+ if not Domain.restore(record.state,record.clone,workspace:GetServerTimeNow(),amount) then return false end
+ model:SetAttribute("Mana",record.clone.mana)
+ return true
+end
 local function remove(record: Record, now: number, transfer: boolean)
  if records[record.model]~=record then return end
  records[record.model]=nil

@@ -33,6 +33,7 @@ local MeditationClones=require(script.Parent.MeditationCloneService)
 local GamaDomain=require(Shared.Abilities.GamakichiState)
 local Gama=require(script.Parent.GamakichiService)
 local Kcm=require(script.Parent.NarutoKcmService)
+local Kurama=require(script.Parent.NarutoKuramaService)
 type Session = { variants: Variants.State, shurikenSnapshot: number, meditation: Meditation.State, meditationMode: boolean, meditationRecallAt: number, sage: Sage.State, gama: GamaDomain.State, q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
 	character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
 	preparationStunned: boolean, nextPublish: number, connections: { RBXScriptConnection } }
@@ -54,7 +55,7 @@ function Service.Get(player: Player): Session? return sessions[player] end
 function Service.IsAbility(id: string): boolean return Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
 	local session = sessions[player]; local toad=Gama.Get(player)
-	return if session then { KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
+	return if session then { KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
 end
 local function publish(player: Player, session: Session, now: number)
 	local model = session.character; if not model or model ~= player.Character then return end
@@ -375,6 +376,7 @@ function Service.Start()
 		end,
 	})
  Service.ConfigureMeditationForms(Kcm.MeditationForm)
+ Kurama.ConfigureSummonManaReceiver(MeditationClones.RestoreMana)
  Shuriken.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
  Gama.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
 	Players.PlayerAdded:Connect(function(player) bind(player) end)
@@ -413,7 +415,8 @@ function Service.Start()
 				end
 			end
 		end
-		if chosen then Commands.assist(session.commands, Summons.EntityId(chosen), true) end
+		Kcm.OnAttackStarted(player,chosen~=nil)
+  if chosen then Commands.assist(session.commands, Summons.EntityId(chosen), true) end
 		local cast = session.q.active
 		local targetRoot = if chosen then chosen:FindFirstChild("HumanoidRootPart") else nil
 		if cast and chosen and targetRoot and targetRoot:IsA("BasePart")

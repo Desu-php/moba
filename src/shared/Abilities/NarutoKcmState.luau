@@ -37,6 +37,10 @@ function M.configure(config: Config)
    cooldownAt=if balance then balance.cooldownAt else now,serial=0,
    closed=false,sharedUnits=0,active=nil}
  end
+ function D.spend(s: State,amount: number): boolean
+  if s.closed or not finite(amount) or amount<0 or amount>s.chakra then return false end
+  s.chakra-=amount; return true
+ end
  function D.balance(s: State): Balance return {chakra=s.chakra,cooldownAt=s.cooldownAt} end
  -- Process elapsed whole ticks. Context must be advanced at each authoritative context change.
  -- On a long gap caller supplies historically correct context or chooses a runtime suspension policy.
@@ -59,10 +63,11 @@ function M.configure(config: Config)
      local cost=config.SharingCostPerUnit*s.sharedUnits
      if s.chakra>=cost then s.chakra-=cost
      else s.sharedUnits=0; table.insert(events,{kind="RevokeSharing"}) end
+     if c.fullKurama then table.insert(events,{kind="KuramaPulse",amount=20}) end
     end
     s.nextResourceAt+=config.ResourcePeriod
     -- Idle saturated resource has no future work before now.
-    if not s.active and (s.chakra>=900+100*c.level or (c.fullKurama and s.sharedUnits==0)) then
+    if not s.active and s.chakra>=900+100*c.level then
      s.nextResourceAt+=math.floor((now-s.nextResourceAt)/config.ResourcePeriod+1)*config.ResourcePeriod
     end
    end
@@ -88,6 +93,7 @@ function M.configure(config: Config)
   if not valid(c) then return false,"Malformed" end
   if not c.alive then return false,"Dead" end
   if s.active or c.fullKurama then return false,"FormBusy" end
+  if c.kuramaCooldown then return false,"KuramaLocked" end
   if c.rank==0 then return false,"Unlearned" end
   if c.level<config.MinimumLevels[c.rank] then return false,"Level" end
   if c.rank==3 and not c.hagoromo then return false,"Hagoromo" end
@@ -134,7 +140,7 @@ function M.configure(config: Config)
  end
  function D.availability(s: State, c: Context)
   local active=s.active~=nil and not s.closed
-  return {kcm=not s.closed and not active and not c.fullKurama, gamakichi=not s.closed and not active,
+  return {kcm=not s.closed and not active and not c.fullKurama and not c.kuramaCooldown, gamakichi=not s.closed and not active,
    sage=not s.closed, dash=active and s.active~=nil and s.active.dashReady,
    sharing=active, fullKurama=not s.closed and not active and c.level>=21 and not c.kuramaCooldown}
  end

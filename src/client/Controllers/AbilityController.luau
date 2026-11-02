@@ -57,15 +57,19 @@ function Controller.AbilityUnavailable(id: string): string?
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	if id=="MeditationRecall" and (model:GetAttribute("MeditationCloneCount") or 0)==0 then return "Нет медитирующих клонов" end
 	if id=="Odama" or id=="Rasenshuriken" then
-  if model:GetAttribute("KcmActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="") then return "Form variant unavailable" end
+  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="") then return "Form variant unavailable" end
   local rank=if state then (state:GetAttribute("Rank_Rasengan") or 0) :: number else 0
   local untilAt=(model:GetAttribute("RasenganVariantUntil") or 0) :: number
   local wanted=if id=="Odama" then "Rasengan" else "Odama"
   if rank<(if id=="Odama" then 2 else 3) or model:GetAttribute("RasenganVariant")~=wanted or untilAt<=workspace:GetServerTimeNow() then return "No selection window" end
  end
  if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Requires clones II" end
-
-	local kcm=model:GetAttribute("KcmActive")==true
+	if id=="KuramaForm" then
+  if typeof(level)~="number" or level<21 then return "Курама с уровня 21" end
+  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaLocked")==true then return "Форма уже действует" end
+  if ((model:GetAttribute("KuramaChakra") or 0) :: number)<2500 then return "Нужно 2500 чакры Курамы" end
+ end
+ local kcm=model:GetAttribute("KcmActive")==true
  if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then return "KCM недоступен" end
  if id=="KCM" and ((model:GetAttribute("KuramaChakra") or 0) :: number)<200 then return "Нужно 200 чакры Курамы" end
  if id=="KcmCancel" and not kcm then return "KCM не активен" end
@@ -138,7 +142,7 @@ function Controller.TryCast(id: string, selectedTarget: any): boolean
 end
 function Controller.GetMessage(): string
  local model=Players.LocalPlayer.Character
- if model and model:GetAttribute("KcmActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="") and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>workspace:GetServerTimeNow() then
+ if model and model:GetAttribute("KcmActive")~=true and model:GetAttribute("KuramaActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="") and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>workspace:GetServerTimeNow() then
   local variant=model:GetAttribute("RasenganVariant")
   return if variant=="Odama" then "X: Rasenshuriken (III)" else "Z: Odama (II+)"
  end
@@ -148,7 +152,10 @@ end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
  local chakra=model:GetAttribute("KuramaChakra"); if typeof(chakra)~="number" then return "" end
- return string.format("Курама %d | %s",math.floor(chakra),if model:GetAttribute("KcmActive")==true then "KCM: E рывок / X выход / ← мана" else "5 KCM / ← 200 чакры в ману (ур.16)")
+ if model:GetAttribute("KuramaActive")==true then
+  local ends=model:GetAttribute("KuramaExpiresAt"); return string.format("Курама %d | Форма %.0fс",math.floor(chakra),math.max(0,(if typeof(ends)=="number" then ends else 0)-workspace:GetServerTimeNow()))
+ end
+ return string.format("Курама %d | %s",math.floor(chakra),if model:GetAttribute("KcmActive")==true then "KCM: E рывок / X выход / ← мана" else "5 KCM / 6 Курама (ур.21) / ← мана")
 end
 function Controller.Start()
 	if remote then return end
