@@ -4,6 +4,7 @@ local Config = require(Shared.Config.MapConfig)
 local Mode = require(Shared.Config.GameModeConfig)
 local Progression = require(Shared.Config.ProgressionConfig)
 local TowerFactory = require(script.Parent.TowerFactory)
+local MapScenery = require(script.Parent.MapScenery)
 local MapBuilder = {}
 function MapBuilder.EnsureShops(map: Folder)
 	local existing = map:FindFirstChild("Shops")
@@ -40,6 +41,7 @@ function MapBuilder.Build(): Folder
 			"Workspace.Map is not a supported survival map; rename your existing container or supply an authored map")
 		MapBuilder.EnsureShops(existing)
 		TowerFactory.Build(existing)
+		MapScenery.Ensure(existing)
 		return existing
 	end
 	assert(Config.Generated, "Generated map disabled: provide Workspace.Map with AuthoredSurvivalMap=true")
@@ -59,9 +61,9 @@ function MapBuilder.Build(): Folder
 				local nextPosition = route[index + 1]
 				local delta = nextPosition - position
 				local road = part(lane, "Road" .. index, Vector3.new(Config.LaneWidth, 0.2, delta.Magnitude + Config.LaneWidth),
-					(position + nextPosition) / 2 - Vector3.new(0, 2.85, 0), Color3.fromRGB(98, 107, 112))
+					(position + nextPosition) / 2 - Vector3.new(0, 2.85, 0), Color3.fromRGB(139, 124, 94))
 				road.CFrame = CFrame.lookAt(road.Position, road.Position + delta)
-				road.Material = Enum.Material.Slate
+				road.Material = Enum.Material.Ground
 			end
 		end
 	end
@@ -95,6 +97,7 @@ function MapBuilder.Build(): Folder
 	map.Parent = workspace
 	MapBuilder.EnsureShops(map)
 	TowerFactory.Build(map)
+	MapScenery.Ensure(map)
 	return map
 end
 function MapBuilder.Route(map: Folder, lane: string, reverse: boolean): { Vector3 }
