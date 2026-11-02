@@ -26,6 +26,7 @@ end
 local function dead(npc: Minion)
 	if npc.deadAt then return end
 	active -= 1; npc.deadAt = workspace:GetServerTimeNow(); npc.target = nil
+	npc.model:SetAttribute("MinionDiedAt", npc.deadAt)
 	setMode(npc, "Dead"); npc.model:SetAttribute("CombatDisabled", true)
 	npc.model:SetAttribute("TargetName", "")
 	npc.humanoid:Move(Vector3.zero)
@@ -212,6 +213,8 @@ function AI.Update(now: number)
 				setMode(npc, "Attacking"); npc.humanoid:MoveTo(npc.root.Position); npc.progressAt = now
 				if now >= npc.nextAttack then
 					npc.nextAttack = now + npc.stats.AttackCooldown
+					-- Presentation timestamp only; the existing server damage/cooldown stays authoritative.
+					model:SetAttribute("MinionAttackAt", now)
 					local humanoid = target:FindFirstChildOfClass("Humanoid")
 					if humanoid and Damage.ApplyAttack(model, humanoid, npc.stats.Damage) > 0 then
 						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))

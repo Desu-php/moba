@@ -1,0 +1,17 @@
+{
+  "name": "MinionVisuals",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": { "Shared": { "$path": "../src/shared" } },
+    "ServerScriptService": {
+      "Server": { "$className": "Folder", "Services": { "$path": "../src/server/Services" } },
+      "MinionVisualTests": { "$path": "minions/Runner.server.luau" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "MinionDriver": { "$path": "minions/Driver.client.luau" },
+        "MinionMotionController": { "$path": "../src/client/Controllers/MinionMotionController.luau" }
+      }
+    }
+  }
+}
