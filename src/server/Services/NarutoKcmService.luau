@@ -5,6 +5,7 @@ local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config=require(Shared.Abilities.NarutoKcmConfig)
 local Domain=require(Shared.Abilities.NarutoKcmState).configure(Config)
 local Adapter=require(Shared.Abilities.NarutoKcmAdapter)
+local RangedDomain=require(Shared.Abilities.NarutoRangedState)
 local Gameplay=require(Shared.Abilities.NarutoKcmGameplay)
 local Kurama=require(script.Parent.NarutoKuramaService)
 local Units=require(Shared.Abilities.WorldUnits)
@@ -142,6 +143,16 @@ local function refresh(p: Player): Record?
   model:SetAttribute("Ready_KcmDash",r.dash.cooldownAt); model:SetAttribute("HagoromoUnlocked",r.hagoromo.granted)
  end
  return r
+end
+function S.RikudoGrant(p: Player,now: number): (RangedDomain.Grant?,number?)
+ if Kurama.IsActive(p) or Kurama.IsLocked(p) then return nil,nil end
+ local r=refresh(p);local rt=runtime
+ if not rt or not r or not r.token then return nil,nil end
+ local rank,castId=rt.ActiveCast(r.token);local model=owned(r.token);local profile=Progression.Get(p)
+ if rank~=3 or not castId or not model or not profile or not r.hagoromo.granted
+  or (profile.Learned.KCM or 0)~=3 or profile.Level<27 then return nil,nil end
+ return {abilityId="",ownerId=tostring(p.UserId),round=r.token.epoch,life=r.token.life,form="Ewrd",
+  kcmRank=3,heroLevel=profile.Level,hagoromo=true,expiresAt=now+.1},castId
 end
 function S.IsAbility(id: string): boolean return id=="KuramaForm" or id=="KCM" or id=="KcmCancel" or id=="KcmDash" or id=="KuramaConvert" end
 -- A09J activation disables A017; the source KCM exit action can restore it.

@@ -1,6 +1,8 @@
 --!strict
 export type Ability = { Name: string, Key: string, KeyLabel: string, Cooldown: number, Windup: number, Duration: number }
 local abilities: { [string]: Ability } = {
+ RikudoHY={Name="Cho Bijudama RS",Key="V",KeyLabel="V",Cooldown=60,Windup=1.5,Duration=8},
+ RikudoHZ={Name="Cho Bijuu RS",Key="B",KeyLabel="B",Cooldown=60,Windup=1.5,Duration=8},
  MeditationToggle={Name="Медитация",Key="Right",KeyLabel="→",Cooldown=0,Windup=0,Duration=0},
  MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="J",Cooldown=5,Windup=0,Duration=0},
  Odama={Name="Odama (window)",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
@@ -21,8 +23,8 @@ local abilities: { [string]: Ability } = {
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand", "GamakichiOil", "GamakichiChop" },
-	PrototypeEnabled = table.freeze({ KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
-	InputAliases = table.freeze({ Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
+	PrototypeEnabled = table.freeze({ RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
+	InputAliases = table.freeze({ V="RikudoHY", B="RikudoHZ", Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },

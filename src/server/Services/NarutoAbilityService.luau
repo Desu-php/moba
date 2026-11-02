@@ -34,6 +34,7 @@ local GamaDomain=require(Shared.Abilities.GamakichiState)
 local Gama=require(script.Parent.GamakichiService)
 local Kcm=require(script.Parent.NarutoKcmService)
 local Kurama=require(script.Parent.NarutoKuramaService)
+local Ranged=require(script.Parent.NarutoRangedService)
 type Session = { variants: Variants.State, shurikenSnapshot: number, meditation: Meditation.State, meditationMode: boolean, meditationRecallAt: number, sage: Sage.State, gama: GamaDomain.State, q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
 	character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
 	preparationStunned: boolean, nextPublish: number, connections: { RBXScriptConnection } }
@@ -52,10 +53,10 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
-	local session = sessions[player]; local toad=Gama.Get(player)
-	return if session then { KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
+	local session = sessions[player]; local toad=Gama.Get(player); local ranged=Ranged.Ready(player)
+	return if session then { RikudoHY=ranged.RikudoHY or 0, RikudoHZ=ranged.RikudoHZ or 0, KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
 end
 local function publish(player: Player, session: Session, now: number)
 	local model = session.character; if not model or model ~= player.Character then return end
@@ -120,6 +121,7 @@ local function clearSage(session: Session)
  end
 end
 local function invalidate(player: Player, session: Session)
+ Ranged.Invalidate(player)
  MeditationClones.ClearOwner(player)
  Meditation.invalidate(session.meditation,roundId(),session.life+1)
  Variants.cancel(session.variants)
@@ -158,6 +160,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	if not model or not fighter then return false, "Unavailable" end
 	if fighter.sleep and fighter.sleep.active then return false, "Busy" end
 	Resource.recalculate(session.pool, values(player), now)
+	if Ranged.IsAbility(id) then return Ranged.TryCast(player,id,requestId,now,targetValue) end
 	if Kcm.IsAbility(id) then return Kcm.TryCast(player,id,requestId,now,targetValue) end
 	if Kcm.Blocked(model,id) then return false,"Form" end
  if id=="MeditationToggle" or id=="MeditationRecall" then
@@ -263,7 +266,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	return false, "Unsupported"
 end
 function Service.Reset()
-	Kcm.Reset()
+	Ranged.Reset(); Kcm.Reset()
 	Sleep.Reset(); Shuriken.Reset(); Summons.Reset(); Gama.Reset(); Displacement.Reset(); MeditationClones.Reset()
 	for player, session in sessions do
 		Meditation.invalidate(session.meditation,roundId(),session.life+1); session.meditationMode=false; session.meditationRecallAt=0
@@ -357,7 +360,7 @@ function Service.Update(now: number)
 		CloneState.expire(session.clones, now)
 		if now >= session.nextPublish then publish(player, session, now) end
 	end
-	Sleep.Update(now); Shuriken.Update(now); Displacement.Update(now)
+	Ranged.Update(now); Sleep.Update(now); Shuriken.Update(now); Displacement.Update(now)
 end
 function Service.Start()
 	if started then return end; started = true
@@ -368,20 +371,25 @@ function Service.Start()
 		busy=function(player)
 			local s=sessions[player]; if not s then return true end
 			local sage=s.sage.active
-			return s.q.active~=nil or s.clones.burst~=nil or s.selfControlUntil>workspace:GetServerTimeNow() or (sage~=nil and sage.phase=="Preparing")
+			return Ranged.Busy(player) or s.q.active~=nil or s.clones.burst~=nil or s.selfControlUntil>workspace:GetServerTimeNow() or (sage~=nil and sage.phase=="Preparing")
 		end,
 		sage=function(player)
 			local s=sessions[player]; local cast=if s then s.sage.active else nil; local now=workspace:GetServerTimeNow()
 			return if cast and cast.phase=="Active" then math.max(0,cast.expiresAt-now) else 0, cast~=nil and cast.phase=="Active" and cast.auraUntil>now
 		end,
 	})
+ Ranged.Start({mana=function(p) return bind(p).pool.mana end,spend=function(p,n) return Resource.spend(bind(p).pool,n) end,
+  strength=function(p) return values(p).strength end,
+  busy=function(p) local s=bind(p);return s.q.active~=nil or s.clones.burst~=nil or s.selfControlUntil>workspace:GetServerTimeNow() or (s.sage.active~=nil and s.sage.active.phase=="Preparing") end,
+  pause=function(p,d) local s=bind(p);local f=if p.Character then Fighters.Get(p.Character) else nil;if f then selfStun(s,f,workspace:GetServerTimeNow(),d) end end})
+ Ranged.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
  Service.ConfigureMeditationForms(Kcm.MeditationForm)
  Kurama.ConfigureSummonManaReceiver(MeditationClones.RestoreMana)
  Shuriken.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
  Gama.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
 	Players.PlayerAdded:Connect(function(player) bind(player) end)
 	Players.PlayerRemoving:Connect(function(player)
-		Kcm.Remove(player)
+		Ranged.Remove(player); Kcm.Remove(player)
 		local session = sessions[player]; if not session then return end
 		MeditationClones.ClearOwner(player); Meditation.invalidate(session.meditation,roundId(),session.life+1)
 		Gama.Remove(player)

@@ -1,0 +1,43 @@
+NARUTO LEGEND 1.7A FIX20.3 — A0HU/A0HV RANGED RELEASE AUDIT
+Static inspection2026-11-02; source war3map.j plus w3a/w3u/w3t objects. No execution/assets copied. SHA256 original8c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Provenance: supplied by parent delegation; preserved as source appendix. No map execution here.
+
+1. ENTRY / NATIVE OBJECT
+A0HU(Ren) grants buffB00L; A0HV(Magma) buffB04L. A057 "Кинуть Расен Сюрикен" baseANcl: unit target Ncl2=1, range2000, targets notself, cooldown30, Ncl1=.2,Ncl4=.01,Ncl5=0. Mana override ABSENT: inherited unknown, not certified zero. A0HT book contains A057,A0I3,A0HU,A0HV,A0HW,A0IA,A0HY,A0HZ,A0I9,A0I0. A057 also manually added at46828 in BEme preparation branch. These are spellbook/temporary skills, not additional learned hero lines.
+Trig_SurikDal gate47805–47825: spellA057 and (original udg_c hasB00L OR B04L OR CReal35==13). Gate reads global original before action setsudg_c=GetTriggerUnit: old-map concurrency flaw. Effect event registration48087–48091. No fresh learned-rank/form/life predicate here.
+Action47841 onward removes B00L/B04L, A0L6/B052; disables empowered melee trigger and syrik_on; removes alternate tag. Target captured as GetSpellTargetUnit into358. NO point targeting; NO fresh enemy test. Native notself admission not equivalent enemies-only. Spell-event/native mana timing remains unresolved.
+
+2. PRIORITY SASUKE COMBO BRANCH (before state10/12)
+47854–47879: MoveRect ARKANS to caster; rectangle originally15304 is1152x1152 (thus center±576 each axis, not circular576). If allied Sasuke hasB02E and inside rectangle: this branch replaces ordinary thrown projectile regardless of HU/HV state. Snapshot angle to target; pause both; move Sasuke100 to side; after.1 enablegg_trg_kombo for2sec; then disable/unpause; clear target after10sec. No explicit alive test.
+Trig_kombo43815–43939, period.03: move Naruto30units/tick=nominal1000/s; Sasuke follows at side. Angle is recalculated each tick AFTER next movement point uses previousangle: chasing path, not fixed direction. When distance from newposition to target<150, stateCReal35=0, XReal414=1; removeA057/heldbuffs/effects; wait.5 then CReal133=1 to push target28/tick; after.6 stops push, unpauses heroes, creates blast at target and castsA0JT9 (4.5sec). After another.5 enable shared AoE for3.5sec. Spawns Sasuke-owned opeo withApxf for3.5sec; its extra ability damage is NOT audited here, so combo total isn't certified. Parent release watchdog disables movement at2sec; already-running callback waits can continue. Shared fields remain HU/HV-initialized unless other source changes them: combo does not normalize AoE pull/radius.
+
+3. NORMAL HU REN RELEASE — STATE10
+47975–48029: reset visualscale209=140, AoEradius210=300, Damage121=0. Wait.2sec, sample caster and designated target CURRENT positions and integer-truncate their angle R2I; remove both handeffects. Set anchorPAINT235=caster+100 alongangle. Spawn2h023 visuals at caster+120 at angle±60; primaryPOSL_UNIT3, secondaryUNIT280. Set YReal87=0(flying), XReal434=1, enablemovement for1sec. After1sec disablemovement, removeanchor, XReal434=0.
+If nohit(YReal87still0): set2, spawnblast at PRIMARY's finalposition; wait.5; enableAoE3.5sec. If hit: parent waits4sec allowing impactcallback. Then cleanupprimary,secondary,blast/AoE, clearcamera;1sec later clear target. HU parent DOES NOT explicitlyresetCReal35 here; original holdcoroutine resets it when its15sec expires.
+No double damage for two visuals. Shared onecenter/oneAoE only. No source homing or two independent projectiles.
+
+4. NORMAL HV MAGMA RELEASE — STATE12 (same branch also13)
+48031–48078: removehand effect; Damage121=0; wait.2sec; angle snapshot/truncate; spawnnwiz primary150units ahead (state13 usesnwzr). SetYReal87=0; movement1sec. No-hit createsblast, waits.5, sharedAoE3.5sec. Hitpath parentwaits4sec. Then disableAoE/resetCReal35=0/removeblast+primary/clearcamera;1sec later targetnull. HV keeps its prep settings: radius350, visualscale120, YReal414=-8, XReal433=120. No native/selfpause instruction in normal release action; original prep selfstun or other statuses may still apply.
+
+5. SHARED FLIGHT / IMPACT
+Trig_Surik_DVIG48094–48230, period.03.
+Each tick readprimary OLDposition and targetCURRENTposition. IfDamage121=0:
+- HU XReal434>0: +=45; center=anchor+(XReal434 along fixedintegerangle); primary=center+50perpendicular, secondary=center−50perpendicular. First counter1→46; center atcaster+146. Their initial±60positions are replaced on firsttick.
+- HV ordinary: primary advances45alongfixedangle.
+Else moveprimary−45 (return branch relevant state4KCM, not standardHU/HV).
+Then compute collisiondistance using OLDprimaryposition and CURRENTtargetposition, after movement call. If<=180: YReal87=2; disablemovement; snapPRIMARY to target unlessXReal434==1. SinceHU increments1→46 before this test, the==1 exception ordinarily fails too: HUprimary snaps. Secondary stays where last moved; it is not independentlycollisionchecked.
+This is ONLY designated target collision. No enemiesalongpath group test, wallraycast or swept hit. Heading does not chase movingtarget. Movement SetUnitPositionLoc usesnativeposition/pathing; terrainbehavior engine-bound. Cast-range2000 is NOT certified projectile travel2000: flight1sec at45/.03≈1500 plus spawn offset; tickphase33/34ticks and terrain matter. Miss still explodes at finalposition.
+Impact createsosw3 at target; objectosw3 hasA0JT,AOae,Aloc,AInv. SetsA0JT9/casts targetstun4.5sec (objectdur/hero4.5, zero damage). Cast success against specifictargettype remains native. Wait.5, targetchestFX, enableAoE; wait3sec; iftargetalive create/useitemstwp ontarget; wait.5; disableAoE, removeeffect/item/primary/blast. stwp's iabi=ANso; ANso explicitCD0,cost0,duration3,Nso1=0,Nso2=3,Nso3=0; nativeabilitysemantics needmetadata/test. Do not labelthis extra damage or automatic kill.
+Thus AoE nominal3.5sec after.5impactdelay, not damageinstantoncollision. No casterselfdamage in these NORMAL ranged branches (unlike meleeHU/HV).
+Parentrelease cleanup and impactcleanup overlap but nominally parent occurs afterimpactcleanup forhitswithin1sec; rawglobals/oldhold expiry may still interfere.
+
+6. SHARED AOE / ACTUAL DAMAGE
+Trig_Surik_oblast48232–48356 period.04. Filter: nonallied AND nonstructure only; no explicit alive/organic/hero-only condition. Everytick enumeratesdynamicradius aroundPRIMARY; destructibles inradius handledthroughIsDestructableDestroying.
+ActualDamage48286: (600+4*GetHeroStr(udg_c,true))/87, allintegeroperands -> JASSintegerquotient; STR readEACHtick, not snapshotted. ATTACK_TYPE_NORMAL/DAMAGE_TYPE_UNIVERSAL throughDamage_Unit wrapper, not unconditionaltrue damage. Does NOTreadSurikDamage, so HV's prepared(700+4STR)/87 doesn'tdeterminevictimAoE. No2xHU multiplier.
+HU YReal414=4: eachAoEtick ifvisualscale209<200 add2scale and5radius. Starting140/300 =>firsttickradius305, after30ticksradius450 thenstays450. Pull4units/ticktowardcenter.
+HV YReal414=-8 (<4): EACHtick add3scale,10radius,4projectilescale withoutcap. Startingradius350 =>firsttick360; afterNeligible ticks350+10N. Moveeachvictim−8towardcenter = push8away per.04tick. Largegrowth is sourcefact, not replacewithfixed350 or700damage.
+Nominal3.5sec / .04=87.5 ticks. Existing periodictrigger phase/TriggerSleepAction scheduling gives runtime-dependent count; denominator87 doesnotguaranteeexact87. Expectedcontinuous inclusionapprox87–88pulses but do NOTdeclareprecisetotalwithoutfixture. Entering/leavingradius changespulsecount. FXevery6ticks uses sharedXReal314 not locallyreset. Existingholdcoroutines may change state/effects whileflightactive; do notreproducesharedstatebugs innewcode.
+
+7. TEST / PARITY BOUNDARY
+VerifyHU state10/HVstate12 are selectedbeforeA057. Castonunitnotpoint; targetmovesduring.2delaychangeslaunchangle; movementafterlaunchdoesnotsteerprojectile. Otherenemyintersectingflightdoesnottriggerdetonation. Designatedtargetwithin180 OLDprimarypos triggersnexttickevenifmovementovershoots. HUtwo visuals don'tdoubleAoEdamage. Miss detonation hasnostun/itemfollowup. Hit has4.5stun andlateANso item; normalranged hasnoselfdamage. HUradiuscaps450/HVgrows10perdamage tick; pullvsrepel sign. AoESTR changesduringeffectmustaffectsubsequentticks; integerquotient. Latecastnear15secholdexpiry/death/targetdespawn/anotherNarutocastneedper-cast cleanup guards, explicitlysafeadaptation. Map combo requiresalliedSasukewithB02E in1152square; fixture separately.
+Native unresolved: A057 inheritedmanacost; channelcastpointinteraction(.2object vs.2script, do notmergewithoutengine); spelltargetnativeadmission, collisionpathing, exacttickcounts and nativeANso semantics. No newDota/Luauimplementationprovided.

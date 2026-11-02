@@ -15,10 +15,11 @@ type Movement = {
 	walkSpeed: number, jumpPower: number, jumpHeight: number, autoRotate: boolean,
 	ownershipAuto: boolean, owner: Player?, ownershipChanged: boolean,
 }
+type NetworkLease = { automatic: boolean, owner: Player?, untilAt: number }
 export type Fighter = {
 	character: Model, humanoid: Humanoid, root: BasePart, player: Player?,
 	sleep: Sleep.Status?, logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
-	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?,
+	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?, networkLease: NetworkLease?,
 }
 
 local FighterStateService = { Changed = Instance.new("BindableEvent") }
@@ -44,13 +45,45 @@ local function restoreMovement(fighter: Fighter)
 		humanoid.JumpHeight = saved.jumpHeight
 		humanoid.AutoRotate = saved.autoRotate
 	end
-	if saved.ownershipChanged and root.Parent and root:CanSetNetworkOwnership() then
+	if saved.ownershipChanged and not fighter.networkLease and root.Parent and root:CanSetNetworkOwnership() then
 		if saved.ownershipAuto then
 			root:SetNetworkOwnershipAuto()
 		else
 			root:SetNetworkOwner(if saved.owner and saved.owner.Parent == Players then saved.owner else nil)
 		end
 	end
+end
+
+-- Stun/Sleep and ranged displacement share one original ownership baseline.
+function FighterStateService.LeaseNetworkOwnership(fighter: Fighter, untilAt: number)
+ local root=fighter.root
+ if untilAt~=untilAt or math.abs(untilAt)==math.huge or not root.Parent or not root:CanSetNetworkOwnership() then return end
+ local lease=fighter.networkLease
+ if not lease then
+  local control=fighter.movement
+  lease={automatic=if control then control.ownershipAuto else root:GetNetworkOwnershipAuto(),
+   owner=if control then control.owner else root:GetNetworkOwner(),untilAt=untilAt}
+  fighter.networkLease=lease
+ else lease.untilAt=math.max(lease.untilAt,untilAt) end
+ root:SetNetworkOwner(nil)
+end
+local function releaseNetworkLease(fighter: Fighter, now: number, force: boolean?)
+ local lease=fighter.networkLease
+ if not lease or (not force and now<lease.untilAt) then return end
+ fighter.networkLease=nil
+ local control=fighter.movement
+ if control then
+  control.ownershipAuto=lease.automatic; control.owner=lease.owner; control.ownershipChanged=true
+ else
+  local root=fighter.root
+  if root.Parent and root:CanSetNetworkOwnership() then
+   if lease.automatic then root:SetNetworkOwnershipAuto()
+   else root:SetNetworkOwner(if lease.owner and lease.owner.Parent==Players then lease.owner else nil) end
+  end
+ end
+end
+function FighterStateService.ReleaseNetworkOwnership(fighter: Fighter)
+ releaseNetworkLease(fighter,Workspace:GetServerTimeNow(),true)
 end
 
 function FighterStateService.Snapshot(fighter: Fighter)
@@ -80,6 +113,7 @@ function FighterStateService.Remove(character: Model)
 	local fighter = fighters[character]
 	if not fighter then return end
 	fighters[character] = nil
+ releaseNetworkLease(fighter,Workspace:GetServerTimeNow(),true)
  fighter.sleep=nil; character:SetAttribute("SleepUntil",nil)
 	State.Kill(fighter.logic)
 	for _, connection in fighter.connections do connection:Disconnect() end
@@ -120,7 +154,7 @@ function FighterStateService.GetOrCreate(character: Model): Fighter?
 	local fighter: Fighter = {
 		character = character, humanoid = humanoid, root = root, player = Players:GetPlayerFromCharacter(character),
 		sleep = nil, logic = State.new(), profileId = Config.DefaultProfile, profile = Config.Profiles[Config.DefaultProfile],
-		revision = 0, connections = {}, movement = nil,
+		revision = 0, connections = {}, movement = nil, networkLease = nil,
 	}
 	local heroId = character:GetAttribute("HeroId")
 	local hero = if typeof(heroId) == "string" then Heroes.Heroes[heroId] else nil
@@ -150,8 +184,8 @@ local function lockMovement(fighter: Fighter)
 		fighter.movement = {
 			walkSpeed = humanoid.WalkSpeed, jumpPower = humanoid.JumpPower,
 			jumpHeight = humanoid.JumpHeight, autoRotate = humanoid.AutoRotate,
-			ownershipAuto = if canOwn then root:GetNetworkOwnershipAuto() else true,
-			owner = if canOwn then root:GetNetworkOwner() else nil, ownershipChanged = canOwn,
+			ownershipAuto = if fighter.networkLease then fighter.networkLease.automatic elseif canOwn then root:GetNetworkOwnershipAuto() else true,
+			owner = if fighter.networkLease then fighter.networkLease.owner elseif canOwn then root:GetNetworkOwner() else nil, ownershipChanged = canOwn,
 		}
 		if canOwn then root:SetNetworkOwner(nil) end
 	end
@@ -198,6 +232,7 @@ function FighterStateService.StunSpell(fighter: Fighter, duration: number)
 end
 
 function FighterStateService.Update(fighter: Fighter, now: number)
+ releaseNetworkLease(fighter,now)
  if fighter.sleep and (fighter.humanoid.Health<=0 or Sleep.update(fighter.sleep,now)) then FighterStateService.WakeSleep(fighter) end
 	if fighter.humanoid.Health <= 0 then
 		if fighter.logic.mode ~= "Dead" then

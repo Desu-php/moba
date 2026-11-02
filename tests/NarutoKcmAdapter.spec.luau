@@ -58,6 +58,8 @@ local ok,why=f.a.Enter(t); check("authoritative entry",ok and why=="Accepted" an
 check("morph once effects once",f.applied[t.serial]==1 and f.effects[t.serial].Entered==1)
 check("KCM disables summon while allowing layered Sage",not f.output[t.serial].mask.gamakichi and f.output[t.serial].mask.sage)
 check("authoritative active getter",f.a.IsActive(t))
+check("private active morph rank",f.a.ActiveCast(t)==2)
+f.snapshots.a.context.rank=3;check("learning does not upgrade active morph",f.a.ActiveCast(t)==2);f.snapshots.a.context.rank=2
 check("private dash getter initially false",not f.a.IsDashReady(t))
 f.time(.5); f.a.Update(t); check("dash exposed at halfsecond",f.effects[t.serial].DashReady==1 and f.output[t.serial].mask.dash)
 f.a.Update(t); check("duplicate update no duplicateeffects",f.effects[t.serial].DashReady==1)
@@ -70,6 +72,7 @@ check("cleanup each exactlyonce",f.removed[t.serial]==1 and f.effects[t.serial].
 check("restores eligible Sage only",f.output[t.serial].mask.sage and not f.output[t.serial].mask.gamakichi and not f.output[t.serial].mask.fullKurama)
 f.a.Update(t); check("repeat cleanup no duplicate",f.removed[t.serial]==1)
 check("active getter false after exit",not f.a.IsActive(t))
+check("private morph absent after exit",f.a.ActiveCast(t)==nil)
 check("private dash getter false after exit",not f.a.IsDashReady(t))
 f.time(10); f.a.Enter(t); check("secondcast",f.applied[t.serial]==2)
 check("stale cast cancellation rejected",select(2,f.a.Cancel(t,1))=="StaleCast")

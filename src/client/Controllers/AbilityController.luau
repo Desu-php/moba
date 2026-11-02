@@ -19,7 +19,7 @@ local correctionModel: Model? = nil
 local correctionUntil = 0
 local lastReason = ""
 local selectingCommand: string? = nil
-local function needsTarget(id: string): boolean return id=="KcmDash" or id=="ShadowSleep" or id=="CloneCommand" or id=="GamakichiOil" or id=="GamakichiChop" end
+local function needsTarget(id: string): boolean return id=="RikudoHY" or id=="RikudoHZ" or id=="KcmDash" or id=="ShadowSleep" or id=="CloneCommand" or id=="GamakichiOil" or id=="GamakichiChop" end
 function Controller.CancelCloneCommand()
 	selectingCommand = nil; Players.LocalPlayer:SetAttribute("SelectingCloneTarget", nil); lastReason = ""
 end
@@ -51,7 +51,8 @@ function Controller.AbilityUnavailable(id: string): string?
 	if not (Config.PrototypeEnabled :: { [string]: boolean })[id] then return "В разработке" end
 	local unavailable = Controller.Unavailable(id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
-	local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
+	if (id=="RikudoHY" or id=="RikudoHZ") and model:GetAttribute("RikudoRangedGranted")~=true then return "Requires active Rikudo" end
+ local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
  local line=if id=="KcmDash" or id=="KcmCancel" then "KCM" elseif id=="MeditationToggle" or id=="MeditationRecall" then "SageMode" elseif id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
  if (id=="KCM" or id=="KcmDash" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="MeditationToggle" or id=="MeditationRecall" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
@@ -79,7 +80,7 @@ function Controller.AbilityUnavailable(id: string): string?
 
  local mana = model:GetAttribute("Mana")
  if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
- local cost = if id=="KcmDash" then 100 elseif id=="Odama" or id=="Rasenshuriken" or id=="ShadowSleep" then 200 elseif id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
+ local cost = if id=="RikudoHY" or id=="RikudoHZ" then 1800 elseif id=="KcmDash" then 100 elseif id=="Odama" or id=="Rasenshuriken" or id=="ShadowSleep" then 200 elseif id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
 	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
  if (id=="GamakichiOil" or id=="GamakichiChop") and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет Гамакичи" end
@@ -89,7 +90,7 @@ end
 function Controller.BeginTarget(id: string): boolean
 	if not needsTarget(id) or Controller.AbilityUnavailable(id) or Controller.Remaining(id)>0 then return false end
 	selectingCommand = id; Players.LocalPlayer:SetAttribute("SelectingCloneTarget", true)
-	lastReason = if id=="GamakichiChop" then "Выберите точку · Esc — отмена" else "Выберите врага · Esc — отмена"; Controller.Changed:Fire(); return true
+	lastReason = if id=="RikudoHY" or id=="RikudoHZ" then "Укажи точку — Esc: отмена" elseif id=="GamakichiChop" then "Выберите точку · Esc — отмена" else "Выберите врага · Esc — отмена"; Controller.Changed:Fire(); return true
 end
 function Controller.BeginCloneCommand(): boolean return Controller.BeginTarget("CloneCommand") end
 local function pick(point: Vector2?): RaycastResult?
@@ -170,7 +171,7 @@ function Controller.Start()
 		if message.kind ~= "Result" then VFX.Event(message); return end
 		if message.character ~= Players.LocalPlayer.Character or message.requestId ~= pendingId then return end
 		pendingId = 0; correctionModel = message.character; corrections = message.ready; correctionUntil = workspace:GetServerTimeNow() + 1.5
-		local reasons: { [string]: string } = { Hagoromo="Требуется дар Хагоромо", Chakra="Недостаточно чакры Курамы", Form="Недоступно в текущей форме", Range="Слишком далеко", Blocked="Путь перекрыт", Ground="Выберите устойчивую поверхность", Busy = "Дождитесь завершения действия", Cooldown = "Способность восстанавливается",
+		local reasons: { [string]: string } = { Rikudo="Нужен активный Рикудо", Hagoromo="Требуется дар Хагоромо", Chakra="Недостаточно чакры Курамы", Form="Недоступно в текущей форме", Range="Слишком далеко", Blocked="Путь перекрыт", Ground="Выберите устойчивую поверхность", Busy = "Дождитесь завершения действия", Cooldown = "Способность восстанавливается",
 			Unavailable = "Сейчас недоступно", RateLimited = "Слишком часто", Replay = "Запрос уже обработан", Mana = "Недостаточно маны",
 			Level = "Требуется уровень 4", Target = "Выберите доступного врага", Unsupported = "Ещё не доступно", UnsupportedTarget = "Эта ветка ещё не доступна" }
 		lastReason = if message.accepted then "" else reasons[message.reason] or "Запрос отклонён"
@@ -192,8 +193,8 @@ function Controller.Start()
 					end
 				end
 				local point=Vector2.new(input.Position.X,input.Position.Y)
-			local hit=if selectingCommand=="GamakichiChop" or selectingCommand=="KcmDash" then pick(point) else nil
-			local target: any=if selectingCommand=="KcmDash" then Controller.PickCloneTarget(point) or (if hit then hit.Position else nil) elseif selectingCommand=="GamakichiChop" then (if hit then hit.Position else nil) else Controller.PickCloneTarget(point)
+			local hit=if selectingCommand=="RikudoHY" or selectingCommand=="RikudoHZ" or selectingCommand=="GamakichiChop" or selectingCommand=="KcmDash" then pick(point) else nil
+			local target: any=if selectingCommand=="RikudoHY" or selectingCommand=="RikudoHZ" then (if hit then hit.Position else nil) elseif selectingCommand=="KcmDash" then Controller.PickCloneTarget(point) or (if hit then hit.Position else nil) elseif selectingCommand=="GamakichiChop" then (if hit then hit.Position else nil) else Controller.PickCloneTarget(point)
 				if target then Controller.TryCast(selectingCommand,target) end
 				return
 			end

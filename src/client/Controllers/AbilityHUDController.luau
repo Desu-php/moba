@@ -65,6 +65,15 @@ function HUD.Start()
    plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
   end
  end
+ local rikudoPanel=View.frame(panel,"RikudoTechniques",UDim2.fromOffset(370,45),UDim2.fromOffset(520,-58));rikudoPanel.Visible=false
+ local rikudoTitle=View.label(rikudoPanel,"Title",UDim2.fromOffset(370,17),UDim2.fromOffset(0,-18),12);rikudoTitle.Text="РИКУДО • временные техники";rikudoTitle.TextColor3=View.Gold
+ local rangedButtons:{[string]:TextButton}={}
+ for i,id in {"RikudoHY","RikudoHZ"} do
+  local b=Instance.new("TextButton");b.Name=id;b.Size=UDim2.fromOffset(180,45);b.Position=UDim2.fromOffset((i-1)*190,0);b.BackgroundColor3=View.Card;b.TextColor3=View.Text;b.TextSize=12;b.Parent=rikudoPanel;View.border(b,View.Gold)
+  b.Activated:Connect(function() Controller.BeginTarget(id) end);rangedButtons[id]=b
+  b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,-210);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
+  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-146) end end)
+ end
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
   local track=View.frame(panel,name,UDim2.fromOffset(450,17),UDim2.fromOffset(240,y)); track.BackgroundColor3=View.Card
   local fill=View.frame(track,"Fill",UDim2.fromScale(1,1),UDim2.new()); fill.BackgroundColor3=color
@@ -90,6 +99,12 @@ function HUD.Start()
    message.Position=UDim2.new(.5,0,1,-(Layout.ConsoleHeight*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(620,camera.ViewportSize.X-24),28)
   end
   local model=player.Character; View.updatePortrait(portrait,model)
+  rikudoPanel.Visible=model~=nil and model:GetAttribute("RikudoRangedGranted")==true
+  for id,b in rangedButtons do
+   local left=Controller.Remaining(id);local reason=Controller.AbilityUnavailable(id)
+   b.Active=left<=0 and reason==nil;b.AutoButtonColor=b.Active;b.BackgroundColor3=if b.Active then View.Card else Color3.fromRGB(31,29,35)
+   b.Text=Config.Abilities[id].KeyLabel.."  "..Config.Abilities[id].Name.."\n"..(if left>0 then string.format("%.1f с",left) elseif reason then "1800 маны • недоступно" else "1800 маны • выбрать точку")
+  end
   local state=player:FindFirstChild("HeroState")
   local function number(name: string): number local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then value else 0 end
   local function shown(name: string,format: string): string local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then string.format(format,value) else "—" end

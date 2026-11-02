@@ -190,6 +190,11 @@ function Adapter.configure<S>(rules: Rules<S>, ports: Ports, policy: MorphPolicy
   local s=ports.read(token.owner)
   return s~=nil and same(r,s) and s.eligible and s.context.alive and rules.availability(r.state,s.context).sharing
  end
+ function A.ActiveCast(token: Token): (number?,number?)
+  if not A.IsActive(token) then return nil,nil end
+  local r=records[token.owner];if not r or r.token~=token then return nil,nil end
+  return r.morphRank,r.castId -- Actual admitted morph, never a newly learned rank or replicated attribute.
+ end
  function A.IsDashReady(token: Token): boolean
   local r=records[token.owner]; if not r or r.token~=token then return false end
   local s=ports.read(token.owner)

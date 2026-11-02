@@ -7,6 +7,7 @@ local Config=require(Shared.Config.AbilityConfig)
 local Definition=require(Shared.Abilities.NarutoDefinitions).Rasengan
 local Units=require(Shared.Abilities.WorldUnits)
 local Rounds=require(script.Parent.RoundController)
+local Ranged=require(script.Parent.NarutoRangedVFXController)
 type Effect={parts:{BasePart},at:number,untilAt:number,origin:Vector3,model:Model?,kind:string,destination:Vector3?,radius:number?,caster:Model?}
 type Helper={model:Model,cast:number}
 local effects:{Effect}={}
@@ -75,6 +76,7 @@ local function visible(model:Model,now:number): boolean
 	return model:GetAttribute("RasenganHeld")==true and typeof(at)=="number" and now>=at+Definition.HandEffectDelay
 end
 function VFX.Event(message:any)
+ if typeof(message.kind)=="string" and string.sub(message.kind,1,6)=="Rikudo" then Ranged.Event(message);return end
 	if typeof(message.position)~="Vector3" then return end
 	if message.kind=="GamakichiOil" or message.kind=="GamakichiOilImpact" or message.kind=="GamakichiChannel" or message.kind=="GamakichiChopImpact" then
 		local kind=if message.kind=="GamakichiOil" then "Oil" elseif message.kind=="GamakichiOilImpact" then "OilImpact" elseif message.kind=="GamakichiChannel" then "Channel" else "Chop"
@@ -96,6 +98,7 @@ function VFX.GetDiagnostics(model:Model): (boolean,boolean)
 	return helpers[model]~=nil,orbs[model]~=nil
 end
 function VFX.Start()
+ Ranged.Start()
 	if started then return end; started=true
 	local created=Instance.new("Folder"); created.Name="LocalHeroVFX"; created.Parent=workspace; folder=created
 	Rounds.Watch(function()

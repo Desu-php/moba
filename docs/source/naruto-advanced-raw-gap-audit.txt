@@ -1,0 +1,62 @@
+NARUTO LEGEND 1.7A FIX20.3 — ADVANCED RAW GAP AUDIT
+2026-11-02; static read only. Source warcraft-map/extracted/war3map.j (1-based lines) and w3a/w3u JSON records.
+Same original SHA256: 8c5750f178a7f1d66a4f04e8d0c585168e51f93c924149858fbb8d731193a5c8.
+Complement: advanced-ranged-release-audit.txt for A057 / HU / HV.
+Provenance: supplied verbatim by parent delegation; map was not executed here.
+
+1. A0HO / A0HQ mana
+A0HO original ANhs; A0HQ original Absk. Neither custom record has amcs override at ANY level. They are NOT certified zero-cost.
+Original Absk is independently modified in this map (amcs30 ranks1–5), but merging those changes into custom A0HQ requires certified native object-resolution semantics. Do not infer30 or vanilla-cost from names. No direct manual mana debit found in Trig_Xe_odama_nar46037–46109 or Trig_RasenRikudo48359ff.
+Standard embedded AbilityData/MetaData and native AbilityFunc files previously checked absent. Boundary remains inherited native cost, not a user preference. Implement confirmed actions behind unresolved NativeCost config; fail/disable rather than silently choose cost.
+
+2. A0IA self-damage
+Global integer udg_SurikDamage declared0 line484, initialized0 line14406.
+Complete literal writes:45875=>floor((600+4STR)/87),45904=>floor((520+4STR)/87),46808 &46954=>floor((450+4STR)/87),47096=>floor((600+4STR)/87),47273=>floor((700+4STR)/87),47599=>floor((900+4STR)/7).
+A0IA Trig_BidhuSuriken_Actions47401–47503 does not write it.
+Melee state13 branch49048–49097 waits.5s then self-damages30*integer SurikDamage; shared AoE separately hardcodes integer (600+4currentSTR)/87 every.04.
+Observed static semantics: first direct IA after initialization can self-damage0; after other variants can use stale quantity computed with earlier caster STR. No defensible single intended formula.
+Do not silently reset to0 as "exact" either: that changes history-dependent source behavior. Isolate as legacy-context dependency or leave self-damage unresolved; fixing source bug requires explicit documented adaptation. Tests distinguish first cast, after HU/HV/HZ, and concurrent Narutos.
+
+3. A0HW regional gate
+47714–47760: OR of four AND predicates:
+both casterSnapshot and targetSnapshot in Ne_tp; OR both in Inst; OR both in IZM; OR both in Duel.
+Not "outside restricted areas", not matching nearest region label, not target-only check.
+Region coordinates:
+15269 Ne_tp = [-8320,-8384]..[8192,5440]
+15275 Duel = [-4832,6816]..[-2496,8672]
+15296 Inst = [-928,6624]..[2848,10208]
+15301 IZM = [4160,7296]..[6080,8992].
+Action47762–47800 snapshots caster BEFORE .01s wait; snapshots target AFTER wait. Dummy self-stun1s occurs before gate, even when gate fails. On success place caster80 units from target toward original caster position, facing target; target native stun A0JT rank4=2s, damage350+2currentSTR. Native80mana/CD140/range600 from A0HW object.
+Native dummy target-stun is owned by target's owner, not caster (47784); do not reinterpret this as allied attack filter.
+Roblox proposal: map these rectangles to explicit gameplay-instance regions; do not copy raw terrain coordinates to a new map or silently remove cross-instance prohibition. Clearly label adaptation. Tests: same valid region pass; different valid regions fail; both outside all regions fail; target crosses boundary during.01s judged after delay.
+
+4. A0HY complete observed damage-zone and counter
+Cast47511–47575: radius439=636, visualScale440=120, travelled435=0; target236 and origin237 saved, direction419 fixed. Seven nwzg visuals: center plus six offsets300 at absolute angles0/60/120/180/240/300. Groups212(projectiles),213(explosion visuals). Release1.3s, caster unpause1.5s.
+Periodic36127–36190 every.03:
+state418=1: travelled+=30; virtual center=origin+travelled*direction. If distance to target<=30 -> state2, count420=58, explosion visuals created at current projectile positions, origin/target locations removed. Then all seven projectiles still move30 that tick.
+Independent following state2 block can run same tick. Counter285: if1 reset0 and damage-pulse; else increment. It is NOT reset by cast. Default0; after completed58pulse sequence0. First pulse normally next tick after arrival; interrupted shared state may differ.
+Each pulse: radius+=4 BEFORE query (first640, last868); scale+=1; query once around center projectile UNIT282; apply damage to that one group215, pull each2 units toward center; damage integer floor((1050+4currentSTR)/58). Seven visuals do NOT imply seven independent damage AoEs or 7x damage.
+Exact filter34766–34810: nonally AND nonstructure AND not members of groups216,221,220,219,217,218. No explicit alive/illusion/magic-immune exclusion here.
+All references to group216–221 in whole JASS are these six reads. Only dynamic GROUP[i] assignment14186–14191 initializes i0..1. Thus these six groups remain null in ordinary script; native IsUnitInGroup(nullgroup) behavior is the only boundary, not demonstrated live exclusions/overlap bookkeeping.
+58 pulses, alternating ticks: nominal3.48s at.06 cadence, engine timer-phase affects walltime. Queries include newly entering units; leaving stops future pulses; each pulse reads currentSTR.
+No travelling-enemy collision query: arrival is point-distance<=30. Destructible clearing500 at arrival; completion removes all seven projectiles and explosion visualgroup, clears camera.
+Tests: one target in overlapping seven visuals receives once/pulse; radius640→868; integer rounding; movement2 per pulse; target can enter mid-channel; no whole-flight sphere-hit logic.
+
+5. A0HZ counters, extra movement, final cripple failure
+Cast47591–47706: radius439=636, movement450=5, pulseCounter426=16, travelled436=0, visualScale440=200 (not120), SurikDamage=floor((900+4STR)/7). Target247, origin249, fixed heading424. Nine projectile visuals; release1.3s/unpause1.5s; helpers removed2.5s.
+Periodic36191–36282:
+travel state423=1 increments virtual travelled30/.03 until distance to point<=30; state2 and life425=116; create nmam. Visuals move30 toward target; this state2 block also executes arrival tick.
+Each explosion tick: life--, radius+=4, scale+=2.
+If counter426==16: damage-pulse; resetcounter0. Else counter++.
+Pulse ticks1,18,35,52,69,86,103 =>7 pulses. Radius at pulses640,708,776,844,912,980,1048. End tick116 radius1100. No damage pulse atfinaltick116.
+Damage callback34856–34864: enemies AND nonstructures; raw REAL (900.+4currentSTR)/7. per pulse (notfloor); pull8 toward point. Destructibles cleared each pulse.
+ADDITIONAL motion36256–36278,34885–34917: while state2 AND updated counter426<10, update450 then move EVERY eligible unit toward point by signed450.
+Update rule: if450>=0 decrement; if becomes0 replace−13. Else increment; if becomes0 replace+13.
+Starts5:4,3,2,1,−13,−12,...,−1,+13,+12,... . Negative means outward. This is not merely8unit pull on damage pulses. Additional filter is NONALLY/nonstructure, while damage usesENEMY/nonstructure. It can affect nonallied neutral units not qualifying as enemy. No extra damage in motion callback.
+End tick116 queries fullradius1100 enemy nonstructures, creates one neutral-passive n00A per target, timedlife1s, issues stringorder "cripple" (34866–34873), then cleans all visuals/state/camera.
+IMPORTANT: n00A explicit uabi=A0JT,Aloc,Avul,A0JQ. A0JT is AHtb thunderbolt. A0JQ derivesAInv and is inventory, NOTcripple. Callback never adds cripple spell. Generic Unit_Enters_Handler123042–123064 only damage-registration, illusion cosmetics/marks, and locustgroup; Init_Unit_Damaged4880 only damaged-eventregistration. No evidenced cripple grant for these final dummies.
+Therefore final cripple order has no evidenced executable ability and likely no-ops; there is NO confirmed rawcode/duration/slow to implement. Do not invent cripple debuff from command text. A controlled native fixture could confirm failure.
+Source global439/440 also shared withHY; per-cast isolation is required safety adaptation, not permission to change damage.
+
+Shared source defects:
+Lifetime/cast coroutines, global caster/state overlap, stale values and cleanup leaks exist. The contract above describes isolated source execution, not a mandate to reproduce cross-player corruption. Separate per-cast state; retain numeric sequence and filters where verified. No assumptions of homing, collision sweeping, snapshottedSTR, single totaldamage or fixed invulnerability added.

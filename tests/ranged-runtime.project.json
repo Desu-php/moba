@@ -1,0 +1,46 @@
+{
+  "name": "RikudoRangedFocusedQA",
+  "serveAddress": "127.0.0.1",
+  "servePort": 34876,
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+    "ReplicatedStorage": {
+      "$ignoreUnknownInstances": true,
+      "Shared": {
+        "$path": "../src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "$ignoreUnknownInstances": true,
+      "Server": {
+        "$path": "../src/server"
+      },
+      "RangedTests": {
+        "$path": "ranged-runtime/Runner.server.luau"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "GameSettingsAvatar": "R15",
+        "LoadCharacterAppearance": false
+      },
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$ignoreUnknownInstances": true,
+        "Client": {
+          "$path": "../src/client"
+        },
+        "RangedQADriver": {
+          "$path": "ranged-runtime/Driver.client.luau"
+        }
+      }
+    },
+    "Workspace": {
+      "$ignoreUnknownInstances": true,
+      "$attributes": {
+        "RegressionSuite": "RangedRuntime"
+      }
+    }
+  }
+}

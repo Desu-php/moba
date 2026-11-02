@@ -52,6 +52,10 @@ local function active(rig: Rig, now: number): (string, number, number)
 	if model:GetAttribute("NativeMeditationClone")==true then return "Meditation",now,1 end
 	local sageReady=model:GetAttribute("SageReadyAt")
  if model:GetAttribute("SagePhase")=="Preparing" and typeof(sageReady)=="number" and now<sageReady then return "SagePrepare",now,1 end
+ local rangedUntil=model:GetAttribute("RangedPreparingUntil");local rangedAt=model:GetAttribute("RangedCastStartedAt")
+ if typeof(rangedUntil)=="number" and typeof(rangedAt)=="number" and now<rangedUntil then
+  if now<rangedAt+1.3 then return "RasenganPrepare",rangedAt,1.3 else return "RasenganStrike",rangedAt+1.3,.2 end
+ end
  local selfPause = model:GetAttribute("RasenganSelfPauseUntil")
 	local ownPause = typeof(selfPause)=="number" and now<selfPause
 	local phase = model:GetAttribute("RasenganPhase")
