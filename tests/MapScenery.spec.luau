@@ -27,7 +27,11 @@ for index, piece in first do
 end
 assert(tall > 150, "Forest and ridge silhouette missing")
 assert(bridges == 3 and houses == 4 and roots == 7)
-assert(names.AllianceGateLintel and names.EnemyGateRib and names.River)
+assert(names.AllianceGateLintel and names.EnemyGateRib and names.River and names.BackdropBedrock)
+local bedrock = first[1]
+assert(bedrock.name == "BackdropBedrock" and math.abs(bedrock.y + bedrock.sy / 2 - .95) < .001,
+	"Backdrop must support scenery at the arena surface, never cover it")
+assert(bedrock.sx / 2 >= 220 and bedrock.sz / 2 >= 200, "Backdrop must support the outer silhouettes")
 -- No returned list is cached or shared: a caller cannot corrupt future generations.
 first[1].x = 9999
 assert(Plan.Build()[1].x == second[1].x)

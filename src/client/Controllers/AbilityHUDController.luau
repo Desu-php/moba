@@ -65,13 +65,13 @@ function HUD.Start()
    plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
   end
  end
- local rikudoPanel=View.frame(panel,"RikudoTechniques",UDim2.fromOffset(370,45),UDim2.fromOffset(520,-58));rikudoPanel.Visible=false
+ local rikudoPanel=View.frame(panel,"RikudoTechniques",UDim2.fromOffset(370,45),UDim2.fromOffset(520,Layout.RikudoPanelY));rikudoPanel.Visible=false
  local rikudoTitle=View.label(rikudoPanel,"Title",UDim2.fromOffset(370,17),UDim2.fromOffset(0,-18),12);rikudoTitle.Text="РИКУДО • временные техники";rikudoTitle.TextColor3=View.Gold
  local rangedButtons:{[string]:TextButton}={}
  for i,id in {"RikudoHY","RikudoHZ"} do
   local b=Instance.new("TextButton");b.Name=id;b.Size=UDim2.fromOffset(180,45);b.Position=UDim2.fromOffset((i-1)*190,0);b.BackgroundColor3=View.Card;b.TextColor3=View.Text;b.TextSize=12;b.Parent=rikudoPanel;View.border(b,View.Gold)
   b.Activated:Connect(function() Controller.BeginTarget(id) end);rangedButtons[id]=b
-  b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,-210);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
+  b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,Layout.RikudoTooltipY);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
   b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-146) end end)
  end
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)

@@ -26,4 +26,11 @@ for _, id in aliases do
 	count += 1
 end
 assert(#Config.Order >= 5 and Config.Order[1] == "Rasengan" and Config.Order[5] == "KCM")
+for _, key in { "Right", "Left" } do
+	assert(Rules.ownsArrow(key, false, false, false, false)); count += 1
+	for blocked = 1, 4 do
+		assert(not Rules.ownsArrow(key, blocked == 1, blocked == 2, blocked == 3, blocked == 4)); count += 1
+	end
+end
+assert(not Rules.ownsArrow("X", false, false, false, false)); count += 1
 print("PASS AbilityInputRules: " .. count .. " checks; X dispatches one context action")

@@ -4,6 +4,8 @@ local count=0
 local function check(ok: boolean,message: string) assert(ok,message); count+=1 end
 for _,viewport in {{1280,720},{1920,1080},{2560,1080},{3440,1440},{1366,768}} do
  local w,h=viewport[1],viewport[2]; local s=Layout.scale(w,h)
+ check((Layout.RikudoPanelY+45)*s < -40,"temporary techniques clear the unscaled message rows")
+ check(Layout.RikudoTooltipY+134 < Layout.RikudoPanelY,"technique tooltip clears temporary buttons")
  check(Layout.ConsoleWidth*s<w-32,"console fits viewport")
  check(Layout.TopWidth*s<w-240,"roster clears corner core controls")
  check(math.abs(Layout.ConsoleHeight*s/h-164/1080)<.0001,"console uses stable height ratio")

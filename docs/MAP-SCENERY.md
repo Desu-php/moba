@@ -1,5 +1,11 @@
 # Shinobi battlefield scenery
 
+Version2 adds one presentation-only bedrock mass under the distant scenery,
+removing the floating-house/tree silhouette found in actual Studio captures.
+The total is326 parts. Its top is0.05stud below the existing ground surface to
+avoid z-fighting. It remains noncollidable/nonqueryable: this is a backdrop, not
+an expansion of the340x250 playable arena or new village navigation space.
+
 Presentation-only pass over the generated map: tall forest belts and layered rock
 ridges frame the arena; plaster houses, tiled roofs and a timber Alliance gate
 sit behind Blue. Red has an ash-coloured stone enclosure, pale root ribs and red

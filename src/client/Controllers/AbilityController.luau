@@ -2,6 +2,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Input = game:GetService("UserInputService")
+local Actions = game:GetService("ContextActionService")
+local Gui = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
@@ -163,6 +165,19 @@ function Controller.Start()
 	Rounds.Watch(function() pendingId = 0; corrections = {}; correctionModel = nil; Controller.CancelCloneCommand(); Controller.Changed:Fire() end)
 	local event = ReplicatedStorage:WaitForChild("HeroAbility", 15); assert(event and event:IsA("RemoteEvent"), "HeroAbility missing")
 	remote = event; VFX.Start()
+	-- Roblox camera controls consume arrows before InputBegan. Own only the two
+	-- gameplay arrows, while leaving text and menu/navigation input to the UI.
+	Actions:BindActionAtPriority("NarutoArrowTechniques", function(_, state, input)
+		if not InputRules.ownsArrow(input.KeyCode.Name, Input:GetFocusedTextBox() ~= nil, Gui.MenuIsOpen,
+			Gui.SelectedObject ~= nil, Players.LocalPlayer:GetAttribute("ShopOpen") == true) then
+			return Enum.ContextActionResult.Pass
+		end
+		if state == Enum.UserInputState.Begin then
+			local id = (Config.InputAliases :: { read [string]: string })[input.KeyCode.Name]
+			if id then Controller.TryCast(id) end
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Right, Enum.KeyCode.Left)
 	RunService.Heartbeat:Connect(function()
 		if selectingCommand and Controller.AbilityUnavailable(selectingCommand) then Controller.CancelCloneCommand(); Controller.Changed:Fire() end
 	end)
@@ -179,6 +194,7 @@ function Controller.Start()
 	end)
 	Players.LocalPlayer.CharacterAdded:Connect(function() pendingId = 0; corrections = {}; correctionModel = nil; Controller.CancelCloneCommand() end)
 	Input.InputBegan:Connect(function(input, processed)
+		if input.KeyCode == Enum.KeyCode.Right or input.KeyCode == Enum.KeyCode.Left then return end
 		if selectingCommand and input.KeyCode == Enum.KeyCode.Escape then Controller.CancelCloneCommand(); Controller.Changed:Fire(); return end
 		if processed or Input:GetFocusedTextBox() then return end
 		if selectingCommand then

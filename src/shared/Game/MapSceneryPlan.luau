@@ -1,7 +1,7 @@
 --!strict
 -- Pure, deterministic presentation plan. Coordinates are relative to MapConfig.Origin.
 -- Tall silhouettes stay outside the playable rectangle; the interior stays low.
-local Plan = { Version = 1, PartBudget = 900 }
+local Plan = { Version = 2, PartBudget = 900 }
 export type Piece = {
 	name: string, x: number, y: number, z: number,
 	sx: number, sy: number, sz: number, yaw: number,
@@ -14,6 +14,9 @@ function Plan.Build(): { Piece }
 		table.insert(pieces, { name = name, x = x, y = y, z = z, sx = sx, sy = sy, sz = sz,
 			palette = palette, shape = shape or "Block", yaw = yaw or 0, material = material or "Slate" })
 	end
+	-- Presentation-only rock mass supports the distant village/forest silhouettes.
+	-- Its top meets the existing arena surface; it never changes collision/navmesh.
+	add("BackdropBedrock", 0, -19.05, 0, 460, 40, 420, "DarkRock", nil, nil, "Rock")
 	local function tree(id: string, x: number, z: number, index: number)
 		local h = 22 + (index % 4) * 3
 		local enemy = x > 20
