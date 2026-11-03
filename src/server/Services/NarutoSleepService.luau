@@ -1,8 +1,26 @@
 --!strict
 local Fighters=require(script.Parent.FighterStateService)
 local Damage=require(script.Parent.DamageService)
+local Teams=require(script.Parent.TeamService)
+local Sleep=require(game.ReplicatedStorage.Shared.Abilities.SleepState)
 local Service={}
 local cosmetics: {[Model]: number}={}
+function Service.CanWakeAlly(attacker: Model,target: Model): boolean
+ if attacker==target or not Damage.CanAct(attacker) or not Damage.CanAct(target)
+  or Teams.IsNeutral(attacker) or Teams.IsNeutral(target) or target:FindFirstChildOfClass("ForceField") then return false end
+ local team=Teams.GetId(attacker)
+ if not team or team~=Teams.GetId(target) or not Teams.IsActive(team) then return false end
+ local kind=target:GetAttribute("EntityKind")
+ if kind~="Hero" and kind~="Minion" and kind~="Summon" then return false end
+ local fighter=Fighters.Get(target)
+ return fighter~=nil and Sleep.isActive(fighter.sleep,workspace:GetServerTimeNow())
+end
+function Service.TryWakeAlly(attacker: Model,target: Model): boolean
+ if not Service.CanWakeAlly(attacker,target) then return false end
+ local fighter=Fighters.Get(target); assert(fighter)
+ -- Wake is not damage: no rewards, offensive procs, or friendly-fire exception.
+ Fighters.WakeSleep(fighter); return true
+end
 function Service.Apply(caster: Model,target: Model,now: number): boolean
  if not Damage.CanDamage(caster,target) or target:FindFirstChildOfClass("ForceField") then return false end
  local kind=target:GetAttribute("EntityKind")

@@ -53,6 +53,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Production Rojo build failed' }
     & $RojoPath build tests/minions.project.json -o build/minion-visual-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture build failed' }
+    & $RojoPath build tests/sleep-wake.project.json -o build/sleep-wake-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Sleep wake server fixture build failed' }
+    & $RojoPath sourcemap tests/sleep-wake.project.json -o build/sleep-wake-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Sleep wake server sourcemap failed' }
     & $RojoPath sourcemap tests/minions.project.json -o build/minion-visual-sourcemap.json
     if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture sourcemap failed' }
     & $RojoPath build tests/meditation.project.json -o build/meditation-tests.rbxlx
@@ -201,6 +205,8 @@ try {
         try {
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/minion-visual-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') minions
             if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture type check failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/sleep-wake-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') sleep-wake
+            if ($LASTEXITCODE -ne 0) { throw 'Sleep wake server fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/meditation-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') meditation
             if ($LASTEXITCODE -ne 0) { throw 'Meditation fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/advanced-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') advanced

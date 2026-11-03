@@ -1,6 +1,6 @@
-# KCM gameplay handoff
+# KCM gameplay — current bounded integration
 
-Base main: `78bb59a071963599df04e807829122157190517c`. This branch enables KCM gameplay; no Studio/MCP/UI, push or publication was performed by the worker.
+Updated2026-11-03 for published main49d0a6b. KCM, bounded Kurama and HY/HZ are integrated; sharing/three-head remain domain-only. Actual runtime/input/visual evidence is in [MCP-QA-2026-11-02](MCP-QA-2026-11-02.md). CI reported0checks, not CI PASS. Original worker validation below is historical; no Roblox publication is implied.
 
 ## Enabled gameplay and seams
 
@@ -30,9 +30,9 @@ Exit/death/reset removes **only NarutoKcm** and its exact token's Highlight. The
 
 Death/life/epoch cleanup uses adapter tokens and cast IDs. Within one epoch, chakra and absolute cooldown persist between lives; unbound/dead time freezes resource and a new resource phase starts on binding. This is the documented safety adaptation. A new epoch/reset starts600. Partial morph failure rolls back without entry debit; failed removal quarantines the life and reports a warning rather than silently retrying.
 
-## Meditation worker seam (integrator)
+## Integrated meditation seam
 
-After merging the Sage/meditation worker and after KCM initialization, register once, preferably immediately after `Kcm.Start(...)` in Naruto.Start:
+The composition root registers the authoritative provider once after KCM initialization. Preserve this seam when changing either service:
 
 ```luau
 Service.ConfigureMeditationForms(function(player)
@@ -46,7 +46,7 @@ Or from the integrator's composition root:
 Naruto.ConfigureMeditationForms(KcmService.MeditationForm)
 ```
 
-`MeditationForm` returns **KCM** only for the private adapter's current live owner/life/epoch active state; it uses `runtime.IsActive`, not replicated presentation attributes. Otherwise it returns **Ordinary**, including death/exit/reset/missing session. Full Kurama is not implemented, so it never returns Kurama. Existing meditation clones keep their captured profile. There are no key conflicts: KCM uses5/E/X/Left, meditation usesRight Arrow/J.
+`MeditationForm` returns **Kurama** for the current private active Kurama state, otherwise **KCM** for the private adapter's current live owner/life/epoch active state, otherwise **Ordinary**. Display attributes do not authorize a form. Existing meditation clones keep their captured profile. KCM uses5/E/X/Left, meditation Right Arrow/J; X is context-routed to KCM cancel before the base melee RS selection.
 
 When merging `NarutoAbilityService`, retain both workers' existing injected mana/busy/Sage hooks and route predicates; do not replace one full file with the other. Preserve KCM's early route so X can cancel during Sage preparation, and leave Sage castable in KCM. `Kcm.Update` must continue running during Sage preparation so40/second drain remains independent.
 
@@ -54,11 +54,13 @@ When merging `NarutoAbilityService`, retain both workers' existing injected mana
 
 The full verified progression contract is sufficient for the grant control flow: once level>=25, start360 seconds; then wait until alive, impose one-second server spell stun/presentation, grant once per owner/epoch. Death during that second restarts the alive presentation as a safety adaptation. The grant does not learn rank3. Server folder/character attributes expose HagoromoUnlocked and the deadline. No network path sets the flag.
 
-**Full A01F Kurama is not enabled.** Its cost2500, unlock21, CD160 and native-duration30 are recorded, but effective Ewar/native morph retention, three-headed consumption and downstream abilities are not sufficiently complete for a full gameplay promise. KCM sharing A0JW, advanced rank3 variants, Rikudo and associated forms remain separate gaps. KCM I/II/III entry, chakra, cancellation, dash, retained stat layer and rank3 grant gating are implemented; this is not a claim that all Naruto branches or native parity are finished.
+**Bounded A01F Kurama is enabled:** key6, level21+, cost2500 private chakra/CD160, effective30s buff with distinct25s release-lock logic. Owned retained-stat policy preserves progression/items; proc uses current maxHP and attack-start center, and passive20HP/20MP reaches actual owned resource pools including valid meditation clones. This is not a full beast model or native morph parity. See [Kurama policies](NARUTO-KURAMA-SHARING.md). HY/HZ V/B ground techniques are also enabled only under actual current admitted KCM III/Hagoromo grant, each1800 ordinary mana/CD60 with independent counters and life/form/epoch cancellation. Kurama active/release-lock rejects stale Rikudo grants. See [HY/HZ runtime](NARUTO-RANGED-RUNTIME.md). Sharing and three-head remain domain-only; HU/HV are statically audited but disabled, A057 inherited cost and ANso native edges unresolved.
 
 Dash safety adaptations: admit enemies that are Hero/Minion/Summon, exclude ForceField and structures; require ground and line/volume clearance, no wall crossing, height difference<=12studs. Victim receives existing mitigated server damage rather than an invented universal-damage bypass. These are explicit Roblox policies; native target/pathing/universal semantics remain uncertified.
 
-## Focused checks and MCP QA
+## Focused checks and historical worker handoff
+
+Current readiness uses [final MCP evidence](MCP-QA-2026-11-02.md), including KCM runtime34 checks and real input. The following original worker counts/NOT RUN statements describe that worker revision, not current integrated execution. Later changed code still needs affected checks and the final gate; the worker's old no-full-gate statement is not a general release rule.
 
 Run `pwsh -File scripts/check-kcm.ps1 -LuauDirectory C:/Users/dev/AppData/Local/Temp/anime-fight-luau-0.744 -LuauLspDirectory C:/Users/dev/AppData/Local/Temp/anime-fight-luau-lsp-1.70.1 -RojoPath C:/Users/dev/.aftman/bin/rojo.exe`. Explicit paths avoid redirected sandbox TEMP/LOCALAPPDATA defaults. Headless checks use existing Luau0.744, luau-lsp1.70.1 and Rojo7.7.1. Run only the touched suites: NarutoKcm, NarutoKcmAdapter, NarutoKcmGameplay, SkillLearning, Gamakichi and Sage. Expected counts:64,63,36,28,65,38 respectively. Analyze/compile the KCM modules, affected network/service/controllers/configs and fixture. All 294 assertions, targeted Luau/Roblox type checks, compile and fixture build passed. Only a pre-existing MultiLineStatement lint in NarutoAbilityService was emitted; no type errors. No full gate is required for this patch.
 

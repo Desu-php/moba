@@ -1,3 +1,5 @@
+> **Historical handoff/checkpoint — superseded for current readiness.** Published main49d0a6b includes the integrated bounded runtime. See [latest MCP QA](MCP-QA-2026-11-02.md) for observed runtime/input/visual evidence and [current backlog](NARUTO-KIT-BACKLOG.md) for implemented, adapted and locked paths. Original NOT RUN/no-push statements below describe their earlier worker/checkpoint state, not today's readiness. CI0checks is not CI PASS; Roblox publication remains excluded.
+
 # Advanced melee Naruto and wakeable Sleep
 
 Base: 78bb59a071963599df04e807829122157190517c. Separate branch `codex/naruto-advanced`.

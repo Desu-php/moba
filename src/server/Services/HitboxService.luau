@@ -34,7 +34,7 @@ local function findHumanoid(part: BasePart): Humanoid?
 	return nil
 end
 
-function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Config.AttackProfile): ({ Humanoid }, CFrame, Vector3)
+function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Config.AttackProfile, admitWake: ((Model)->boolean)?): ({ Humanoid }, CFrame, Vector3)
 	local origin = root.CFrame
 	local dimensions, offset = profile.HitboxSize, profile.HitboxOffset
 	local size = Vector3.new(dimensions.X, dimensions.Y, dimensions.Z)
@@ -78,7 +78,8 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
 		if not character or not character:IsA("Model") or character == attacker or humanoid.Health <= 0 then
 			continue
 		end
-		if not Damage.CanDamage(attacker, character) or character:FindFirstChildOfClass("ForceField") then continue end
+		if (not Damage.CanDamage(attacker, character) and (not admitWake or not admitWake(character)))
+			or character:FindFirstChildOfClass("ForceField") then continue end
 		local targetRoot = character:FindFirstChild("HumanoidRootPart")
 		if not targetRoot or not targetRoot:IsA("BasePart") or not HitboxService.IsFiniteCFrame(targetRoot.CFrame) then
 			continue
@@ -92,7 +93,8 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
 			table.insert(targets, humanoid)
 		end
 	end
- -- Choose the closest valid enemy in the aimed volume; overlap iteration order is unspecified.
+ -- A player can explicitly wake one sleeping ally. Default callers remain enemy-only.
+ -- Choose the closest admitted interaction; overlap iteration order is unspecified.
  table.sort(targets, function(a: Humanoid, b: Humanoid): boolean
   local first = (a.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart
   local second = (b.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart

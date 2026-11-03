@@ -20,6 +20,7 @@ export type Fighter = {
 	character: Model, humanoid: Humanoid, root: BasePart, player: Player?,
 	sleep: Sleep.Status?, logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
 	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?, networkLease: NetworkLease?,
+	wakeOnlyAttackId: number?,
 }
 
 local FighterStateService = { Changed = Instance.new("BindableEvent") }

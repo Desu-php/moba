@@ -1,0 +1,12 @@
+{
+  "name": "SleepWakeServerQA",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": { "$attributes": { "RegressionSuite": "SleepWakeServer" } },
+    "ReplicatedStorage": { "Shared": { "$path": "../src/shared" } },
+    "ServerScriptService": {
+      "Server": { "$className": "Folder", "Services": { "$path": "../src/server/Services" } },
+      "SleepWakeTests": { "$path": "sleep-wake/Runner.server.luau" }
+    }
+  }
+}

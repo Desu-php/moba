@@ -14,6 +14,7 @@ local Hitboxes = require(script.Parent.HitboxService)
 local AttackRules = require(Shared.Combat.BasicAttackRules)
 local RequestLimiter = require(script.Parent.RequestLimiter)
 local Damage = require(script.Parent.DamageService)
+local Sleep = require(script.Parent.NarutoSleepService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Structures = require(Shared.Game.StructureRules)
 local Teams = require(script.Parent.TeamService)
@@ -48,12 +49,19 @@ local function announceStart(fighter: Fighters.Fighter)
 	Fighters.Publish(fighter)
 	fighter.attackLifeId = fighter.character:GetAttribute("LifeId")
 	fighter.attackRoundId = fighter.character:GetAttribute("RoundId")
-	local candidates=Hitboxes.GetTargets(fighter.character,fighter.root,fighter.profile)
+	fighter.wakeOnlyAttackId=nil
+	local candidates=Hitboxes.GetTargets(fighter.character,fighter.root,fighter.profile,function(target)
+		return Sleep.CanWakeAlly(fighter.character,target)
+	end)
+    local first=candidates[1]
+    local model=if first then first.Parent else nil
+    local wakeOnly=model~=nil and model:IsA("Model") and Sleep.TryWakeAlly(fighter.character,model)
+    if wakeOnly then fighter.wakeOnlyAttackId=attack.id end
     for _,hp in candidates do
         local target=hp.Parent
         if target and target:IsA("Model") and Damage.CanDamage(fighter.character,target) then Damage.AttackAttempt:Fire(fighter.character,target) end
     end
-    CombatService.AttackStarted:Fire(fighter)
+    if not wakeOnly then CombatService.AttackStarted:Fire(fighter) end
 	remote:FireAllClients({ kind = "Started", snapshot = Fighters.Snapshot(fighter), attack = attack })
 	if Debug.LogCombat then
 		print(string.format("[Combat] %s M1-%d request=%d", fighter.character.Name, attack.step, attack.requestId))
@@ -134,6 +142,9 @@ function CombatService.TryAttack(player: Player, ...: any): string
 end
 
 local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
+	-- This committed swing already woke its one ally at attack-start. It must not
+	-- retarget an enemy at impact or consume a held Rasengan/offensive proc.
+	if fighter.wakeOnlyAttackId==attack.id then return end
 	if Fighters.Get(fighter.character) ~= fighter
 		or fighter.attackLifeId ~= fighter.character:GetAttribute("LifeId")
 		or fighter.attackRoundId ~= fighter.character:GetAttribute("RoundId")
