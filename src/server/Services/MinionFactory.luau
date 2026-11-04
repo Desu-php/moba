@@ -41,6 +41,9 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 		hip.C1 = CFrame.new(0, 1, 0)
 	end
 	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = stats.MaxHealth; humanoid.Health = stats.MaxHealth
+	-- Prevent two walking rigs from using one another as ladders.
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+	humanoid.AutoJumpEnabled = false
 	humanoid.WalkSpeed = stats.WalkSpeed; humanoid.BreakJointsOnDeath = false; humanoid.DisplayName = teamId .. " " .. kind
 	humanoid.HealthDisplayDistance = 45; humanoid.NameDisplayDistance = 30; humanoid.Parent = model
 	model.PrimaryPart = root

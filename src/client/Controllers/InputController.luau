@@ -23,6 +23,15 @@ function InputController.Start()
 	end
 	started = true
 	local player = game:GetService("Players").LocalPlayer
+	local function configureMovement(character: Model)
+		local humanoid = character:WaitForChild("Humanoid", 10)
+		if player.Character ~= character or not humanoid or not humanoid:IsA("Humanoid") then return end
+		-- SetStateEnabled does not replicate; apply on the physics-owning client too.
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+		humanoid.AutoJumpEnabled = false
+	end
+	player.CharacterAdded:Connect(configureMovement)
+	if player.Character then task.spawn(configureMovement, player.Character) end
 	if UserInputService.KeyboardEnabled then
 		-- Own PC locomotion so user-selected ClickToMove never competes with aim clicks.
 		-- The existing Humanoid still applies authoritative speed, jump and control locks.

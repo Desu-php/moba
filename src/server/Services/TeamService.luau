@@ -96,6 +96,9 @@ local function characterAdded(player: Player, character: Model)
 		local root = character:WaitForChild("HumanoidRootPart", 10)
 		if player.Character ~= character or player.Parent ~= Players then return end
 		if not humanoid or not humanoid:IsA("Humanoid") or not root or not root:IsA("BasePart") then return end
+		-- Humanoid treats other rigs as climbable geometry. Lane contact must stay planar.
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+		humanoid.AutoJumpEnabled = false
 		if epoch ~= current.roundId or not canSpawn(player) then invalidateCharacter(player); return end
 		local respawn = player.RespawnLocation
 		if respawn then character:PivotTo(respawn.CFrame + Vector3.new(0, 4, 0)) end

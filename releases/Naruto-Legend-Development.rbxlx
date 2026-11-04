@@ -6717,6 +6717,9 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 		hip.C1 = CFrame.new(0, 1, 0)
 	end
 	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = stats.MaxHealth; humanoid.Health = stats.MaxHealth
+	-- Prevent two walking rigs from using one another as ladders.
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+	humanoid.AutoJumpEnabled = false
 	humanoid.WalkSpeed = stats.WalkSpeed; humanoid.BreakJointsOnDeath = false; humanoid.DisplayName = teamId .. " " .. kind
 	humanoid.HealthDisplayDistance = 45; humanoid.NameDisplayDistance = 30; humanoid.Parent = model
 	model.PrimaryPart = root
@@ -8639,6 +8642,9 @@ local function characterAdded(player: Player, character: Model)
 		local root = character:WaitForChild("HumanoidRootPart", 10)
 		if player.Character ~= character or player.Parent ~= Players then return end
 		if not humanoid or not humanoid:IsA("Humanoid") or not root or not root:IsA("BasePart") then return end
+		-- Humanoid treats other rigs as climbable geometry. Lane contact must stay planar.
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+		humanoid.AutoJumpEnabled = false
 		if epoch ~= current.roundId or not canSpawn(player) then invalidateCharacter(player); return end
 		local respawn = player.RespawnLocation
 		if respawn then character:PivotTo(respawn.CFrame + Vector3.new(0, 4, 0)) end
@@ -11530,6 +11536,15 @@ function InputController.Start()
 	end
 	started = true
 	local player = game:GetService("Players").LocalPlayer
+	local function configureMovement(character: Model)
+		local humanoid = character:WaitForChild("Humanoid", 10)
+		if player.Character ~= character or not humanoid or not humanoid:IsA("Humanoid") then return end
+		-- SetStateEnabled does not replicate; apply on the physics-owning client too.
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+		humanoid.AutoJumpEnabled = false
+	end
+	player.CharacterAdded:Connect(configureMovement)
+	if player.Character then task.spawn(configureMovement, player.Character) end
 	if UserInputService.KeyboardEnabled then
 		-- Own PC locomotion so user-selected ClickToMove never competes with aim clicks.
 		-- The existing Humanoid still applies authoritative speed, jump and control locks.
