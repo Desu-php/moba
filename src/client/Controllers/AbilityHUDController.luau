@@ -2,6 +2,7 @@
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UserInput=game:GetService("UserInputService")
+local TextService=game:GetService("TextService")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config=require(Shared.Config.AbilityConfig)
 local Items=require(Shared.Config.ItemConfig)
@@ -43,6 +44,7 @@ function HUD.Start()
  UserInput.InputBegan:Connect(function(input,processed) if not processed and not UserInput:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.C then toggle() end end)
  local tooltip=View.frame(panel,"Tooltip",UDim2.fromOffset(410,300),UDim2.fromOffset(240,-310)); tooltip.Visible=false; tooltip.ZIndex=8; View.border(tooltip,View.Gold)
  local tooltipText=View.label(tooltip,"Text",UDim2.new(1,-20,1,-16),UDim2.fromOffset(10,8),14); tooltipText.TextSize=16; tooltipText.TextWrapped=true; tooltipText.TextXAlignment=Enum.TextXAlignment.Left; tooltipText.TextYAlignment=Enum.TextYAlignment.Top
+ tooltipText.TextTruncate=Enum.TextTruncate.None
  local hovered: string?=nil
  local buttons: {[string]: TextButton}={}
  local learnButtons: {[string]: TextButton}={}
@@ -156,15 +158,14 @@ function HUD.Start()
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
   local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
-   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2 and (model:GetAttribute("SagePhase")~="Active" or number("Rank_Rasengan")>=3)
+   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2
    and model:GetAttribute("KcmActive")~=true and model:GetAttribute("KuramaActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="" or model:GetAttribute("SagePhase")=="Active")
   buttons.Rasengan.Visible=not choosing
   local sx,sy,ss=Layout.skill(1)
   for i,id in {"Odama","Rasenshuriken"} do
-   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1 and (id=="Rasenshuriken" or not model or model:GetAttribute("SagePhase")~="Active")
-   local sage=model~=nil and model:GetAttribute("SagePhase")=="Active"
-   local width=if number("Rank_Rasengan")>=3 and not sage then (ss-3)/2 else ss
-   b.Position=UDim2.fromOffset(sx+(if sage then 0 else (i-1)*(width+3)),sy);b.Size=UDim2.fromOffset(width,ss)
+   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1
+   local width=if number("Rank_Rasengan")>=3 then (ss-3)/2 else ss
+   b.Position=UDim2.fromOffset(sx+(i-1)*(width+3),sy);b.Size=UDim2.fromOffset(width,ss)
    local reason=Controller.AbilityUnavailable(id);b.BackgroundColor3=if reason or Controller.Remaining(id)>0 then View.Card else Color3.fromRGB(24,88,113)
   end
   for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
@@ -212,6 +213,10 @@ function HUD.Start()
     if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
     if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
     tooltipText.Text=(if id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..tostring(Controller.Cost(id)).." чакры  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
+    local bounds=TextService:GetTextSize(tooltipText.Text,tooltipText.TextSize,tooltipText.Font,Vector2.new(390,10000))
+    local height=math.max(140,math.ceil(bounds.Y)+24)
+    tooltip.Size=UDim2.fromOffset(410,height)
+    tooltip.Position=UDim2.fromOffset(if id=="RikudoHY" or id=="RikudoHZ" then 490 else 240,-height-10)
    end
   end
  end)

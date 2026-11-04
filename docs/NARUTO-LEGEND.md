@@ -1,5 +1,7 @@
 # Naruto Legend base abilities — source reference and implementation history
 
+Актуальная сверка способностей и сочетаний режимов от 4 ноября 2026 года: [NARUTO-MODE-PARITY](NARUTO-MODE-PARITY.md). Старые срезы ниже сохранены как история реализации.
+
 ## Current baseline: 78bb59a (2026-11-02 audit)
 
 The sections below retain the original domain/rank-I implementation history;

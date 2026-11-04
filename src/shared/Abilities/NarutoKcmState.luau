@@ -146,7 +146,7 @@ function M.configure(config: Config)
  function D.availability(s: State, c: Context)
   local active=s.active~=nil and not s.closed
   return {kcm=not s.closed and not active and not c.fullKurama and not c.kuramaCooldown, gamakichi=not s.closed and not active,
-   sage=not s.closed, dash=active and s.active~=nil and s.active.dashReady,
+   sage=not s.closed and not (active and s.active~=nil and s.active.rank==3), dash=active and s.active~=nil and s.active.dashReady,
    sharing=active, fullKurama=not s.closed and not active and c.level>=21 and not c.kuramaCooldown}
  end
  return D

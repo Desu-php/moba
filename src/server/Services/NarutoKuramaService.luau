@@ -10,7 +10,7 @@ local Teams=require(script.Parent.TeamService)
 local Damage=require(script.Parent.DamageService)
 local Hitboxes=require(script.Parent.HitboxService)
 export type Hooks={chakra: (Player)->number?,spend: (Player,number)->boolean,kcm: (Player)->boolean,
- busy: (Player)->boolean,restoreMana: (Player,number)->()}
+ busy: (Player)->boolean,restoreMana: (Player,number)->(),released: (Player)->()}
 type Record={state: Form.State,model: Model?,visual: Highlight?,lastRequest: number,applied: boolean}
 local records: {[Player]: Record}={}
 local retained: {[string]: {epoch: number,balance: Form.Balance}}={}
@@ -34,7 +34,14 @@ local function teardown(r: Record)
  if r.visual then r.visual:Destroy(); r.visual=nil end
 end
 local function events(r: Record,list: {Form.Event})
- for _,e in list do if e.kind=="Exited" then teardown(r) end end
+ local h=hooks
+ for _,e in list do
+  if e.kind=="Exited" then teardown(r)
+  elseif e.kind=="Released" and h and r.model then
+   local p=Players:GetPlayerFromCharacter(r.model)
+   if p and p.Character==r.model and r.model:GetAttribute("LifeId")==r.state.life and epoch()==r.state.epoch then h.released(p) end
+  end
+ end
  local model=r.model; if model then model:SetAttribute("KuramaLocked",Form.isLocked(r.state)) end
 end
 local function record(p: Player,now: number): Record

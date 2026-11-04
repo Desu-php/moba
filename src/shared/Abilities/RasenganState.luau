@@ -6,7 +6,7 @@ export type Configuration = {
 	read HoldDuration: number, read AttackControlDelay: number, read ImpactDelay: number, read Stun: number,
 }
 export type Cast = {
-	variant: string, stun: number, impactDelay: number, id: number, ownerId: string, round: number, life: number, requestId: number,
+	variant: string, sagePrepared: boolean?, stun: number, impactDelay: number, id: number, ownerId: string, round: number, life: number, requestId: number,
 	startedAt: number, readyAt: number, expiresAt: number, phase: string,
 	targetId: string?, controlAt: number?, controlled: boolean, impactAt: number?, impacted: boolean,
 }

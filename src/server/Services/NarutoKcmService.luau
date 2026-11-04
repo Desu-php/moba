@@ -17,7 +17,7 @@ local Targets=require(script.Parent.AbilityTargetService)
 local Hitboxes=require(script.Parent.HitboxService)
 local Teams=require(script.Parent.TeamService)
 export type Hooks={mana: (Player)->number,restoreMana: (Player,number)->(),spendMana: (Player,number)->boolean,
- busy: (Player)->boolean,sage: (Player)->(number,boolean)}
+ busy: (Player)->boolean,sage: (Player)->(number,boolean),setSageReady: (Player,boolean)->()}
 type Record={player: Player,token: Adapter.Token?,model: Model?,dash: Gameplay.DashState,hagoromo: Gameplay.Hagoromo,
  epoch: number,lastRequest: number,sageEntryBlocked: boolean}
 local records: {[string]: Record}={}
@@ -66,11 +66,13 @@ function S.Start(h: Hooks)
   effect=function(token,kind,id)
    local model=owned(token); if not model then return end
    if kind=="Entered" then
+    if model:GetAttribute("KcmRank")==3 then h.setSageReady(records[token.owner].player,true) end
     model:SetAttribute("KcmActive",true); model:SetAttribute("KcmCastId",id)
     local highlight=Instance.new("Highlight"); highlight.Archivable=false; highlight.Name="NarutoKcmAura"; highlight.Adornee=model
     highlight.FillColor=Color3.fromRGB(255,179,30); highlight.OutlineColor=Color3.fromRGB(255,230,110)
     highlight.FillTransparency=.8; highlight.DepthMode=Enum.HighlightDepthMode.Occluded; highlight.Parent=model; visuals[token]=highlight
    elseif kind=="Exited" then
+    h.setSageReady(records[token.owner].player,false)
     model:SetAttribute("KcmActive",false); model:SetAttribute("KcmCastId",nil)
     local r=records[token.owner]; if r then r.sageEntryBlocked=false end
    end
@@ -106,6 +108,10 @@ function S.Start(h: Hooks)
   spend=function(p,amount) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.SpendChakra(r.token,amount) end,
   kcm=function(p) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.IsActive(r.token) end,
   busy=h.busy,restoreMana=h.restoreMana,
+  released=function(p)
+   local r=records[tostring(p.UserId)]
+   if r then r.sageEntryBlocked=false end -- A01F release explicitly restores A017, independently of Sage's timer.
+  end,
  })
 end
 local function record(p: Player): Record
@@ -172,7 +178,7 @@ end
 function S.OnAttackStarted(p: Player,hasTarget: boolean) Kurama.AttackStarted(p,hasTarget) end
 function S.Blocked(model: Model,id: string): boolean
  local player=Players:GetPlayerFromCharacter(model)
- return player~=nil and S.MeditationForm(player)=="KCM" and id=="Gamakichi"
+ return player~=nil and ((S.MeditationForm(player)=="KCM" and id=="Gamakichi") or (S.IsRikudo(player) and id=="SageMode"))
 end
 function S.TryCast(p: Player,id: string,request: number,now: number,target: any): (boolean,string)
  local r=refresh(p); local h=hooks; if not runtime or not r or not r.token or not h then return false,"Unavailable" end

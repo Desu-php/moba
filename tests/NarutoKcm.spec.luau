@@ -48,6 +48,12 @@ for rank=1,3 do
  check("rank gate"..rank,if rank==3 then not ok and reason=="Hagoromo" else ok)
  if rank==3 then gate.hagoromo=true; ok=D.enter(x,gate); check("Hagoromo permits learned3",ok) end
 end
+local rk=context(27,3); rk.hagoromo=true
+local rkState=D.new(0); check("Rikudo entry",D.enter(rkState,rk))
+check("Rikudo hides new Sage cast",not D.availability(rkState,rk).sage)
+rk.rank=1; check("active rank owns Sage admission",not D.availability(rkState,rk).sage)
+local lower=context(27,2); local lowerState=D.new(0); D.enter(lowerState,lower)
+lower.rank=3; check("learning III does not hide Sage in active II",D.availability(lowerState,lower).sage)
 local gate=context(27,0); ok,reason=D.enter(D.new(0),gate); check("flag not free learnedrank",not ok and reason=="Unlearned")
 gate=context(); gate.alive=false; ok,reason=D.enter(D.new(0),gate); check("dead rejected",not ok and reason=="Dead")
 gate=context(); gate.fullKurama=true; ok,reason=D.enter(D.new(0),gate); check("fullKurama external gate",not ok and reason=="FormBusy")

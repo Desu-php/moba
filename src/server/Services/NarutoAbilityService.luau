@@ -38,7 +38,7 @@ local Kcm=require(script.Parent.NarutoKcmService)
 local Kurama=require(script.Parent.NarutoKuramaService)
 local Ranged=require(script.Parent.NarutoRangedService)
 type Session = { variants: Variants.State, shurikenSnapshot: number, meditation: Meditation.State, meditationMode: boolean, meditationRecallAt: number, sage: Sage.State, gama: GamaDomain.State, q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
-	character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
+	sageTechniquesReady: boolean, character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
 	preparationStunned: boolean, nextPublish: number, connections: { RBXScriptConnection } }
 local Service = { Visual = Instance.new("BindableEvent") }
 local sessions: { [Player]: Session } = {}
@@ -76,6 +76,7 @@ local function publish(player: Player, session: Session, now: number)
  model:SetAttribute("Ready_Rasenshuriken",session.variants.cooldowns.Rasenshuriken or 0)
  model:SetAttribute("Ready_SageMode",session.sage.cooldownAt)
  model:SetAttribute("SagePhase",if sage then sage.phase else "")
+ model:SetAttribute("SageTechniquesReady",session.sageTechniquesReady)
  model:SetAttribute("SageRank",if sage then sage.rank else 0)
  model:SetAttribute("SageReadyAt",if sage then sage.readyAt else 0)
  model:SetAttribute("SageExpiresAt",if sage then sage.expiresAt else 0)
@@ -116,6 +117,7 @@ local function selfStun(session: Session, fighter: Fighters.Fighter, now: number
 end
 local function clearSage(session: Session)
  Sage.cancel(session.sage)
+ session.sageTechniquesReady=false
  local model=session.character
  if model then
   Stats.SetLayer(model,"NarutoSage",nil)
@@ -138,7 +140,7 @@ local function bind(player: Player): Session
 	local existing = sessions[player]; if existing then return existing end
 	local now, owner = workspace:GetServerTimeNow(), tostring(player.UserId)
 	local session: Session = { variants=Variants.new(), shurikenSnapshot=0, meditation=Meditation.new(owner,roundId(),0), meditationMode=false, meditationRecallAt=0, sage=Sage.new(owner,roundId(),0), gama=GamaDomain.new(), q = Rasengan.new(owner, roundId(), 0), clones = CloneState.new(owner, roundId(), 0),
-		commands = Commands.new(owner, roundId(), 0), pool = Resource.new(values(player), now), character = nil, target = nil,
+		sageTechniquesReady=false, commands = Commands.new(owner, roundId(), 0), pool = Resource.new(values(player), now), character = nil, target = nil,
 		life = 0, selfStun = false, selfControlUntil = 0, preparationStunned = false, nextPublish = 0, connections = {} }
 	sessions[player] = session
 	local function added(model: Model)
@@ -202,7 +204,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	if id=="RasenshurikenThrow" then
         local cast=session.q.active;local sage=session.sage.active;local profile=Progression.Get(player)
         if typeof(targetValue)~="Vector3" then return false,"Malformed" end
-        if not cast or not ThrowRules.allowed(if profile then profile.Learned.Rasengan or 0 else 0,sage~=nil and sage.phase=="Active" and now<sage.expiresAt,cast.variant,cast.phase,now,cast.readyAt,cast.expiresAt) then return false,"Unavailable" end
+        if not cast or not ThrowRules.allowed(if profile then profile.Learned.Rasengan or 0 else 0,session.sageTechniquesReady and sage~=nil and sage.phase=="Active" and now<sage.expiresAt,cast.variant,cast.phase,now,cast.readyAt,cast.expiresAt) then return false,"Unavailable" end
         local life,epoch=session.life,roundId()
         local ok=Thrown.Begin(model,targetValue,now,function() return values(player).strength end,function()
             return player.Character==model and session.life==life and roundId()==epoch and Damage.CanAct(model)
@@ -214,8 +216,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
     elseif id=="Odama" or id=="Rasenshuriken" then
         if targetValue~=nil then return false,"Malformed" end
         local sage=session.sage.active
-        local sageThrow=id=="Rasenshuriken" and sage~=nil and sage.phase=="Active" and now<sage.expiresAt
-        if not sageThrow and (sage~=nil or meditationForm(player)~="Ordinary") then return false,"FormAdapterUnverified" end
+        if meditationForm(player)~="Ordinary" or (sage~=nil and sage.phase~="Active") then return false,"FormAdapterUnverified" end
         local cast=session.q.active; if not cast or cast.phase=="Consumed" then return false,"Window" end
         local profile=Progression.Get(player)
         local rank=if profile then profile.Learned.Rasengan or 0 else 0
@@ -249,6 +250,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 		if targetValue ~= nil then return false, "Malformed" end
 		local cast, reason, debit = Q.request(session.q, now, requestId, session.pool.mana, true)
 		if not cast then return false, reason end
+		cast.sagePrepared=session.sageTechniquesReady and meditationForm(player)=="Ordinary"
 		Variants.cancel(session.variants)
 		assert(Resource.spend(session.pool, debit), "Q debit must commit without yielding")
 		session.preparationStunned = false
@@ -275,7 +277,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         end
         local plan,planReason=RankPolicy.ordinaryClonePlan(rank,variant)
         if not plan then return false,planReason end
-        local resourcePlan=ClonePlan.create(rank,if variant=="OrdinarySelf" then "Self" else "Point",session.pool.mana,session.pool.maximum)
+        local resourcePlan=ClonePlan.create(rank,if variant=="OrdinarySelf" then "Self" else "Point",session.pool.mana,session.pool.maximum,meditationForm(player)=="Kurama")
         if not resourcePlan then return false,"Mana" end
         plan.count=resourcePlan.count
         local extra=resourcePlan.extraManaDrain
@@ -323,11 +325,13 @@ function Service.Update(now: number)
                     end)
                 end
 				if Sage.expire(session.sage,now) then
+                    if not Kcm.IsRikudo(player) then session.sageTechniquesReady=false end
                     Stats.SetLayer(model,"NarutoSage",nil)
                     game:GetService("CollectionService"):RemoveTag(model,"NarutoSage")
                 end
                 local activated=Sage.activate(session.sage,now)
                 if activated then
+                    session.sageTechniquesReady=true
                     Kcm.SageActivated(player)
                     local modifier=Sage.modifier(activated.rank); assert(modifier)
                     Stats.SetLayer(model,"NarutoSage",{health=modifier.health,armor=modifier.armor,attack=modifier.attack,speed=Units.toStuds(modifier.speedWarcraft)})
@@ -364,7 +368,7 @@ function Service.Update(now: number)
 					local impacted = Q.claimImpact(session.q, cast, now)
 					if impacted and target then
 						local humanoid = target:FindFirstChildOfClass("Humanoid")
-						local level, strength = Service.GetStats(player); local raw = Variants.damage(cast.variant,level,strength)
+						local level, strength = Service.GetStats(player); local raw = Variants.damage(cast.variant,level,strength,cast.sagePrepared)
 						if humanoid and raw then
 							if cast.variant=="Rasenshuriken" then
                                 local round,life=session.q.round,session.q.life
@@ -404,6 +408,11 @@ function Service.Start()
 			local s=sessions[player]; local cast=if s then s.sage.active else nil; local now=workspace:GetServerTimeNow()
 			return if cast and cast.phase=="Active" then math.max(0,cast.expiresAt-now) else 0, cast~=nil and cast.phase=="Active" and cast.auraUntil>now
 		end,
+        setSageReady=function(player,ready)
+            local s=sessions[player]; if not s then return end
+            s.sageTechniquesReady=ready
+            if s.character then s.character:SetAttribute("SageTechniquesReady",ready) end
+        end,
 	})
  Ranged.Start({mana=function(p) return bind(p).pool.mana end,spend=function(p,n) return Resource.spend(bind(p).pool,n) end,
   strength=function(p) return values(p).strength end,

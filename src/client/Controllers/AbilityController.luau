@@ -88,7 +88,7 @@ function Controller.AbilityUnavailable(id: string): string?
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	if id=="MeditationRecall" and (model:GetAttribute("MeditationCloneCount") or 0)==0 then return "Нет медитирующих клонов" end
 	if id=="Odama" or id=="Rasenshuriken" then
-  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and not (id=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active")) then return "Нужна обычная форма или режим мудреца для Расенсюрикена" end
+  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~="Active") then return "Нужна обычная форма или готовый режим мудреца" end
   local rank=if state then (state:GetAttribute("Rank_Rasengan") or 0) :: number else 0
   local untilAt=(model:GetAttribute("RasenganVariantUntil") or 0) :: number
   local wanted=if id=="Odama" or model:GetAttribute("RasenganVariant")=="Rasengan" then "Rasengan" else "Odama"
@@ -112,6 +112,7 @@ function Controller.AbilityUnavailable(id: string): string?
 
  local mana = model:GetAttribute("Mana")
  if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
+ if id=="SageMode" and model:GetAttribute("RikudoActive")==true then return "В Рикудо нельзя заново включить режим мудреца" end
  local cost = Controller.Cost(id)
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
 	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
@@ -173,8 +174,8 @@ local function queueUpgrade(id: string): boolean
   return reject(unavailable)
  end
  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true
-  or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and not (id=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active")) then
-  clearUpgrades(); return reject("Усиления доступны в обычной форме")
+  or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~="Active") then
+  clearUpgrades(); return reject("Нужна обычная форма или готовый режим мудреца")
  end
  local hero=player:FindFirstChild("HeroState")
  local rank=if hero then (hero:GetAttribute("Rank_Rasengan") or 0) :: number else 0
@@ -213,7 +214,7 @@ function Controller.TryCast(id: string, selectedTarget: any): boolean
 end
 function Controller.TryThrowRasenshuriken(): boolean
  local model=Players.LocalPlayer.Character
- if not model or model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("RasenganVariant")~="Rasenshuriken" then return false end
+ if not model or model:GetAttribute("SageTechniquesReady")~=true or model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("RasenganVariant")~="Rasenshuriken" then return false end
  if model:GetAttribute("RasenganPhase")~="Holding" or ((model:GetAttribute("RasenganReadyAt") or 0) :: number)>workspace:GetServerTimeNow() then return true end
  local camera=require(script.Parent.CameraController);local ray=camera.GetAimRay()
  if not ray then return true end
@@ -248,9 +249,8 @@ function Controller.GetMessage(): string
  if lastReason~="" then return lastReason end
  if model and model:GetAttribute("RasenganHeld")==true then
   local variant=tostring(model:GetAttribute("RasenganVariant"))
-  if variant=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active" then return "Расенсюрикен · ЛКМ — бросить по прицелу" end
+  if variant=="Rasenshuriken" and model:GetAttribute("SageTechniquesReady")==true and model:GetAttribute("SagePhase")=="Active" then return "Расенсюрикен · ЛКМ — бросить по прицелу" end
   local name=if variant=="Odama" then "Одама Расенган" elseif variant=="Rasenshuriken" then "Расенсюрикен" else "Расенган"
-  if variant=="Rasengan" and model:GetAttribute("SagePhase")=="Active" and not Controller.AbilityUnavailable("Rasenshuriken") then return "X — Расенсюрикен · затем ЛКМ — бросок" end
   local nextId=if variant=="Rasengan" then "Odama" elseif variant=="Odama" then "Rasenshuriken" else nil
   if nextId and not Controller.AbilityUnavailable(nextId) and Controller.Remaining(nextId)<=0 then
    local hero=Players.LocalPlayer:FindFirstChild("HeroState")
@@ -265,10 +265,19 @@ end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
  local chakra=model:GetAttribute("KuramaChakra"); if typeof(chakra)~="number" then return "" end
+ local now=workspace:GetServerTimeNow()
+ local layers={}
  if model:GetAttribute("KuramaActive")==true then
-  local ends=model:GetAttribute("KuramaExpiresAt"); return string.format("Курама %d | Форма %.0fс",math.floor(chakra),math.max(0,(if typeof(ends)=="number" then ends else 0)-workspace:GetServerTimeNow()))
+  table.insert(layers,string.format("Форма Курамы %.0fс",math.max(0,((model:GetAttribute("KuramaExpiresAt") or now) :: number)-now)))
+ elseif model:GetAttribute("KcmActive")==true then
+  local rank=model:GetAttribute("KcmRank")
+  table.insert(layers,if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I")
  end
- return string.format("Курама %d | %s",math.floor(chakra),if model:GetAttribute("KcmActive")==true then "KCM: E рывок / X выход / ← мана" else "5 KCM / 6 Курама (ур.21) / ← мана")
+ if model:GetAttribute("SagePhase")=="Active" then
+  local remaining=math.max(0,((model:GetAttribute("SageExpiresAt") or now) :: number)-now)
+  table.insert(layers,string.format("%s %.0fс",if model:GetAttribute("SageTechniquesReady")==true then "Мудрец" else "Бонусы мудреца",remaining))
+ elseif model:GetAttribute("SagePhase")=="Preparing" then table.insert(layers,"Сбор природной энергии") end
+ return string.format("Чакра Курамы %d | %s",math.floor(chakra),if #layers>0 then table.concat(layers," + ") else "5 KCM / 6 Курама (ур.21) / ← мана")
 end
 function Controller.Start()
 	if remote then return end

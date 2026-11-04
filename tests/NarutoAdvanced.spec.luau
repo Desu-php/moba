@@ -26,6 +26,10 @@ V.cancel(a); check(a.choice==nil and a.cooldowns.Odama==40.5,"cancel retains coo
 check(select(2,V.select(a,"Odama",3,20,20.1,1000,true))=="Cooldown","independent CD")
 check(V.damage("Odama",30,20)==310 and V.stun("Odama")==4,"Odama formula")
 check(V.damage("Rasengan",11,30)==260 and V.stun("Rasengan")==3.5,"base preserved")
+check(V.damage("Rasengan",11,30,true)==290,"prepared ordinary Sage Rasengan receives source thirty bonus")
+check(V.damage("Rasengan",11,30,false)==260,"ordinary or morph preparation does not receive Sage-only branch bonus")
+check(V.damage("Rasengan",11,40,true)==300,"Sage preparation flag preserves impact-time strength")
+check(V.damage("Odama",30,20,true)==310,"Sage Rasengan flag cannot add another bonus to Odama")
 check(V.pulse(16)==7 and V.selfDamage(16)==150,"separate integer victim and self formulas")
 check(V.pulse(100)==11 and V.selfDamage(100)==270,"current STR changes pulse")
 check(V.radius(0)==300 and V.radius(40)==500 and V.radius(80)==500,"bounded radius growth")
@@ -51,6 +55,17 @@ local mass=Plan.create(4,"Self",500,1000); assert(mass)
 check(mass.count==30 and mass.extraManaDrain==300 and mass.nativeManaCost==200,"inclusive postcost mass threshold")
 local fallback=Plan.create(4,"Self",499.99,1000); assert(fallback)
 check(fallback.count==7,"threshold fallback")
+for rank=1,4 do
+ for _,mana in {200,499.99,500,1000} do
+  local kurama=Plan.create(rank,"Self",mana,1000,true); assert(kurama)
+  check(kurama.count==4 and kurama.extraManaDrain==0 and kurama.nativeManaCost==200,"full Kurama keeps four clones and no mass debit at every rank/resource threshold")
+  check(kurama.cooldown==50-4*(rank-1),"full Kurama retains ranked native cooldown")
+ end
+end
+local kuramaSleep=Plan.create(4,"Enemy",1000,1000,true); assert(kuramaSleep)
+check(kuramaSleep.kind=="Sleep" and kuramaSleep.count==0,"Kurama enemy-target Sleep still precedes clone burst branch")
+check(Plan.create(4,"Self",199,1000,true)==nil,"full Kurama does not bypass base mana cost")
+check(Plan.create(0,"Self",1000,1000,true)==nil,"full Kurama does not bypass learned-rank validation")
 for rank=2,4 do
  local enemy=Plan.create(rank,"Enemy",1000,1000); assert(enemy)
  check(enemy.kind=="Sleep" and enemy.count==0 and enemy.extraManaDrain==0,"sleep no battle clones")

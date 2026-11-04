@@ -85,9 +85,15 @@ return table.freeze({
 local Domain=require("./NarutoRules")
 local Rules=Domain.configure(require("./NarutoDefinitions"))
 local Plan={}
-function Plan.create(rank: number,target: string,mana: number,maximum: number): (Domain.ClonePlan?, string)
+function Plan.create(rank: number,target: string,mana: number,maximum: number,fullKurama: boolean?): (Domain.ClonePlan?, string)
  if mana~=mana or mana<200 or mana==math.huge then return nil,"Mana" end
- return Rules.clonePlan(rank,target,mana-200,maximum)
+ local plan,reason=Rules.clonePlan(rank,target,mana-200,maximum)
+ if plan and plan.kind=="Burst" and fullKurama then
+  -- war3map.j 45196,45239-45263: B03V keeps the initial four; only non-Kurama
+  -- casts enter rank-count and self-target mass-count/extra-mana branches.
+  plan.count=4; plan.extraManaDrain=0
+ end
+ return plan,reason
 end
 return table.freeze(Plan)
 ]]></string>
@@ -1052,7 +1058,7 @@ function M.configure(config: Config)
  function D.availability(s: State, c: Context)
   local active=s.active~=nil and not s.closed
   return {kcm=not s.closed and not active and not c.fullKurama and not c.kuramaCooldown, gamakichi=not s.closed and not active,
-   sage=not s.closed, dash=active and s.active~=nil and s.active.dashReady,
+   sage=not s.closed and not (active and s.active~=nil and s.active.rank==3), dash=active and s.active~=nil and s.active.dashReady,
    sharing=active, fullKurama=not s.closed and not active and c.level>=21 and not c.kuramaCooldown}
  end
  return D
@@ -1638,7 +1644,7 @@ export type Configuration = {
 	read HoldDuration: number, read AttackControlDelay: number, read ImpactDelay: number, read Stun: number,
 }
 export type Cast = {
-	variant: string, stun: number, impactDelay: number, id: number, ownerId: string, round: number, life: number, requestId: number,
+	variant: string, sagePrepared: boolean?, stun: number, impactDelay: number, id: number, ownerId: string, round: number, life: number, requestId: number,
 	startedAt: number, readyAt: number, expiresAt: number, phase: string,
 	targetId: string?, controlAt: number?, controlled: boolean, impactAt: number?, impacted: boolean,
 }
@@ -1803,9 +1809,11 @@ function V.select(state: State, id: string, rank: number, startedAt: number, now
  return choice,"Accepted",200
 end
 function V.cancel(state: State) state.choice=nil end
-function V.damage(id: string, level: number, strength: number): number
+function V.damage(id: string, level: number, strength: number, sagePrepared: boolean?): number
  if id=="Odama" then return 250+3*strength end
- return 120+strength+10*level
+ -- war3map.j 46410-46424 captures YReal410 during ordinary Sage preparation;
+ -- 48560-48569/48745-48753 use it at impact even if the Sage timer has since ended.
+ return (if id=="Rasengan" and sagePrepared then 150 else 120)+strength+10*level
 end
 function V.stun(id: string): number return if id=="Odama" then 4 elseif id=="Rasenshuriken" then 4.5 else 3.5 end
 -- JASS integer division is truncation; authoritative effective STR is integer.
@@ -6913,7 +6921,7 @@ local Kcm=require(script.Parent.NarutoKcmService)
 local Kurama=require(script.Parent.NarutoKuramaService)
 local Ranged=require(script.Parent.NarutoRangedService)
 type Session = { variants: Variants.State, shurikenSnapshot: number, meditation: Meditation.State, meditationMode: boolean, meditationRecallAt: number, sage: Sage.State, gama: GamaDomain.State, q: Rasengan.State, clones: CloneState.State, commands: Commands.State, pool: Resource.Pool,
-	character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
+	sageTechniquesReady: boolean, character: Model?, target: Model?, life: number, selfStun: boolean, selfControlUntil: number,
 	preparationStunned: boolean, nextPublish: number, connections: { RBXScriptConnection } }
 local Service = { Visual = Instance.new("BindableEvent") }
 local sessions: { [Player]: Session } = {}
@@ -6951,6 +6959,7 @@ local function publish(player: Player, session: Session, now: number)
  model:SetAttribute("Ready_Rasenshuriken",session.variants.cooldowns.Rasenshuriken or 0)
  model:SetAttribute("Ready_SageMode",session.sage.cooldownAt)
  model:SetAttribute("SagePhase",if sage then sage.phase else "")
+ model:SetAttribute("SageTechniquesReady",session.sageTechniquesReady)
  model:SetAttribute("SageRank",if sage then sage.rank else 0)
  model:SetAttribute("SageReadyAt",if sage then sage.readyAt else 0)
  model:SetAttribute("SageExpiresAt",if sage then sage.expiresAt else 0)
@@ -6991,6 +7000,7 @@ local function selfStun(session: Session, fighter: Fighters.Fighter, now: number
 end
 local function clearSage(session: Session)
  Sage.cancel(session.sage)
+ session.sageTechniquesReady=false
  local model=session.character
  if model then
   Stats.SetLayer(model,"NarutoSage",nil)
@@ -7013,7 +7023,7 @@ local function bind(player: Player): Session
 	local existing = sessions[player]; if existing then return existing end
 	local now, owner = workspace:GetServerTimeNow(), tostring(player.UserId)
 	local session: Session = { variants=Variants.new(), shurikenSnapshot=0, meditation=Meditation.new(owner,roundId(),0), meditationMode=false, meditationRecallAt=0, sage=Sage.new(owner,roundId(),0), gama=GamaDomain.new(), q = Rasengan.new(owner, roundId(), 0), clones = CloneState.new(owner, roundId(), 0),
-		commands = Commands.new(owner, roundId(), 0), pool = Resource.new(values(player), now), character = nil, target = nil,
+		sageTechniquesReady=false, commands = Commands.new(owner, roundId(), 0), pool = Resource.new(values(player), now), character = nil, target = nil,
 		life = 0, selfStun = false, selfControlUntil = 0, preparationStunned = false, nextPublish = 0, connections = {} }
 	sessions[player] = session
 	local function added(model: Model)
@@ -7077,7 +7087,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 	if id=="RasenshurikenThrow" then
         local cast=session.q.active;local sage=session.sage.active;local profile=Progression.Get(player)
         if typeof(targetValue)~="Vector3" then return false,"Malformed" end
-        if not cast or not ThrowRules.allowed(if profile then profile.Learned.Rasengan or 0 else 0,sage~=nil and sage.phase=="Active" and now<sage.expiresAt,cast.variant,cast.phase,now,cast.readyAt,cast.expiresAt) then return false,"Unavailable" end
+        if not cast or not ThrowRules.allowed(if profile then profile.Learned.Rasengan or 0 else 0,session.sageTechniquesReady and sage~=nil and sage.phase=="Active" and now<sage.expiresAt,cast.variant,cast.phase,now,cast.readyAt,cast.expiresAt) then return false,"Unavailable" end
         local life,epoch=session.life,roundId()
         local ok=Thrown.Begin(model,targetValue,now,function() return values(player).strength end,function()
             return player.Character==model and session.life==life and roundId()==epoch and Damage.CanAct(model)
@@ -7089,8 +7099,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
     elseif id=="Odama" or id=="Rasenshuriken" then
         if targetValue~=nil then return false,"Malformed" end
         local sage=session.sage.active
-        local sageThrow=id=="Rasenshuriken" and sage~=nil and sage.phase=="Active" and now<sage.expiresAt
-        if not sageThrow and (sage~=nil or meditationForm(player)~="Ordinary") then return false,"FormAdapterUnverified" end
+        if meditationForm(player)~="Ordinary" or (sage~=nil and sage.phase~="Active") then return false,"FormAdapterUnverified" end
         local cast=session.q.active; if not cast or cast.phase=="Consumed" then return false,"Window" end
         local profile=Progression.Get(player)
         local rank=if profile then profile.Learned.Rasengan or 0 else 0
@@ -7124,6 +7133,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 		if targetValue ~= nil then return false, "Malformed" end
 		local cast, reason, debit = Q.request(session.q, now, requestId, session.pool.mana, true)
 		if not cast then return false, reason end
+		cast.sagePrepared=session.sageTechniquesReady and meditationForm(player)=="Ordinary"
 		Variants.cancel(session.variants)
 		assert(Resource.spend(session.pool, debit), "Q debit must commit without yielding")
 		session.preparationStunned = false
@@ -7150,7 +7160,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         end
         local plan,planReason=RankPolicy.ordinaryClonePlan(rank,variant)
         if not plan then return false,planReason end
-        local resourcePlan=ClonePlan.create(rank,if variant=="OrdinarySelf" then "Self" else "Point",session.pool.mana,session.pool.maximum)
+        local resourcePlan=ClonePlan.create(rank,if variant=="OrdinarySelf" then "Self" else "Point",session.pool.mana,session.pool.maximum,meditationForm(player)=="Kurama")
         if not resourcePlan then return false,"Mana" end
         plan.count=resourcePlan.count
         local extra=resourcePlan.extraManaDrain
@@ -7198,11 +7208,13 @@ function Service.Update(now: number)
                     end)
                 end
 				if Sage.expire(session.sage,now) then
+                    if not Kcm.IsRikudo(player) then session.sageTechniquesReady=false end
                     Stats.SetLayer(model,"NarutoSage",nil)
                     game:GetService("CollectionService"):RemoveTag(model,"NarutoSage")
                 end
                 local activated=Sage.activate(session.sage,now)
                 if activated then
+                    session.sageTechniquesReady=true
                     Kcm.SageActivated(player)
                     local modifier=Sage.modifier(activated.rank); assert(modifier)
                     Stats.SetLayer(model,"NarutoSage",{health=modifier.health,armor=modifier.armor,attack=modifier.attack,speed=Units.toStuds(modifier.speedWarcraft)})
@@ -7239,7 +7251,7 @@ function Service.Update(now: number)
 					local impacted = Q.claimImpact(session.q, cast, now)
 					if impacted and target then
 						local humanoid = target:FindFirstChildOfClass("Humanoid")
-						local level, strength = Service.GetStats(player); local raw = Variants.damage(cast.variant,level,strength)
+						local level, strength = Service.GetStats(player); local raw = Variants.damage(cast.variant,level,strength,cast.sagePrepared)
 						if humanoid and raw then
 							if cast.variant=="Rasenshuriken" then
                                 local round,life=session.q.round,session.q.life
@@ -7279,6 +7291,11 @@ function Service.Start()
 			local s=sessions[player]; local cast=if s then s.sage.active else nil; local now=workspace:GetServerTimeNow()
 			return if cast and cast.phase=="Active" then math.max(0,cast.expiresAt-now) else 0, cast~=nil and cast.phase=="Active" and cast.auraUntil>now
 		end,
+        setSageReady=function(player,ready)
+            local s=sessions[player]; if not s then return end
+            s.sageTechniquesReady=ready
+            if s.character then s.character:SetAttribute("SageTechniquesReady",ready) end
+        end,
 	})
  Ranged.Start({mana=function(p) return bind(p).pool.mana end,spend=function(p,n) return Resource.spend(bind(p).pool,n) end,
   strength=function(p) return values(p).strength end,
@@ -7381,7 +7398,7 @@ local Targets=require(script.Parent.AbilityTargetService)
 local Hitboxes=require(script.Parent.HitboxService)
 local Teams=require(script.Parent.TeamService)
 export type Hooks={mana: (Player)->number,restoreMana: (Player,number)->(),spendMana: (Player,number)->boolean,
- busy: (Player)->boolean,sage: (Player)->(number,boolean)}
+ busy: (Player)->boolean,sage: (Player)->(number,boolean),setSageReady: (Player,boolean)->()}
 type Record={player: Player,token: Adapter.Token?,model: Model?,dash: Gameplay.DashState,hagoromo: Gameplay.Hagoromo,
  epoch: number,lastRequest: number,sageEntryBlocked: boolean}
 local records: {[string]: Record}={}
@@ -7430,11 +7447,13 @@ function S.Start(h: Hooks)
   effect=function(token,kind,id)
    local model=owned(token); if not model then return end
    if kind=="Entered" then
+    if model:GetAttribute("KcmRank")==3 then h.setSageReady(records[token.owner].player,true) end
     model:SetAttribute("KcmActive",true); model:SetAttribute("KcmCastId",id)
     local highlight=Instance.new("Highlight"); highlight.Archivable=false; highlight.Name="NarutoKcmAura"; highlight.Adornee=model
     highlight.FillColor=Color3.fromRGB(255,179,30); highlight.OutlineColor=Color3.fromRGB(255,230,110)
     highlight.FillTransparency=.8; highlight.DepthMode=Enum.HighlightDepthMode.Occluded; highlight.Parent=model; visuals[token]=highlight
    elseif kind=="Exited" then
+    h.setSageReady(records[token.owner].player,false)
     model:SetAttribute("KcmActive",false); model:SetAttribute("KcmCastId",nil)
     local r=records[token.owner]; if r then r.sageEntryBlocked=false end
    end
@@ -7470,6 +7489,10 @@ function S.Start(h: Hooks)
   spend=function(p,amount) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.SpendChakra(r.token,amount) end,
   kcm=function(p) local r=records[tostring(p.UserId)]; return runtime~=nil and r~=nil and r.token~=nil and runtime.IsActive(r.token) end,
   busy=h.busy,restoreMana=h.restoreMana,
+  released=function(p)
+   local r=records[tostring(p.UserId)]
+   if r then r.sageEntryBlocked=false end -- A01F release explicitly restores A017, independently of Sage's timer.
+  end,
  })
 end
 local function record(p: Player): Record
@@ -7536,7 +7559,7 @@ end
 function S.OnAttackStarted(p: Player,hasTarget: boolean) Kurama.AttackStarted(p,hasTarget) end
 function S.Blocked(model: Model,id: string): boolean
  local player=Players:GetPlayerFromCharacter(model)
- return player~=nil and S.MeditationForm(player)=="KCM" and id=="Gamakichi"
+ return player~=nil and ((S.MeditationForm(player)=="KCM" and id=="Gamakichi") or (S.IsRikudo(player) and id=="SageMode"))
 end
 function S.TryCast(p: Player,id: string,request: number,now: number,target: any): (boolean,string)
  local r=refresh(p); local h=hooks; if not runtime or not r or not r.token or not h then return false,"Unavailable" end
@@ -7653,7 +7676,7 @@ local Teams=require(script.Parent.TeamService)
 local Damage=require(script.Parent.DamageService)
 local Hitboxes=require(script.Parent.HitboxService)
 export type Hooks={chakra: (Player)->number?,spend: (Player,number)->boolean,kcm: (Player)->boolean,
- busy: (Player)->boolean,restoreMana: (Player,number)->()}
+ busy: (Player)->boolean,restoreMana: (Player,number)->(),released: (Player)->()}
 type Record={state: Form.State,model: Model?,visual: Highlight?,lastRequest: number,applied: boolean}
 local records: {[Player]: Record}={}
 local retained: {[string]: {epoch: number,balance: Form.Balance}}={}
@@ -7677,7 +7700,14 @@ local function teardown(r: Record)
  if r.visual then r.visual:Destroy(); r.visual=nil end
 end
 local function events(r: Record,list: {Form.Event})
- for _,e in list do if e.kind=="Exited" then teardown(r) end end
+ local h=hooks
+ for _,e in list do
+  if e.kind=="Exited" then teardown(r)
+  elseif e.kind=="Released" and h and r.model then
+   local p=Players:GetPlayerFromCharacter(r.model)
+   if p and p.Character==r.model and r.model:GetAttribute("LifeId")==r.state.life and epoch()==r.state.epoch then h.released(p) end
+  end
+ end
  local model=r.model; if model then model:SetAttribute("KuramaLocked",Form.isLocked(r.state)) end
 end
 local function record(p: Player,now: number): Record
@@ -9358,7 +9388,7 @@ function Controller.AbilityUnavailable(id: string): string?
 	if id == "Rasengan" and (typeof(level) ~= "number" or level < 4) then return "С уровня 4" end
 	if id=="MeditationRecall" and (model:GetAttribute("MeditationCloneCount") or 0)==0 then return "Нет медитирующих клонов" end
 	if id=="Odama" or id=="Rasenshuriken" then
-  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and not (id=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active")) then return "Нужна обычная форма или режим мудреца для Расенсюрикена" end
+  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~="Active") then return "Нужна обычная форма или готовый режим мудреца" end
   local rank=if state then (state:GetAttribute("Rank_Rasengan") or 0) :: number else 0
   local untilAt=(model:GetAttribute("RasenganVariantUntil") or 0) :: number
   local wanted=if id=="Odama" or model:GetAttribute("RasenganVariant")=="Rasengan" then "Rasengan" else "Odama"
@@ -9382,6 +9412,7 @@ function Controller.AbilityUnavailable(id: string): string?
 
  local mana = model:GetAttribute("Mana")
  if id=="SageMode" and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~=nil then return "Режим уже действует" end
+ if id=="SageMode" and model:GetAttribute("RikudoActive")==true then return "В Рикудо нельзя заново включить режим мудреца" end
  local cost = Controller.Cost(id)
 	if cost > 0 and (typeof(mana) ~= "number" or mana < cost) then return "Недостаточно маны" end
 	if id == "CloneCommand" and (model:GetAttribute("NativeCloneCount") or 0) == 0 and (model:GetAttribute("GamakichiCount") or 0)==0 then return "Нет клонов" end
@@ -9443,8 +9474,8 @@ local function queueUpgrade(id: string): boolean
   return reject(unavailable)
  end
  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true
-  or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and not (id=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active")) then
-  clearUpgrades(); return reject("Усиления доступны в обычной форме")
+  or (model:GetAttribute("SagePhase")~=nil and model:GetAttribute("SagePhase")~="" and model:GetAttribute("SagePhase")~="Active") then
+  clearUpgrades(); return reject("Нужна обычная форма или готовый режим мудреца")
  end
  local hero=player:FindFirstChild("HeroState")
  local rank=if hero then (hero:GetAttribute("Rank_Rasengan") or 0) :: number else 0
@@ -9483,7 +9514,7 @@ function Controller.TryCast(id: string, selectedTarget: any): boolean
 end
 function Controller.TryThrowRasenshuriken(): boolean
  local model=Players.LocalPlayer.Character
- if not model or model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("RasenganVariant")~="Rasenshuriken" then return false end
+ if not model or model:GetAttribute("SageTechniquesReady")~=true or model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("RasenganVariant")~="Rasenshuriken" then return false end
  if model:GetAttribute("RasenganPhase")~="Holding" or ((model:GetAttribute("RasenganReadyAt") or 0) :: number)>workspace:GetServerTimeNow() then return true end
  local camera=require(script.Parent.CameraController);local ray=camera.GetAimRay()
  if not ray then return true end
@@ -9518,9 +9549,8 @@ function Controller.GetMessage(): string
  if lastReason~="" then return lastReason end
  if model and model:GetAttribute("RasenganHeld")==true then
   local variant=tostring(model:GetAttribute("RasenganVariant"))
-  if variant=="Rasenshuriken" and model:GetAttribute("SagePhase")=="Active" then return "Расенсюрикен · ЛКМ — бросить по прицелу" end
+  if variant=="Rasenshuriken" and model:GetAttribute("SageTechniquesReady")==true and model:GetAttribute("SagePhase")=="Active" then return "Расенсюрикен · ЛКМ — бросить по прицелу" end
   local name=if variant=="Odama" then "Одама Расенган" elseif variant=="Rasenshuriken" then "Расенсюрикен" else "Расенган"
-  if variant=="Rasengan" and model:GetAttribute("SagePhase")=="Active" and not Controller.AbilityUnavailable("Rasenshuriken") then return "X — Расенсюрикен · затем ЛКМ — бросок" end
   local nextId=if variant=="Rasengan" then "Odama" elseif variant=="Odama" then "Rasenshuriken" else nil
   if nextId and not Controller.AbilityUnavailable(nextId) and Controller.Remaining(nextId)<=0 then
    local hero=Players.LocalPlayer:FindFirstChild("HeroState")
@@ -9535,10 +9565,19 @@ end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
  local chakra=model:GetAttribute("KuramaChakra"); if typeof(chakra)~="number" then return "" end
+ local now=workspace:GetServerTimeNow()
+ local layers={}
  if model:GetAttribute("KuramaActive")==true then
-  local ends=model:GetAttribute("KuramaExpiresAt"); return string.format("Курама %d | Форма %.0fс",math.floor(chakra),math.max(0,(if typeof(ends)=="number" then ends else 0)-workspace:GetServerTimeNow()))
+  table.insert(layers,string.format("Форма Курамы %.0fс",math.max(0,((model:GetAttribute("KuramaExpiresAt") or now) :: number)-now)))
+ elseif model:GetAttribute("KcmActive")==true then
+  local rank=model:GetAttribute("KcmRank")
+  table.insert(layers,if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I")
  end
- return string.format("Курама %d | %s",math.floor(chakra),if model:GetAttribute("KcmActive")==true then "KCM: E рывок / X выход / ← мана" else "5 KCM / 6 Курама (ур.21) / ← мана")
+ if model:GetAttribute("SagePhase")=="Active" then
+  local remaining=math.max(0,((model:GetAttribute("SageExpiresAt") or now) :: number)-now)
+  table.insert(layers,string.format("%s %.0fс",if model:GetAttribute("SageTechniquesReady")==true then "Мудрец" else "Бонусы мудреца",remaining))
+ elseif model:GetAttribute("SagePhase")=="Preparing" then table.insert(layers,"Сбор природной энергии") end
+ return string.format("Чакра Курамы %d | %s",math.floor(chakra),if #layers>0 then table.concat(layers," + ") else "5 KCM / 6 Курама (ур.21) / ← мана")
 end
 function Controller.Start()
 	if remote then return end
@@ -9639,8 +9678,9 @@ return {
  Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
  ShadowClones="Создаёт теневых клонов. Они распределяются между видимыми врагами в радиусе 28 студов, окружают их и занимают свободные места для атаки. Если враг один, клоны сменяют друг друга после ударов. После гибели цели выбирают новую.\nБез врагов следуют за Наруто; при удалении дальше 48 студов возвращаются. Призванные в воздухе клоны приземляются. F — общая приоритетная цель; R — отозвать; Y — стоять без атак. После возврата снова ищут врагов. Количество и длительность зависят от ранга. Со II ранга T открывает технику сна.",
  Gamakichi="Призывает Гамакичи. Ранг определяет силу и возраст жабы. Она помогает в бою и выполняет общие команды F / R / Y.\nG — выбрать точку для масла. Взрослая жаба получает H — серию ударов мечом по области. ЛКМ подтверждает цель, ПКМ отменяет.",
- SageMode="Наруто неподвижно собирает природную энергию, затем входит в режим мудреца. Оранжевая аура отмечает действующий режим.\nПодготовка требует времени: учитывайте опасность рядом. Стрелка вправо — медитация; J — вернуть чакру из медитирующих клонов. Параметры зависят от изученного ранга.",
- KCM="Использует отдельный запас чакры Курамы и окружает Наруто золотой энергией. Доступность формы зависит от ранга и условий прогрессии.\nE — удерживать для прицеливания рывка, отпустить для применения. X — выйти из формы. Стрелка влево — преобразование чакры.",
+ SageMode="Наруто неподвижно собирает природную энергию: 10 / 7 / 4 секунды по рангу. Усиление действует 51 секунду, аура — первые 47. Даёт здоровье, броню, урон и скорость; восстанавливает 200 / 350 / 500 маны.\nМожно включить поверх KCM I–II или полной Курамы: бонусы складываются, таймер мудреца идёт отдельно. В Рикудо новый режим мудреца недоступен. При выходе из KCM бонусы мудреца сохраняются до конца таймера, но его техники отключаются.\nВ обычной форме доступны Q → Z — Одама и Q → X — Расенсюрикен. Стрелка вправо — медитация; J — вернуть чакру из медитирующих клонов.",
+ KCM="Ранги: KCM I, KCM II, Рикудо. Вход расходует 200 чакры Курамы, поддержание — 40 в секунду. Это отдельный запас от маны способностей.\nДля сочетания сначала включите KCM I–II, затем режим мудреца: их бонусы складываются. Сам режим мудреца блокирует новый вход в KCM; выход из KCM или завершение полной Курамы снимают эту блокировку. Рикудо не позволяет заново включить мудреца. Полная Курама и KCM одновременно недоступны.\nE — прицелиться для рывка. X — выйти. Стрелка влево — обменять 200 чакры Курамы на 200 маны.",
+ KuramaForm="Полная форма Курамы с уровня 21. Требует 2500 чакры Курамы, действует 30 секунд, перезарядка — 160 секунд. Даёт +2500 здоровья, +20 брони и +90 урона.\nБонусы режима мудреца складываются с этой формой и сохраняют свой таймер. KCM одновременно включить нельзя. В этой форме призыв создаёт ровно 4 клона без дополнительного расхода 30% маны. После завершения формы снова можно включить KCM.",
  CloneCommand="Направляет клонов и Гамакичи на вражескую цель под прицелом. Если цели нет, выберите её и подтвердите ЛКМ.\nR возвращает призывов к владельцу; Y оставляет их на месте. Союзников атаковать нельзя.",
  GamakichiOil="Гамакичи выпускает масло в выбранную точку. Замедление начинается после прилёта, а не при нажатии.\nНаведите прицел, нажмите G и подтвердите ЛКМ. ПКМ / Esc — отмена.",
  GamakichiChop="Взрослый Гамакичи проводит четыре последовательных удара мечом по выбранной области. Урон проходит волнами.\nH — выбрать область, ЛКМ — подтвердить. Требуется взрослый призыв. ПКМ / Esc — отмена.",
@@ -9657,6 +9697,7 @@ return {
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UserInput=game:GetService("UserInputService")
+local TextService=game:GetService("TextService")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config=require(Shared.Config.AbilityConfig)
 local Items=require(Shared.Config.ItemConfig)
@@ -9698,6 +9739,7 @@ function HUD.Start()
  UserInput.InputBegan:Connect(function(input,processed) if not processed and not UserInput:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.C then toggle() end end)
  local tooltip=View.frame(panel,"Tooltip",UDim2.fromOffset(410,300),UDim2.fromOffset(240,-310)); tooltip.Visible=false; tooltip.ZIndex=8; View.border(tooltip,View.Gold)
  local tooltipText=View.label(tooltip,"Text",UDim2.new(1,-20,1,-16),UDim2.fromOffset(10,8),14); tooltipText.TextSize=16; tooltipText.TextWrapped=true; tooltipText.TextXAlignment=Enum.TextXAlignment.Left; tooltipText.TextYAlignment=Enum.TextYAlignment.Top
+ tooltipText.TextTruncate=Enum.TextTruncate.None
  local hovered: string?=nil
  local buttons: {[string]: TextButton}={}
  local learnButtons: {[string]: TextButton}={}
@@ -9811,15 +9853,14 @@ function HUD.Start()
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
   local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
-   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2 and (model:GetAttribute("SagePhase")~="Active" or number("Rank_Rasengan")>=3)
+   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2
    and model:GetAttribute("KcmActive")~=true and model:GetAttribute("KuramaActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="" or model:GetAttribute("SagePhase")=="Active")
   buttons.Rasengan.Visible=not choosing
   local sx,sy,ss=Layout.skill(1)
   for i,id in {"Odama","Rasenshuriken"} do
-   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1 and (id=="Rasenshuriken" or not model or model:GetAttribute("SagePhase")~="Active")
-   local sage=model~=nil and model:GetAttribute("SagePhase")=="Active"
-   local width=if number("Rank_Rasengan")>=3 and not sage then (ss-3)/2 else ss
-   b.Position=UDim2.fromOffset(sx+(if sage then 0 else (i-1)*(width+3)),sy);b.Size=UDim2.fromOffset(width,ss)
+   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1
+   local width=if number("Rank_Rasengan")>=3 then (ss-3)/2 else ss
+   b.Position=UDim2.fromOffset(sx+(i-1)*(width+3),sy);b.Size=UDim2.fromOffset(width,ss)
    local reason=Controller.AbilityUnavailable(id);b.BackgroundColor3=if reason or Controller.Remaining(id)>0 then View.Card else Color3.fromRGB(24,88,113)
   end
   for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
@@ -9867,6 +9908,10 @@ function HUD.Start()
     if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
     if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
     tooltipText.Text=(if id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..tostring(Controller.Cost(id)).." чакры  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
+    local bounds=TextService:GetTextSize(tooltipText.Text,tooltipText.TextSize,tooltipText.Font,Vector2.new(390,10000))
+    local height=math.max(140,math.ceil(bounds.Y)+24)
+    tooltip.Size=UDim2.fromOffset(410,height)
+    tooltip.Position=UDim2.fromOffset(if id=="RikudoHY" or id=="RikudoHZ" then 490 else 240,-height-10)
    end
   end
  end)
@@ -10730,17 +10775,47 @@ return Controller
               <string name="Source"><![CDATA[--!strict
 local Players=game:GetService("Players")
 local Aura={}
-type State={folder:Folder,parts:{Part},form:string,at:number}
+type Layer={folder:Folder,parts:{Part},at:number}
+type State={folder:Folder,layers:{[string]:Layer}}
 local states:{[Model]:State}={}
+local function updateLayer(state:State,form:string,enabled:boolean,root:BasePart,now:number)
+ local layer=state.layers[form]
+ if not enabled then
+  if layer then layer.folder:Destroy();state.layers[form]=nil end
+  return
+ end
+ if not layer then
+  local f=Instance.new("Folder");f.Name=form.."Aura";f.Parent=state.folder
+  local parts:{Part}={}
+  for _=1,18 do
+   local p=Instance.new("Part");p.Name="ChakraStream";p.Anchored=true;p.CanCollide=false;p.CanQuery=false;p.CanTouch=false;p.CastShadow=false;p.Material=Enum.Material.Neon;p.Parent=f;table.insert(parts,p)
+  end
+  local created:Layer={folder=f,parts=parts,at=now};layer=created;state.layers[form]=created
+ end
+ local t=now-layer.at
+ for i,p in layer.parts do
+  local phase=(t*(if form=="Kurama" then 1.2 else .55)+i/18)%1
+  local angle=i*2.399+t*.7
+  local radius=(if form=="Kurama" then 1.5 else 2.2)+math.sin(phase*math.pi)*.5
+  local pos=root.Position+Vector3.new(math.cos(angle)*radius,-2.7+phase*6,math.sin(angle)*radius)
+  p.Color=if form=="Kurama" then Color3.fromRGB(255,151,25) else Color3.fromRGB(231,174,80)
+  p.Size=Vector3.new(.035,if form=="Kurama" then .7+phase else .18,.035)
+  p.CFrame=CFrame.new(pos)*CFrame.Angles(0,angle,math.sin(angle)*.3)
+  p.Transparency=.25+math.abs(phase-.5)*1.4
+ end
+end
 function Aura.Update(parent:Folder,now:number)
  local live:{[Model]:boolean}={}
  for _,player in Players:GetPlayers() do
   local model=player.Character
   if not model then continue end
   local root=model:FindFirstChild("HumanoidRootPart");local hp=model:FindFirstChildOfClass("Humanoid")
-  local form:string=if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("SagePhase")=="Active" or model:GetAttribute("SagePhase")=="Preparing" then "Sage" else ""
+  local chakra=model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaActive")==true
+  local sagePhase=model:GetAttribute("SagePhase");local auraUntil=model:GetAttribute("SageAuraUntil")
+  -- Sage's visible aura ends before its stat layer. Morphs do not replace that independent timer.
+  local sage=sagePhase=="Preparing" or (sagePhase=="Active" and typeof(auraUntil)=="number" and now<auraUntil)
   local camera=workspace.CurrentCamera
-  if form=="" or not root or not root:IsA("BasePart") or not hp or hp.Health<=0 or (camera and (root.Position-camera.CFrame.Position).Magnitude>120) then continue end
+  if not (chakra or sage) or not root or not root:IsA("BasePart") or not hp or hp.Health<=0 or (camera and (root.Position-camera.CFrame.Position).Magnitude>120) then continue end
   live[model]=true
   local costume=model:FindFirstChild("DisplayedHeroAppearance") or model:FindFirstChild("HeroAppearance")
   if costume and model:GetAttribute("HeroVisualForm")=="Kurama" then
@@ -10766,24 +10841,10 @@ function Aura.Update(parent:Folder,now:number)
   local state=states[model]
   if not state then
    local f=Instance.new("Folder");f.Name="ChakraAura";f.Parent=parent
-   local parts:{Part}={}
-   for i=1,18 do
-    local p=Instance.new("Part");p.Name="ChakraStream";p.Anchored=true;p.CanCollide=false;p.CanQuery=false;p.CanTouch=false;p.CastShadow=false;p.Material=Enum.Material.Neon;p.Parent=f;table.insert(parts,p)
-   end
-   local createdState:State={folder=f,parts=parts,form=form,at=now};state=createdState;states[model]=createdState
+   local createdState:State={folder=f,layers={}};state=createdState;states[model]=createdState
   end
-  if state.form~=form then state.form=form;state.at=now end
-  local t=now-state.at
-  for i,p in state.parts do
-   local phase=(t*(if form=="Kurama" then 1.2 else .55)+i/18)%1
-   local angle=i*2.399+t*.7
-   local radius=(if form=="Kurama" then 1.5 else 2.2)+math.sin(phase*math.pi)*.5
-   local pos=root.Position+Vector3.new(math.cos(angle)*radius,-2.7+phase*6,math.sin(angle)*radius)
-   p.Color=if form=="Kurama" then Color3.fromRGB(255,151,25) else Color3.fromRGB(231,174,80)
-   p.Size=Vector3.new(.035,if form=="Kurama" then .7+phase else .18,.035)
-   p.CFrame=CFrame.new(pos)*CFrame.Angles(0,angle,math.sin(angle)*.3)
-   p.Transparency=.25+math.abs(phase-.5)*1.4
-  end
+  updateLayer(state,"Kurama",chakra,root,now)
+  updateLayer(state,"Sage",sage,root,now)
  end
  for model,state in states do if not live[model] then state.folder:Destroy();states[model]=nil end end
 end

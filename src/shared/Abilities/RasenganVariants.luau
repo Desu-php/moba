@@ -25,9 +25,11 @@ function V.select(state: State, id: string, rank: number, startedAt: number, now
  return choice,"Accepted",200
 end
 function V.cancel(state: State) state.choice=nil end
-function V.damage(id: string, level: number, strength: number): number
+function V.damage(id: string, level: number, strength: number, sagePrepared: boolean?): number
  if id=="Odama" then return 250+3*strength end
- return 120+strength+10*level
+ -- war3map.j 46410-46424 captures YReal410 during ordinary Sage preparation;
+ -- 48560-48569/48745-48753 use it at impact even if the Sage timer has since ended.
+ return (if id=="Rasengan" and sagePrepared then 150 else 120)+strength+10*level
 end
 function V.stun(id: string): number return if id=="Odama" then 4 elseif id=="Rasenshuriken" then 4.5 else 3.5 end
 -- JASS integer division is truncation; authoritative effective STR is integer.
