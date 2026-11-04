@@ -55,7 +55,7 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return id=="RasenshurikenThrow" or Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return id=="MeditationCast" or id=="RasenshurikenThrow" or Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
 	local session = sessions[player]; local toad=Gama.Get(player); local ranged=Ranged.Ready(player)
 	return if session then { RikudoHY=ranged.RikudoHY or 0, RikudoHZ=ranged.RikudoHZ or 0, KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
@@ -159,9 +159,12 @@ local function bind(player: Player): Session
 	return session
 end
 function Service.TryCast(player: Player, id: string, requestId: number, now: number, targetValue: any): (boolean, string)
-	if id=="ShadowSleep" then if typeof(targetValue)~="Instance" then return false,"Target" end; id="ShadowClones" end
+	if id=="ShadowSleep" then return false,"Unsupported" end
 	local session = bind(player); local model = player.Character
 	local fighter = if model then Fighters.GetOrCreate(model) else nil
+ local meditationCast=id=="MeditationCast"
+ if meditationCast then id="SageMode" end
+
 	if not model or not fighter then return false, "Unavailable" end
 	if fighter.sleep and fighter.sleep.active then return false, "Busy" end
 	Resource.recalculate(session.pool, values(player), now)
@@ -232,7 +235,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         if targetValue~=nil then return false,"Malformed" end
         if session.q.active then return false,"Busy" end
         local profile=Progression.Get(player)
-        local sage,reason,debit=Sage.request(session.sage,now,requestId,if profile then profile.Learned.SageMode or 0 else 0,Stats.Get(player).Level,session.pool.mana,session.meditationMode)
+        local sage,reason,debit=Sage.request(session.sage,now,requestId,if profile then profile.Learned.SageMode or 0 else 0,Stats.Get(player).Level,session.pool.mana,meditationCast or session.meditationMode)
         if not sage then return false,reason end
         assert(Resource.spend(session.pool,debit))
         selfStun(session,fighter,now,sage.readyAt-now)
@@ -260,16 +263,8 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         local rank=if profile then profile.Learned.ShadowClones or 0 else 0
         if session.pool.mana<200 then return false,"Mana" end
         local variant="OrdinarySelf"
-        if typeof(targetValue)=="Instance" then
-            if not (targetValue :: Instance):IsA("Model") then return false,"Target" end
-            local target=targetValue :: Model
-            if rank<2 or not Damage.CanDamage(model,target) or target:FindFirstChildOfClass("ForceField") then return false,"Target" end
-            local root=target:FindFirstChild("HumanoidRootPart")
-            if not root or not root:IsA("BasePart") or (root.Position-fighter.root.Position).Magnitude>Units.toStuds(2000) then return false,"Target" end
-            if now<session.clones.cooldownAt or session.clones.burst then return false,"Cooldown" end
-            if not Sleep.Apply(model,target,now) then return false,"Target" end
-            assert(Resource.spend(session.pool,200)); session.clones.cooldownAt=now+Definitions.Clones.Cooldowns[rank]
-            publish(player,session,now); return true,"Accepted"
+        -- Canon-first Naruto kit: the Warcraft enemy-target sleep branch is retired.
+        if typeof(targetValue)=="Instance" then return false,"Target"
         elseif targetValue~=nil then
             if typeof(targetValue)~="Vector3" or not Hitboxes.IsFiniteCFrame(CFrame.new(targetValue)) then return false,"Target" end
             if (targetValue-fighter.root.Position).Magnitude>Units.toStuds(2000) then return false,"Target" end
@@ -463,14 +458,19 @@ function Service.Start()
 		end
 		Kcm.OnAttackStarted(player,chosen~=nil)
 	end)
+	Combat.SetAttackGuard(function(fighter: Fighters.Fighter): boolean
+		local session=if fighter.player then sessions[fighter.player] else nil
+		return not session or not Q.blocksBasicAttack(session.q,workspace:GetServerTimeNow())
+	end)
 	Combat.SetContactHandler(function(fighter: Fighters.Fighter, chosen: Model): boolean
 		local player = fighter.player; local session = if player then sessions[player] else nil
 		if not player or not session then return false end
 		Commands.assist(session.commands, Summons.EntityId(chosen), true)
 		local cast = session.q.active
 		local targetRoot = chosen:FindFirstChild("HumanoidRootPart")
-		if cast and targetRoot and targetRoot:IsA("BasePart")
-			and (targetRoot.Position - fighter.root.Position).Magnitude <= Units.toStuds(50) + (fighter.root.Size.X + targetRoot.Size.X) / 2 then
+		-- CombatService already verified the real hitbox, team, wall and ForceField.
+		-- A second, shorter centre-distance gate used to let ordinary M1 hit first.
+		if cast and targetRoot and targetRoot:IsA("BasePart") then
 			local kind = chosen:GetAttribute("EntityKind")
 			if Q.attack(session.q, cast, workspace:GetServerTimeNow(), Summons.EntityId(chosen), true, kind ~= "Hero" and kind ~= "Minion" and kind ~= "Summon") then
 				session.target = chosen; session.selfControlUntil = workspace:GetServerTimeNow() + 0.01 + cast.impactDelay

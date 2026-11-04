@@ -58,6 +58,10 @@ function Module.configure(config: Configuration)
 		return finite(now) and cast ~= nil and Module.current(state, cast)
 			and now >= cast.startedAt and now < cast.expiresAt
 	end
+	function Rules.blocksBasicAttack(state: State, now: number): boolean
+		local cast=state.active
+		return cast~=nil and Module.current(state,cast) and (cast.phase=="Consumed" or (now<cast.expiresAt and now<cast.readyAt))
+	end
 	-- Roblox combat UX adapter supplies server-verified melee contact at the hit
 	-- frame (not attack-start intent). The original delayed control/damage remains.
 	function Rules.attack(state: State, cast: Cast, now: number, targetId: string, hostile: boolean, structure: boolean): boolean

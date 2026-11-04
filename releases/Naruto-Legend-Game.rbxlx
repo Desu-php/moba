@@ -13,31 +13,41 @@
         </Properties>
         <Item class="ModuleScript" referent="3">
           <Properties>
-            <string name="Name">AbilityDeck</string>
+            <string name="Name">AbilityFamilies</string>
             <string name="Source"><![CDATA[--!strict
--- Stable, paged groups. Locked techniques keep their slots; forms never reshuffle hotkeys.
-local Deck={PageSize=6,DefaultGroup="Techniques"}
-Deck.Groups={
- {id="Techniques",name="Атаки",abilities={"Odama","Rasenshuriken","ShadowSleep","KcmDash","RikudoHY","RikudoHZ","Rasengan","RasenshurikenThrow"}},
- {id="Modes",name="Режимы",abilities={"SageMode","KCM","KuramaForm","KcmCancel"}},
- {id="Support",name="Поддержка",abilities={"CloneCommand","GamakichiOil","GamakichiChop","MeditationToggle","MeditationRecall","KuramaConvert","ShadowClones","Gamakichi"}},
+-- Stable family/choice positions. Opening a family is local navigation, never a cast.
+export type Entry={key:string,id:string,name:string,command:string?}
+export type Family={key:string,name:string,icon:string,hint:string,entries:{Entry}}
+local Families={}
+Families.Order={"Q","E","R","F","C","T"}
+local definitions: {[string]:Family}={
+ Q={key="Q",name="Расенган",icon="Rasengan",hint="Q формирует Расенган. Z / X — усилить. Готовый заряд заменяет первое попадание ЛКМ.",entries={
+  {key="Z",id="Odama",name="Одама"},{key="X",id="Rasenshuriken",name="Расенсюрикен"}}},
+ E={key="E",name="Клоны",icon="ShadowClones",hint="E → E — призвать. Команды атаки, следования и ожидания относятся ко всем боевым призывам.",entries={
+  {key="E",id="ShadowClones",name="Призвать"},
+  {key="X",id="CloneCommand",name="Атаковать"},{key="V",id="CloneCommand",name="За мной",command="Follow"},
+  {key="B",id="CloneCommand",name="Стоять",command="Hold"}}},
+ R={key="R",name="Гамакичи",icon="Gamakichi",hint="R → R — призвать. Z — масло, X — удары мечом взрослого Гамакичи. Затем прицел и ЛКМ.",entries={
+  {key="R",id="Gamakichi",name="Призвать"},{key="Z",id="GamakichiOil",name="Масло"},{key="X",id="GamakichiChop",name="Удары мечом"}}},
+ F={key="F",name="Техники формы",icon="KcmDash",hint="F → F — рывок KCM. Z / X — техники Рикудо. Выбор цели подтверждается ЛКМ.",entries={
+  {key="F",id="KcmDash",name="Рывок"},{key="Z",id="RikudoHY",name="Биджудама RS"},{key="X",id="RikudoHZ",name="Биджу RS"}}},
+ C={key="C",name="Режимы",icon="KuramaForm",hint="C → C — мудрец; Z — изученный KCM / Рикудо; X — полная Курама; V — выйти из KCM. Режимы сохраняют отдельные таймеры.",entries={
+  {key="C",id="SageMode",name="Мудрец"},{key="Z",id="KCM",name="KCM"},{key="X",id="KuramaForm",name="Курама"},{key="V",id="KcmCancel",name="Выход KCM"}}},
+ T={key="T",name="Чакра",icon="MeditationToggle",hint="T → T — подготовка с медитирующими клонами. Z — вернуть их энергию. X — обменять чакру Курамы на ману.",entries={
+  {key="T",id="MeditationCast",name="Медитация"},{key="Z",id="MeditationRecall",name="Вернуть чакру"},{key="X",id="KuramaConvert",name="Обмен чакры"}}},
 }
-function Deck.group(id:string)
- for _,group in Deck.Groups do if group.id==id then return group end end
- return Deck.Groups[1]
+Families.Definitions=definitions
+function Families.resolve(open:string?,key:string): (string,Entry?)
+ local family=if open then Families.Definitions[open] else nil
+ if family then for _,entry in family.entries do if entry.key==key then return "Action",entry end end end
+ if Families.Definitions[key] then return "Open",nil end
+ return "None",nil
 end
-function Deck.pages(id:string):number return math.max(1,math.ceil(#Deck.group(id).abilities/Deck.PageSize)) end
-function Deck.page(id:string,page:number):{string}
- local list=Deck.group(id).abilities;local result={}
- local start=(math.clamp(math.floor(page),1,Deck.pages(id))-1)*Deck.PageSize
- for i=start+1,math.min(start+Deck.PageSize,#list) do table.insert(result,list[i]) end
- return result
+function Families.learning(key:string):string?
+ local index=table.find({"One","Two","Three","Four","Five"},key)
+ return if index then ({"Rasengan","ShadowClones","Gamakichi","SageMode","KCM"})[index] else nil
 end
-function Deck.slot(key:string,modifier:boolean,control:boolean,text:boolean,menu:boolean):number?
- if not modifier or control or text or menu then return nil end
- return table.find({"One","Two","Three","Four","Five","Six"},key)
-end
-return table.freeze(Deck)
+return table.freeze(Families)
 ]]></string>
           </Properties>
         </Item>
@@ -45,13 +55,12 @@ return table.freeze(Deck)
           <Properties>
             <string name="Name">AbilityInputRules</string>
             <string name="Source"><![CDATA[--!strict
--- One key resolves to one request. KCM cancel takes X only while that form is active.
+-- Compatibility resolver for the three direct Rasengan aliases. Family routing owns other inputs.
 local Rules = {}
 function Rules.ownsArrow(key: string, textFocused: boolean, menuOpen: boolean, guiSelected: boolean, shopOpen: boolean): boolean
 	return (key == "Right" or key == "Left") and not (textFocused or menuOpen or guiSelected or shopOpen)
 end
-function Rules.resolve(aliases: { read [string]: string }, key: string, kcmActive: boolean): string?
-	if key == "X" and kcmActive then return "KcmCancel" end
+function Rules.resolve(aliases: { read [string]: string }, key: string, _kcmActive: boolean): string?
 	return aliases[key]
 end
 return Rules
@@ -1726,6 +1735,10 @@ function Module.configure(config: Configuration)
 		return finite(now) and cast ~= nil and Module.current(state, cast)
 			and now >= cast.startedAt and now < cast.expiresAt
 	end
+	function Rules.blocksBasicAttack(state: State, now: number): boolean
+		local cast=state.active
+		return cast~=nil and Module.current(state,cast) and (cast.phase=="Consumed" or (now<cast.expiresAt and now<cast.readyAt))
+	end
 	-- Roblox combat UX adapter supplies server-verified melee contact at the hit
 	-- frame (not attack-start intent). The original delayed control/damage remains.
 	function Rules.attack(state: State, cast: Cast, now: number, targetId: string, hostile: boolean, structure: boolean): boolean
@@ -2499,31 +2512,32 @@ return Rig
             <string name="Source"><![CDATA[--!strict
 export type Ability = { Name: string, Key: string, KeyLabel: string, Cooldown: number, Windup: number, Duration: number }
 local abilities: { [string]: Ability } = {
+ MeditationCast={Name="Медитация с клонами",Key="Unknown",KeyLabel="T → T",Cooldown=150,Windup=0,Duration=51},
  RasenshurikenThrow={Name="Бросок Расенсюрикена",Key="Unknown",KeyLabel="ЛКМ",Cooldown=0,Windup=.35,Duration=3.5},
- RikudoHY={Name="Cho Bijudama RS",Key="V",KeyLabel="V",Cooldown=60,Windup=1.5,Duration=8},
- RikudoHZ={Name="Cho Bijuu RS",Key="B",KeyLabel="B",Cooldown=60,Windup=1.5,Duration=8},
- MeditationToggle={Name="Медитация",Key="Right",KeyLabel="→",Cooldown=0,Windup=0,Duration=0},
- MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="J",Cooldown=5,Windup=0,Duration=0},
- Odama={Name="Одама Расенган",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
- Rasenshuriken={Name="Расенсюрикен",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
- ShadowSleep={Name="Сон противника",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
- KuramaForm={Name="Курама",Key="Six",KeyLabel="6",Cooldown=160,Windup=0,Duration=30},
- KcmDash={Name="Рывок KCM",Key="E",KeyLabel="E",Cooldown=40,Windup=0,Duration=0},
- KcmCancel={Name="Выйти из KCM",Key="X",KeyLabel="X",Cooldown=0,Windup=0,Duration=0},
- KuramaConvert={Name="Обмен чакры",Key="Left",KeyLabel="←",Cooldown=0,Windup=0,Duration=0},
- GamakichiOil={Name="Масло",Key="G",KeyLabel="G",Cooldown=25,Windup=0,Duration=6},
- GamakichiChop={Name="Рубящий канал",Key="H",KeyLabel="H",Cooldown=30,Windup=.5,Duration=3.5},
-	Rasengan = { Name = "Расенган I", Key = "One", KeyLabel = "1 / Q", Cooldown = 60, Windup = 2, Duration = 15 },
-	ShadowClones = { Name = "Клоны I", Key = "Two", KeyLabel = "2", Cooldown = 50, Windup = 0.25, Duration = 20 },
-	Gamakichi = { Name = "Гамакичи", Key = "Three", KeyLabel = "3", Cooldown = 0, Windup = 0, Duration = 0 },
-	SageMode = { Name = "Режим мудреца", Key = "Four", KeyLabel = "4", Cooldown = 150, Windup = 10, Duration = 51 },
-	KCM = { Name = "KCM", Key = "Five", KeyLabel = "5", Cooldown = 10, Windup = 0, Duration = 0 },
-	CloneCommand = { Name = "Цель клонам", Key = "F", KeyLabel = "F", Cooldown = 0, Windup = 0, Duration = 0 },
+ RikudoHY={Name="Cho Bijudama RS",Key="V",KeyLabel="F → Z",Cooldown=60,Windup=1.5,Duration=8},
+ RikudoHZ={Name="Cho Bijuu RS",Key="B",KeyLabel="F → X",Cooldown=60,Windup=1.5,Duration=8},
+ MeditationToggle={Name="Медитация",Key="Right",KeyLabel="Архив",Cooldown=0,Windup=0,Duration=0},
+ MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="T → Z",Cooldown=5,Windup=0,Duration=0},
+ Odama={Name="Одама Расенган",Key="Z",KeyLabel="Q → Z",Cooldown=40,Windup=2,Duration=15},
+ Rasenshuriken={Name="Расенсюрикен",Key="X",KeyLabel="Q → X",Cooldown=60,Windup=1.3,Duration=15},
+ ShadowSleep={Name="Сон противника",Key="T",KeyLabel="E → Z",Cooldown=0,Windup=0,Duration=3},
+ KuramaForm={Name="Курама",Key="Six",KeyLabel="C → X",Cooldown=160,Windup=0,Duration=30},
+ KcmDash={Name="Рывок KCM",Key="E",KeyLabel="F → F",Cooldown=40,Windup=0,Duration=0},
+ KcmCancel={Name="Выйти из KCM",Key="X",KeyLabel="C → V",Cooldown=0,Windup=0,Duration=0},
+ KuramaConvert={Name="Обмен чакры",Key="Left",KeyLabel="T → X",Cooldown=0,Windup=0,Duration=0},
+ GamakichiOil={Name="Масло",Key="G",KeyLabel="R → Z",Cooldown=25,Windup=0,Duration=6},
+ GamakichiChop={Name="Рубящий канал",Key="H",KeyLabel="R → X",Cooldown=30,Windup=.5,Duration=3.5},
+	Rasengan = { Name = "Расенган I", Key = "One", KeyLabel = "Q", Cooldown = 60, Windup = 2, Duration = 15 },
+	ShadowClones = { Name = "Клоны I", Key = "Two", KeyLabel = "E → E", Cooldown = 50, Windup = 0.25, Duration = 20 },
+	Gamakichi = { Name = "Гамакичи", Key = "Three", KeyLabel = "R → R", Cooldown = 0, Windup = 0, Duration = 0 },
+	SageMode = { Name = "Режим мудреца", Key = "Four", KeyLabel = "C → C", Cooldown = 150, Windup = 10, Duration = 51 },
+	KCM = { Name = "KCM", Key = "Five", KeyLabel = "C → Z", Cooldown = 10, Windup = 0, Duration = 0 },
+	CloneCommand = { Name = "Цель клонам", Key = "F", KeyLabel = "E → X", Cooldown = 0, Windup = 0, Duration = 0 },
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "KuramaForm" },
-	PrototypeEnabled = table.freeze({ RasenshurikenThrow=true, RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
-	InputAliases = table.freeze({ F="CloneCommand", G="GamakichiOil", H="GamakichiChop", V="RikudoHY", B="RikudoHZ", Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
+	PrototypeEnabled = table.freeze({ MeditationCast=true, RasenshurikenThrow=true, RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=false, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
+	InputAliases = table.freeze({ Q="Rasengan", Z="Odama", X="Rasenshuriken" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },
@@ -2711,7 +2725,7 @@ return table.freeze({
 export type Hero = { Name: string, Profile: string, Abilities: { string } }
 local heroes: { [string]: Hero } = {
 	OrangeNinja = { Name = "Наруто · базовый прототип", Profile = "OrangeNinja",
-		Abilities = { "RasenshurikenThrow", "RikudoHY", "RikudoHZ", "Odama", "Rasenshuriken", "ShadowSleep", "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "KcmDash", "KcmCancel", "KuramaConvert", "KuramaForm", "CloneCommand", "GamakichiOil", "GamakichiChop", "MeditationToggle", "MeditationRecall" } },
+		Abilities = { "MeditationCast", "RasenshurikenThrow", "RikudoHY", "RikudoHZ", "Odama", "Rasenshuriken", "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "KcmDash", "KcmCancel", "KuramaConvert", "KuramaForm", "CloneCommand", "GamakichiOil", "GamakichiChop", "MeditationToggle", "MeditationRecall" } },
 }
 return table.freeze({ DefaultHero = "OrangeNinja", Heroes = heroes, AppearanceVersion = 1 })
 ]]></string>
@@ -3760,7 +3774,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	Fighters.Update(fighter,now)
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
  local profile=require(script.Parent.HeroProgressionService).Get(player)
- local line=if abilityId=="RikudoHY" or abilityId=="RikudoHZ" then "KCM" elseif abilityId=="KcmDash" or abilityId=="KcmCancel" then "KCM" elseif abilityId=="RasenshurikenThrow" or abilityId=="Odama" or abilityId=="Rasenshuriken" then "Rasengan" elseif abilityId=="ShadowSleep" then "ShadowClones" elseif abilityId=="MeditationToggle" or abilityId=="MeditationRecall" then "SageMode" elseif abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
+ local line=if abilityId=="MeditationCast" then "SageMode" elseif abilityId=="RikudoHY" or abilityId=="RikudoHZ" then "KCM" elseif abilityId=="KcmDash" or abilityId=="KcmCancel" then "KCM" elseif abilityId=="RasenshurikenThrow" or abilityId=="Odama" or abilityId=="Rasenshuriken" then "Rasengan" elseif abilityId=="ShadowSleep" then "ShadowClones" elseif abilityId=="MeditationToggle" or abilityId=="MeditationRecall" then "SageMode" elseif abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
  if not profile or (abilityId~="KuramaConvert" and abilityId~="KuramaForm" and (if abilityId=="CloneCommand" then math.max(profile.Learned.ShadowClones or 0,profile.Learned.Gamakichi or 0) else profile.Learned[line] or 0)<1) then return result(false,"Unlearned") end
 	return result(Naruto.TryCast(player,abilityId,id,now,target))
 end
@@ -4560,6 +4574,8 @@ local CombatService = { AttackStarted = Instance.new("BindableEvent") }
 -- A prepared melee technique may replace the ordinary strike after the server
 -- has verified contact. It must never consume itself merely on attack intent.
 local contactHandler: ((Fighters.Fighter, Model) -> boolean)? = nil
+local attackGuard: ((Fighters.Fighter) -> boolean)? = nil
+function CombatService.SetAttackGuard(guard: (Fighters.Fighter) -> boolean) attackGuard=guard end
 function CombatService.SetContactHandler(handler: (Fighters.Fighter, Model) -> boolean)
 	contactHandler = handler
 end
@@ -4612,6 +4628,7 @@ end
 
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
+		and (not attackGuard or attackGuard(fighter))
 		and Damage.CanAct(fighter.character)
 		and not (fighter.sleep and fighter.sleep.active)
 		and ((fighter.character:GetAttribute("NarutoPausedUntil") or 0) :: number) <= Workspace:GetServerTimeNow()
@@ -4902,7 +4919,7 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
   local ok,reason=Kcm.StudioEnableRikudo(player)
   if not ok then return false,"Не удалось включить Рикудо: завершите текущую технику или оглушение и повторите rikudo. ("..reason..")" end
   return true,if reason=="AlreadyActive" then "Рикудо уже активен, чакра пополнена. F8 закрыть → X выйти → rikudo для повторного перехода."
-   else "Рикудо включён без ожидания Хагоромо. F8 закрыть; X — выйти. Для повторного перехода: rikudo."
+   else "Рикудо включён без ожидания Хагоромо. F8 закрыть; C → V — выйти. Для повторного перехода: rikudo."
  elseif command.name=="level" then
   local target=command.level :: number
   if target<profile.Level then return false,"Команда повышает уровень. Для сброса перезапустите Play." end
@@ -7101,7 +7118,7 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return id=="RasenshurikenThrow" or Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return id=="MeditationCast" or id=="RasenshurikenThrow" or Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
 	local session = sessions[player]; local toad=Gama.Get(player); local ranged=Ranged.Ready(player)
 	return if session then { RikudoHY=ranged.RikudoHY or 0, RikudoHZ=ranged.RikudoHZ or 0, KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
@@ -7205,9 +7222,12 @@ local function bind(player: Player): Session
 	return session
 end
 function Service.TryCast(player: Player, id: string, requestId: number, now: number, targetValue: any): (boolean, string)
-	if id=="ShadowSleep" then if typeof(targetValue)~="Instance" then return false,"Target" end; id="ShadowClones" end
+	if id=="ShadowSleep" then return false,"Unsupported" end
 	local session = bind(player); local model = player.Character
 	local fighter = if model then Fighters.GetOrCreate(model) else nil
+ local meditationCast=id=="MeditationCast"
+ if meditationCast then id="SageMode" end
+
 	if not model or not fighter then return false, "Unavailable" end
 	if fighter.sleep and fighter.sleep.active then return false, "Busy" end
 	Resource.recalculate(session.pool, values(player), now)
@@ -7278,7 +7298,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         if targetValue~=nil then return false,"Malformed" end
         if session.q.active then return false,"Busy" end
         local profile=Progression.Get(player)
-        local sage,reason,debit=Sage.request(session.sage,now,requestId,if profile then profile.Learned.SageMode or 0 else 0,Stats.Get(player).Level,session.pool.mana,session.meditationMode)
+        local sage,reason,debit=Sage.request(session.sage,now,requestId,if profile then profile.Learned.SageMode or 0 else 0,Stats.Get(player).Level,session.pool.mana,meditationCast or session.meditationMode)
         if not sage then return false,reason end
         assert(Resource.spend(session.pool,debit))
         selfStun(session,fighter,now,sage.readyAt-now)
@@ -7306,16 +7326,8 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
         local rank=if profile then profile.Learned.ShadowClones or 0 else 0
         if session.pool.mana<200 then return false,"Mana" end
         local variant="OrdinarySelf"
-        if typeof(targetValue)=="Instance" then
-            if not (targetValue :: Instance):IsA("Model") then return false,"Target" end
-            local target=targetValue :: Model
-            if rank<2 or not Damage.CanDamage(model,target) or target:FindFirstChildOfClass("ForceField") then return false,"Target" end
-            local root=target:FindFirstChild("HumanoidRootPart")
-            if not root or not root:IsA("BasePart") or (root.Position-fighter.root.Position).Magnitude>Units.toStuds(2000) then return false,"Target" end
-            if now<session.clones.cooldownAt or session.clones.burst then return false,"Cooldown" end
-            if not Sleep.Apply(model,target,now) then return false,"Target" end
-            assert(Resource.spend(session.pool,200)); session.clones.cooldownAt=now+Definitions.Clones.Cooldowns[rank]
-            publish(player,session,now); return true,"Accepted"
+        -- Canon-first Naruto kit: the Warcraft enemy-target sleep branch is retired.
+        if typeof(targetValue)=="Instance" then return false,"Target"
         elseif targetValue~=nil then
             if typeof(targetValue)~="Vector3" or not Hitboxes.IsFiniteCFrame(CFrame.new(targetValue)) then return false,"Target" end
             if (targetValue-fighter.root.Position).Magnitude>Units.toStuds(2000) then return false,"Target" end
@@ -7509,14 +7521,19 @@ function Service.Start()
 		end
 		Kcm.OnAttackStarted(player,chosen~=nil)
 	end)
+	Combat.SetAttackGuard(function(fighter: Fighters.Fighter): boolean
+		local session=if fighter.player then sessions[fighter.player] else nil
+		return not session or not Q.blocksBasicAttack(session.q,workspace:GetServerTimeNow())
+	end)
 	Combat.SetContactHandler(function(fighter: Fighters.Fighter, chosen: Model): boolean
 		local player = fighter.player; local session = if player then sessions[player] else nil
 		if not player or not session then return false end
 		Commands.assist(session.commands, Summons.EntityId(chosen), true)
 		local cast = session.q.active
 		local targetRoot = chosen:FindFirstChild("HumanoidRootPart")
-		if cast and targetRoot and targetRoot:IsA("BasePart")
-			and (targetRoot.Position - fighter.root.Position).Magnitude <= Units.toStuds(50) + (fighter.root.Size.X + targetRoot.Size.X) / 2 then
+		-- CombatService already verified the real hitbox, team, wall and ForceField.
+		-- A second, shorter centre-distance gate used to let ordinary M1 hit first.
+		if cast and targetRoot and targetRoot:IsA("BasePart") then
 			local kind = chosen:GetAttribute("EntityKind")
 			if Q.attack(session.q, cast, workspace:GetServerTimeNow(), Summons.EntityId(chosen), true, kind ~= "Hero" and kind ~= "Minion" and kind ~= "Summon") then
 				session.target = chosen; session.selfControlUntil = workspace:GetServerTimeNow() + 0.01 + cast.impactDelay
@@ -9498,15 +9515,12 @@ return Service
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Input = game:GetService("UserInputService")
-local Actions = game:GetService("ContextActionService")
 local Gui = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
 local VFX = require(script.Parent.AbilityVFXController)
 local Rounds = require(script.Parent.RoundController)
-local Learning = require(script.Parent.LearningController)
-local InputRules = require(Shared.Abilities.AbilityInputRules)
 local Gama=require(Shared.Abilities.GamakichiState)
 local Targeting=require(script.Parent.AbilityTargeting)
 local Feedback=require(script.Parent.VFXController)
@@ -9544,7 +9558,7 @@ function Controller.ClearCooldownCorrections()
  corrections={};correctionUntil=0;Controller.Changed:Fire()
 end
 function Controller.Remaining(id: string): number
- if id=="ShadowSleep" then id="ShadowClones" end
+ if id=="ShadowSleep" then id="ShadowClones" elseif id=="MeditationCast" then id="SageMode" end
 	if RunService:IsStudio() and Players.LocalPlayer:GetAttribute("DeveloperNoCooldown")==true then return 0 end
 	local model = Players.LocalPlayer.Character; if not model then return 0 end
 	local deadline = model:GetAttribute("Ready_" .. id)
@@ -9570,10 +9584,12 @@ function Controller.Unavailable(summonOrder: boolean?): string?
 	return nil
 end
 function Controller.Cost(id: string): number
+ if id=="MeditationCast" then id="SageMode" end
  local state=Players.LocalPlayer:FindFirstChild("HeroState")
  return if id=="RikudoHY" or id=="RikudoHZ" then 1800 elseif id=="KcmDash" then 100 elseif id=="Odama" or id=="Rasenshuriken" or id=="ShadowSleep" then 200 elseif id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 end
 function Controller.AbilityUnavailable(id: string): string?
+ if id=="MeditationCast" then return Controller.AbilityUnavailable("SageMode") end
 	if not (Config.PrototypeEnabled :: { [string]: boolean })[id] then return "В разработке" end
 	local unavailable = Controller.Unavailable(id=="CloneCommand" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
@@ -9589,21 +9605,21 @@ function Controller.AbilityUnavailable(id: string): string?
   local untilAt=(model:GetAttribute("RasenganVariantUntil") or 0) :: number
   local wanted=if id=="Odama" or model:GetAttribute("RasenganVariant")=="Rasengan" then "Rasengan" else "Odama"
   if rank<(if id=="Odama" then 2 else 3) then return if id=="Odama" then "Нужен II ранг Расенгана" else "Нужен III ранг Расенгана" end
-  if model:GetAttribute("RasenganVariant")~=wanted then return if id=="Odama" then "Сначала 1 — Расенган" else "Сначала Q — Расенган" end
+  if model:GetAttribute("RasenganVariant")~=wanted then return if id=="Odama" then "Сначала Q — Расенган" else "Сначала Q — Расенган" end
   if untilAt<=workspace:GetServerTimeNow() then return "Окно усиления закрыто" end
  end
  if id=="RasenshurikenThrow" and (model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("SageTechniquesReady")~=true or model:GetAttribute("RasenganVariant")~="Rasenshuriken" or model:GetAttribute("RasenganPhase")~="Holding") then return "Мудрец → Q → X → дождитесь формирования" end
  if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Нужен II ранг клонов" end
 	if id=="KuramaForm" then
   if typeof(level)~="number" or level<21 then return "Курама с уровня 21" end
-  if model:GetAttribute("KcmActive")==true then return "Сначала выйдите из KCM / Рикудо: X" end
+  if model:GetAttribute("KcmActive")==true then return "Сначала выйдите из KCM / Рикудо: C → V" end
   if model:GetAttribute("KuramaLocked")==true then return "Форма Курамы уже действует" end
   if ((model:GetAttribute("KuramaChakra") or 0) :: number)<2500 then return "Нужно 2500 чакры Курамы" end
  end
  local kcm=model:GetAttribute("KcmActive")==true
  if id=="KCM" and not kcm and state and state:GetAttribute("Rank_KCM")==3 and model:GetAttribute("HagoromoUnlocked")~=true then return "Для Рикудо нужен дар Хагоромо" end
  if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then
-  if kcm then return "Режим уже действует • X — выйти" end
+  if kcm then return "Режим уже действует • C → V — выйти" end
   return "Сначала завершите текущий режим"
  end
  if id=="KCM" and ((model:GetAttribute("KuramaChakra") or 0) :: number)<200 then return "Нужно 200 чакры Курамы" end
@@ -9689,7 +9705,7 @@ local function queueUpgrade(id: string): boolean
  if ((model:GetAttribute("Mana") or 0) :: number)<200 then return reject("Для усиления нужно ещё 200 чакры") end
  if not queue or queue.closed or upgradeCharacter~=model then
   local variant=model:GetAttribute("RasenganVariant")
-  if variant~="Rasengan" and variant~="Odama" then return reject(if id=="Odama" then "Сначала 1 — Расенган" else "Сначала Q — Расенган") end
+  if variant~="Rasengan" and variant~="Odama" then return reject(if id=="Odama" then "Сначала Q — Расенган" else "Сначала Q — Расенган") end
   queue=UpgradeQueue.new((model:GetAttribute("NarutoCastId") or 0) :: number,variant,
    (model:GetAttribute("RasenganVariantUntil") or 0) :: number,nil)
   upgrades=queue; upgradeCharacter=model
@@ -9762,7 +9778,7 @@ function Controller.GetMessage(): string
   local phase=model:GetAttribute("RasenganPhase")
   return if phase=="Consumed" then name..": попадание" elseif phase=="Preparing" then name..": формирование в руке…" else name.." готов · подойдите к врагу и нажмите ЛКМ"
  end
- return if model and model:GetAttribute("MeditationMode")==true then "Meditation: 4 / J recall / Right direct" else ""
+ return if model and model:GetAttribute("MeditationMode")==true then "Медитация: T → T · вернуть чакру: T → Z" else ""
 end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
@@ -9779,34 +9795,20 @@ function Controller.GetFormStatus(): string
   local remaining=math.max(0,((model:GetAttribute("SageExpiresAt") or now) :: number)-now)
   table.insert(layers,string.format("%s %.0fс",if model:GetAttribute("SageTechniquesReady")==true then "Мудрец" else "Бонусы мудреца",remaining))
  elseif model:GetAttribute("SagePhase")=="Preparing" then table.insert(layers,"Сбор природной энергии") end
- return string.format("Чакра Курамы %d | %s",math.floor(chakra),if #layers>0 then table.concat(layers," + ") else "5 KCM / 6 Курама (ур.21) / ← мана")
+ return string.format("Чакра Курамы %d | %s",math.floor(chakra),if #layers>0 then table.concat(layers," + ") else "C — режимы · T — чакра")
 end
 function Controller.Start()
 	if remote then return end
 	Rounds.Watch(function() pendingId = 0; pendingAbility=nil; clearUpgrades(); corrections = {}; correctionModel = nil; Controller.CancelCloneCommand(); Controller.Changed:Fire() end)
 	local event = ReplicatedStorage:WaitForChild("HeroAbility", 15); assert(event and event:IsA("RemoteEvent"), "HeroAbility missing")
 	remote = event; VFX.Start()
-	-- Roblox camera controls consume arrows before InputBegan. Own only the two
-	-- gameplay arrows, while leaving text and menu/navigation input to the UI.
-	Actions:BindActionAtPriority("NarutoArrowTechniques", function(_, state, input)
-		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return Enum.ContextActionResult.Pass end
-		if not InputRules.ownsArrow(input.KeyCode.Name, Input:GetFocusedTextBox() ~= nil, Gui.MenuIsOpen,
-			Gui.SelectedObject ~= nil, Players.LocalPlayer:GetAttribute("ShopOpen") == true) then
-			return Enum.ContextActionResult.Pass
-		end
-		if state == Enum.UserInputState.Begin then
-			local id = (Config.InputAliases :: { read [string]: string })[input.KeyCode.Name]
-			if id then Controller.TryCast(id) end
-		end
-		return Enum.ContextActionResult.Sink
-	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Right, Enum.KeyCode.Left)
 	RunService.Heartbeat:Connect(function()
   flushUpgrades()
 		if selectingCommand then
    if Controller.AbilityUnavailable(selectingCommand) then Controller.CancelCloneCommand(); Controller.Changed:Fire()
    else
     local reason=Targeting.Preview(selectingCommand)
-    lastReason=(reason or "Цель доступна")..(if quickKey then " · отпустите E — рывок · ПКМ — отмена" else " · ЛКМ — применить · ПКМ / Esc — отмена")
+    lastReason=(reason or "Цель доступна")..(if quickKey then " · ЛКМ — рывок · ПКМ — отмена" else " · ЛКМ — применить · ПКМ / Esc — отмена")
    end
   end
 	end)
@@ -9823,47 +9825,18 @@ function Controller.Start()
 		Controller.Changed:Fire()
 	end)
 	Players.LocalPlayer.CharacterAdded:Connect(function() pendingId = 0; pendingAbility=nil; clearUpgrades(); corrections = {}; correctionModel = nil; Controller.CancelCloneCommand() end)
-	Input.InputBegan:Connect(function(input, processed)
-		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return end
-		if (Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)) and table.find({"One","Two","Three","Four","Five","Six"},input.KeyCode.Name) then return end
-		if input.KeyCode == Enum.KeyCode.Right or input.KeyCode == Enum.KeyCode.Left then return end
-		if selectingCommand and input.KeyCode == Enum.KeyCode.Escape then Controller.CancelCloneCommand(); Controller.Changed:Fire(); return end
-		if processed or Input:GetFocusedTextBox() or Gui.MenuIsOpen then return end
-  if input.KeyCode==Enum.KeyCode.R then Controller.Command("Follow"); return end
-  if input.KeyCode==Enum.KeyCode.Y then Controller.Command("Hold"); return end
-		if selectingCommand then
-			if input.KeyCode == Enum.KeyCode.Escape or input.UserInputType == Enum.UserInputType.MouseButton2 then
-				Controller.CancelCloneCommand(); Controller.Changed:Fire(); return
-			elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				local gui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
-				local abilityGui = if gui then gui:FindFirstChild("AbilityHUD") else nil
-				if gui and abilityGui then
-					for _, object in gui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y) do
-						if object:IsDescendantOf(abilityGui) then return end
-					end
-				end
-				Controller.ConfirmTarget()
-				return
-			end
-		end
-		local model = Players.LocalPlayer.Character
-		local alias = InputRules.resolve(Config.InputAliases :: { read [string]: string }, input.KeyCode.Name, model ~= nil and model:GetAttribute("KcmActive") == true)
-		if alias then
-   if not needsTarget(alias) and (Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl)) then Learning.TryLearn(alias); return end
-			if alias=="KcmDash" then
-    if Controller.BeginTarget(alias) then quickKey=input.KeyCode end
-   elseif alias == "CloneCommand" then Controller.Command("Attack") else Controller.TryCast(alias) end
-			return
-		end
-		for _, id in Config.Order do
-			if input.KeyCode.Name == Config.Abilities[id].Key then
-    if not needsTarget(id) and (Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl)) then Learning.TryLearn(id) elseif id=="CloneCommand" then Controller.Command("Attack") else Controller.TryCast(id) end
-    break
+ Input.InputBegan:Connect(function(input,processed)
+  if selectingCommand and input.KeyCode==Enum.KeyCode.Escape then Controller.CancelCloneCommand();Controller.Changed:Fire();return end
+  if processed or Input:GetFocusedTextBox() or Gui.MenuIsOpen then return end
+  if selectingCommand then
+   if input.UserInputType==Enum.UserInputType.MouseButton2 then Controller.CancelCloneCommand();Controller.Changed:Fire();return end
+   if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+    local gui=Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    local abilityGui=if gui then gui:FindFirstChild("AbilityHUD") else nil
+    if gui and abilityGui then for _,object in gui:GetGuiObjectsAtPosition(input.Position.X,input.Position.Y) do if object:IsDescendantOf(abilityGui) then return end end end
+    Controller.ConfirmTarget()
    end
-		end
-	end)
- Input.InputEnded:Connect(function(input)
-  if quickKey and input.KeyCode==quickKey then quickKey=nil; Controller.ConfirmTarget() end
+  end
  end)
  Input.WindowFocusReleased:Connect(function() clearUpgrades(); Controller.CancelCloneCommand() end)
  Players.LocalPlayer.CharacterRemoving:Connect(function() clearUpgrades(); Controller.CancelCloneCommand() end)
@@ -9874,17 +9847,48 @@ return Controller
           </Item>
           <Item class="ModuleScript" referent="136">
             <Properties>
-              <string name="Name">AbilityDeckController</string>
+              <string name="Name">AbilityDescriptions</string>
+              <string name="Source"><![CDATA[--!strict
+-- Player-facing descriptions shared by main and temporary ability slots.
+return {
+ MeditationCast="T → T начинает подготовку режима мудреца с медитирующими клонами. В отличие от C → C, энергия накапливается в клонах вместо мгновенного восстановления маны. T → Z возвращает их энергию. Общие условия и перезарядка режима мудреца сохраняются.",
+ RasenshurikenThrow="Сначала включите режим мудреца и сформируйте Расенсюрикен: Q → X. Когда он готов в руке, ЛКМ бросает его по прицелу. В полёте раскрывает синий купол в области фактического урона.",
+ ShadowSleep="Со II ранга клонов доступна техника сна противника. E → Z → выберите врага → ЛКМ для подтверждения. Нужно 200 маны. ПКМ / Esc отменяет выбор.",
+ KcmDash="Доступен в активном KCM или Рикудо. F → F, выберите место прицелом и подтвердите ЛКМ. ПКМ / Esc отменяет выбор.",
+ KcmCancel="Завершает активный KCM или Рикудо. C → V возвращает обычную форму; самостоятельные бонусы мудреца сохраняют свой таймер. Эта команда не отменяет полную Кураму.",
+ KuramaConvert="С уровня 16 переводит 200 отдельной чакры Курамы в 200 обычной маны способностей. T → X — применить. Нужен достаточный запас чакры Курамы.",
+ MeditationToggle="Стрелка вправо переключает назначение кнопки 4: обычный режим мудреца или медитация с клонами. Включите медитацию, затем нажмите 4 для подготовки медитирующих клонов. T → Z возвращает их накопленную энергию. Нужна изученная линия режима мудреца.",
+ MeditationRecall="T → Z возвращает накопленную энергию медитирующих клонов. Доступно, когда у Наруто есть такие клоны; боевые теневые клоны этой командой не отзываются.",
+ Rasengan="Собирает вращающуюся чакру в ладони. После формирования подойдите к врагу и ударьте ЛКМ. Промах сохраняет заряд.\nПосле Q выберите Z — Одама или X — Расенсюрикен напрямую. Варианты появляются над Q; выбранная техника меняет значок Q. Пока сфера формируется, удерживайте ЛКМ: удар начнётся после готовности. Без выбора остаётся обычный Расенган.",
+ Odama="Увеличивает обычный Расенган до огромной сферы. Наруто поддерживает её второй рукой и наносит мощный удар вблизи.\nТребуется II ранг Расенгана. Q → Z. Доплата 200 чакры; всего 300. Урон: 250 + 3 × сила. ЛКМ по врагу — применить.",
+ Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
+ ShadowClones="Создаёт теневых клонов. Они распределяются между видимыми врагами в радиусе 28 студов, окружают их и занимают свободные места для атаки. Если враг один, клоны сменяют друг друга после ударов. После гибели цели выбирают новую.\nБез врагов следуют за Наруто; при удалении дальше 48 студов возвращаются. Призванные в воздухе клоны приземляются. E → X — приоритетная цель; E → V — за мной; E → B — стоять без атак. После возврата снова ищут врагов. Количество и длительность зависят от ранга. На IV ранге обычный призыв создаёт 30 клонов, если после оплаты остаётся 30% максимальной маны; иначе — 7. Массовый призыв дополнительно расходует эти 30%.",
+ Gamakichi="Призывает Гамакичи. Ранг определяет силу и возраст жабы. Она помогает в бою и выполняет общие команды E → X / V / B.\nR → Z — выбрать точку для масла. Взрослая жаба получает R → X — серию ударов мечом по области. ЛКМ подтверждает цель, ПКМ отменяет.",
+ SageMode="Наруто неподвижно собирает природную энергию: 10 / 7 / 4 секунды по рангу. Усиление действует 51 секунду, аура — первые 47. Даёт здоровье, броню, урон и скорость; восстанавливает 200 / 350 / 500 маны.\nМожно включить поверх KCM I–II или полной Курамы: бонусы складываются, таймер мудреца идёт отдельно. В Рикудо новый режим мудреца недоступен. При выходе из KCM бонусы мудреца сохраняются до конца таймера, но его техники отключаются.\nВ обычной форме доступны Q → Z — Одама и Q → X — Расенсюрикен. T → T — медитация; T → Z — вернуть чакру из медитирующих клонов.",
+ KCM="Ранги: KCM I, KCM II, Рикудо. Вход расходует 200 чакры Курамы, поддержание — 40 в секунду. Это отдельный запас от маны способностей.\nДля сочетания сначала включите KCM I–II, затем режим мудреца: их бонусы складываются. Сам режим мудреца блокирует новый вход в KCM; выход из KCM или завершение полной Курамы снимают эту блокировку. Рикудо не позволяет заново включить мудреца. Полная Курама и KCM одновременно недоступны.\nF → F — прицелиться для рывка. C → V — выйти. T → X — обменять 200 чакры Курамы на 200 маны.",
+ KuramaForm="Полная форма Курамы с уровня 21. Требует 2500 чакры Курамы, действует 30 секунд, перезарядка — 160 секунд. Даёт +2500 здоровья, +20 брони и +90 урона.\nЛКМ — тяжёлый удар лапой по одной цели впереди. Базовый интервал — 2 секунды; ловкость ускоряет атаки. Иногда начало атаки вызывает ударную волну: враги в радиусе 18,75 студов получают урон в размере 4% максимального здоровья Курамы до учёта защиты. Золотое кольцо показывает границу волны.\nБонусы режима мудреца складываются с этой формой и сохраняют свой таймер. KCM одновременно включить нельзя. В этой форме призыв создаёт ровно 4 клона без дополнительного расхода 30% маны. После завершения формы снова можно включить KCM.",
+ CloneCommand="Направляет клонов и Гамакичи на вражескую цель под прицелом. Если цели нет, выберите её и подтвердите ЛКМ.\nE → V возвращает призывов к владельцу; E → B оставляет их на месте без автоматических атак. Союзников атаковать нельзя.",
+ GamakichiOil="Гамакичи выпускает масло в выбранную точку. Замедление начинается после прилёта, а не при нажатии.\nНаведите прицел, нажмите R → Z и подтвердите ЛКМ. ПКМ / Esc — отмена.",
+ GamakichiChop="Взрослый Гамакичи проводит четыре последовательных удара мечом по выбранной области. Урон проходит волнами.\nR → X — выбрать область, ЛКМ — подтвердить. Требуется взрослый призыв. ПКМ / Esc — отмена.",
+ RikudoHY="Временная техника Рикудо: мощная атака по выбранной точке. Требуется активная форма и 1800 чакры. F → Z → прицел → ЛКМ. ПКМ / Esc — отмена.",
+ RikudoHZ="Временная техника Рикудо с областью поражения. Требуется активная форма и 1800 чакры. F → X → прицел → ЛКМ. ПКМ / Esc — отмена.",
+}
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="137">
+            <Properties>
+              <string name="Name">AbilityFamilyController</string>
               <string name="Source"><![CDATA[--!strict
 local Players=game:GetService("Players")
 local Input=game:GetService("UserInputService")
-local Actions=game:GetService("ContextActionService")
 local Gui=game:GetService("GuiService")
 local RunService=game:GetService("RunService")
 local Shared=game.ReplicatedStorage:WaitForChild("Shared")
-local Deck=require(Shared.Abilities.AbilityDeck)
+local Families=require(Shared.Abilities.AbilityFamilies)
 local Config=require(Shared.Config.AbilityConfig)
 local Controller=require(script.Parent.AbilityController)
+local Learning=require(script.Parent.LearningController)
 local View=require(script.Parent.MobaHUDView)
 local Icons=require(script.Parent.HUDIcons)
 local Descriptions=require(script.Parent.AbilityDescriptions)
@@ -9893,193 +9897,175 @@ local started=false
 function Module.Start(panel:Frame)
  if started then return end;started=true
  local player=Players.LocalPlayer
- local group=Deck.DefaultGroup;local page=1;local selected="Odama";local opened=false
- local hovered:string?=nil
- local function name(id:string):string
-  if id=="KCM" then
-   local state=player:FindFirstChild("HeroState");local rank=if state then state:GetAttribute("Rank_KCM") else 0
+ local opened:string?=nil;local hovered:string?=nil;local hoveredFamily:string?=nil;local hoveredEntry:Families.Entry?=nil
+ local roots:{[string]:TextButton}={};local choices:{TextButton}={};local learnButtons:{{button:TextButton,id:string}}={}
+ local strip=View.frame(panel,"FamilyChoices",UDim2.fromOffset(450,118),UDim2.fromOffset(240,-126));strip.Visible=false;strip.ZIndex=6;View.border(strip,View.Gold)
+ local title=View.label(strip,"Title",UDim2.fromOffset(372,21),UDim2.fromOffset(7,1),13);title.TextXAlignment=Enum.TextXAlignment.Left;title.TextColor3=View.Gold
+ local footer=View.label(strip,"Hint",UDim2.fromOffset(436,18),UDim2.fromOffset(7,99),11);footer.Text="Клавиша — выбор · ЛКМ — цель · ПКМ — отмена · Alt — курсор"
+ local tip=View.frame(panel,"FamilyTooltip",UDim2.fromOffset(440,260),UDim2.fromOffset(240,-394));tip.Visible=false;tip.ZIndex=10;View.border(tip,View.Gold)
+ local hoverEpoch=0;local tipHovered=false
+ local function retainHover() hoverEpoch+=1 end
+ local function leaveHover()
+  hoverEpoch+=1;local epoch=hoverEpoch
+  task.delay(.18,function() if hoverEpoch==epoch and not tipHovered then hovered=nil;hoveredFamily=nil;hoveredEntry=nil end end)
+ end
+ tip.MouseEnter:Connect(function() tipHovered=true;retainHover() end)
+ tip.MouseLeave:Connect(function() tipHovered=false;leaveHover() end)
+ local scroll=Instance.new("ScrollingFrame");scroll.Name="Scroll";scroll.Size=UDim2.new(1,-16,1,-16);scroll.Position=UDim2.fromOffset(8,8);scroll.BackgroundTransparency=1;scroll.BorderSizePixel=0;scroll.ScrollBarThickness=4;scroll.CanvasSize=UDim2.new();scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y;scroll.Parent=tip
+ local tipText=View.label(scroll,"Text",UDim2.new(1,-8,0,0),UDim2.new(),15);tipText.AutomaticSize=Enum.AutomaticSize.Y;tipText.TextWrapped=true;tipText.TextTruncate=Enum.TextTruncate.None;tipText.TextXAlignment=Enum.TextXAlignment.Left;tipText.TextYAlignment=Enum.TextYAlignment.Top
+ local function makeButton(parent:Instance,name:string,x:number,y:number,w:number,h:number):TextButton
+  local b=Instance.new("TextButton");b.Name=name;b.Text="";b.Size=UDim2.fromOffset(w,h);b.Position=UDim2.fromOffset(x,y);b.BackgroundColor3=View.Card;b.BorderSizePixel=0;b.Parent=parent;View.border(b,View.Gold);return b
+ end
+ local function icon(button:TextButton,id:string)
+  if button:GetAttribute("IconId")==id then return end
+  button:SetAttribute("IconId",id);local symbol=button:FindFirstChild("Symbol") :: Frame
+  symbol:ClearAllChildren();Icons.draw(symbol,id)
+ end
+ local function labelName(entry:Families.Entry):string
+  if entry.id=="KCM" then
+   local hero=player:FindFirstChild("HeroState");local rank=if hero then hero:GetAttribute("Rank_KCM") else 0
    return if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I"
   end
-  return if id=="Rasengan" then "Расенган" elseif id=="ShadowClones" then "Теневые клоны" else Config.Abilities[id].Name
+  return entry.name
  end
- local function active(id:string):boolean
-  local c=player.Character;if not c then return false end
-  return (id=="KuramaForm" and c:GetAttribute("KuramaActive")==true) or (id=="KCM" and c:GetAttribute("KcmActive")==true)
-   or (id=="SageMode" and c:GetAttribute("SagePhase")=="Active") or (id=="MeditationToggle" and c:GetAttribute("MeditationMode")==true)
+ local function close()
+  opened=nil;strip.Visible=false;hovered=nil;hoveredEntry=nil;player:SetAttribute("AbilityFamily",nil)
  end
- local function status(id:string):string
-  if active(id) then return "АКТИВЕН" end
-  local remaining=Controller.Remaining(id)
-  if remaining>0 then return string.format("КД %.1f с",remaining) end
-  return Controller.AbilityUnavailable(id) or "Готово"
+ local function blocked():boolean
+  local c=player.Character;local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
+  return not h or h.Health<=0 or Input:GetFocusedTextBox()~=nil or Gui.MenuIsOpen or player:GetAttribute("ShopOpen")==true or player:GetAttribute("StatsOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true
  end
- local function cost(id:string):string
-  if id=="KuramaForm" then return "2500 чакры Курамы" end
-  if id=="KCM" then return "200 чакры Курамы • 40/с" end
-  if id=="KuramaConvert" then return "200 чакры Курамы → 200 маны" end
-  return tostring(Controller.Cost(id)).." маны"
- end
- local function description(id:string):string
-  return name(id).."  ["..Config.Abilities[id].KeyLabel.."]\n"..cost(id).."\n"..status(id).."\n\n"..((Descriptions :: {[string]:string})[id] or "")
- end
- local function button(parent:Instance,id:string,text:string,x:number,y:number,w:number,h:number):TextButton
-  local b=Instance.new("TextButton");b.Name=id;b.Text=text;b.Position=UDim2.fromOffset(x,y);b.Size=UDim2.fromOffset(w,h)
-  b.BackgroundColor3=View.Card;b.BorderSizePixel=0;b.TextColor3=View.Text;b.TextSize=13;b.Font=Enum.Font.GothamMedium;b.Parent=parent;View.border(b,View.Gold);return b
- end
- local quick=View.frame(panel,"TechniqueDeck",UDim2.fromOffset(450,80),UDim2.fromOffset(240,-88));quick.ZIndex=5
- local tabs:{[string]:TextButton}={}
- local book=View.frame(panel,"TechniqueBook",UDim2.fromOffset(760,390),UDim2.fromOffset(70,-398));book.ZIndex=12;book.Visible=false;View.border(book,View.Gold)
- local title=View.label(book,"Title",UDim2.fromOffset(650,30),UDim2.fromOffset(14,8),20);title.Text="ВСЕ ТЕХНИКИ • НАРУТО";title.TextXAlignment=Enum.TextXAlignment.Left
- local close=button(book,"Close","X",712,9,32,28)
- local bookTabs:{[string]:TextButton}={}
- local help=View.label(book,"Help",UDim2.fromOffset(730,24),UDim2.fromOffset(14,352),12);help.Text="Shift + 1–6 — выбранный набор • PgUp / PgDn — страницы • Tab / Esc — закрыть"
- local quickSlots:{TextButton}={};local cards:{TextButton}={}
- local detail=Instance.new("ScrollingFrame");detail.Name="Description";detail.Position=UDim2.fromOffset(454,82);detail.Size=UDim2.fromOffset(290,215)
- detail.BackgroundColor3=View.Card;detail.BorderSizePixel=0;detail.ScrollBarThickness=4;detail.CanvasSize=UDim2.new();detail.AutomaticCanvasSize=Enum.AutomaticSize.Y;detail.Parent=book
- local detailText=View.label(detail,"Text",UDim2.new(1,-24,0,0),UDim2.fromOffset(10,8),15);detailText.AutomaticSize=Enum.AutomaticSize.Y;detailText.TextWrapped=true;detailText.TextTruncate=Enum.TextTruncate.None;detailText.TextXAlignment=Enum.TextXAlignment.Left;detailText.TextYAlignment=Enum.TextYAlignment.Top
- local use=button(book,"Use","ПРИМЕНИТЬ",454,308,290,32)
- local tip=View.frame(panel,"DeckTooltip",UDim2.fromOffset(420,280),UDim2.fromOffset(240,-378));tip.ZIndex=15;tip.Visible=false;View.border(tip,View.Gold)
- local tipScroll=Instance.new("ScrollingFrame");tipScroll.Name="Scroll";tipScroll.Size=UDim2.new(1,-16,1,-16);tipScroll.Position=UDim2.fromOffset(8,8);tipScroll.BackgroundTransparency=1;tipScroll.BorderSizePixel=0;tipScroll.ScrollBarThickness=4;tipScroll.CanvasSize=UDim2.new();tipScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y;tipScroll.Parent=tip
- local tipText=View.label(tipScroll,"Text",UDim2.new(1,-8,0,0),UDim2.new(),15);tipText.AutomaticSize=Enum.AutomaticSize.Y;tipText.TextWrapped=true;tipText.TextTruncate=Enum.TextTruncate.None;tipText.TextXAlignment=Enum.TextXAlignment.Left;tipText.TextYAlignment=Enum.TextYAlignment.Top
- local bookToggle=button(panel,"OpenTechniqueBook","Tab\nТехники",638,38,52,60);bookToggle.TextSize=11
- local pageLabel=View.label(quick,"Page",UDim2.fromOffset(54,20),UDim2.fromOffset(348,1),12)
- local prev=button(quick,"Previous","‹",326,1,22,20);local nextButton=button(quick,"Next","›",402,1,22,20)
- local bookPage=View.label(book,"Page",UDim2.fromOffset(120,26),UDim2.fromOffset(530,46),12)
- local bookPrev=button(book,"Previous","‹",492,46,30,26);local bookNext=button(book,"Next","›",662,46,30,26)
- local function setOpen(value:boolean)
-  opened=value;book.Visible=value;hovered=nil;tip.Visible=false;player:SetAttribute("AbilityBookOpen",value)
-  if value then Controller.CancelCloneCommand() end
- end
- local function cast(id:string)
-  -- UI never grants a technique; all existing client and authoritative server gates still apply.
-  setOpen(false)
-  if id=="RasenshurikenThrow" then Controller.TryThrowRasenshuriken()
-  elseif id=="CloneCommand" then Controller.BeginCloneCommand()
-  else Controller.TryCast(id) end
- end
- local function redraw()
-  local ids=Deck.page(group,page)
-  player:SetAttribute("TechniqueDeckGroup",group);player:SetAttribute("TechniqueDeckPage",page)
-  for i=1,6 do
-   local id=ids[i]
-   for _,b in {quickSlots[i],cards[i]} do
-    b.Visible=id~=nil;b:SetAttribute("AbilityId",id)
-    local old=b:FindFirstChild("Symbol");if old then old:Destroy() end
-    if id then
-     local symbol=View.frame(b,"Symbol",UDim2.fromOffset(30,30),UDim2.fromOffset(5,if b==quickSlots[i] then 2 else 8));Icons.draw(symbol,id)
-    end
+ local function open(key:string)
+  if blocked() then return end
+  Controller.CancelCloneCommand();opened=key;hovered=nil;hoveredEntry=nil;hoveredFamily=nil;player:SetAttribute("AbilityFamily",key)
+  local family=Families.Definitions[key];strip.Visible=true;title.Text=family.name..(if key=="E" then " • команды всем боевым призывам" else " • выберите продолжение")
+  for i,b in choices do
+   local entry=family.entries[i];b.Visible=entry~=nil;b:SetAttribute("AbilityId",if entry then entry.id else nil)
+   if entry then
+    (b:FindFirstChild("Key") :: TextLabel).Text=entry.key
+    icon(b,if entry.id=="MeditationCast" then "MeditationToggle" else entry.id)
    end
   end
-  selected=ids[1] or "Rasengan";detail.CanvasPosition=Vector2.zero
-  pageLabel.Text=tostring(page).."/"..Deck.pages(group);bookPage.Text="Страница "..page.." / "..Deck.pages(group)
-  for id,b in tabs do b.BackgroundColor3=if id==group then Color3.fromRGB(100,76,34) else View.Card end
-  for id,b in bookTabs do b.BackgroundColor3=if id==group then Color3.fromRGB(100,76,34) else View.Card end
-  for _,b in {prev,nextButton,bookPrev,bookNext} do b.Visible=Deck.pages(group)>1 end
+ end
+ local function rootPress(key:string)
+  if blocked() then return end
+  open(key)
+  if key=="Q" then
+   local c=player.Character
+   if not c or c:GetAttribute("RasenganHeld")~=true then Controller.TryCast("Rasengan") end
+  end
+ end
+ local function activate(entry:Families.Entry)
+  if blocked() then return end
+  local old=opened;close()
+  local ok=if entry.command then Controller.Command(entry.command)
+   elseif entry.id=="CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(entry.id)
+  if not ok and old then
+   -- Keep the explanation/choices visible without erasing the rejection message.
+   opened=old;strip.Visible=true;player:SetAttribute("AbilityFamily",old)
+  end
+ end
+ local function addLearn(parent:TextButton,id:string)
+  local plus=makeButton(parent,"Learn",parent.Size.X.Offset-18,-19,18,18);plus.Text="+";plus.TextSize=17;plus.TextColor3=View.Gold;plus.ZIndex=5
+  plus.Activated:Connect(function() Learning.TryLearn(id) end);table.insert(learnButtons,{button=plus,id=id})
+ end
+ for i,key in Families.Order do
+  local family=Families.Definitions[key]
+  local b=makeButton(panel,"Family"..key,240+(i-1)*75,32,70,78);roots[key]=b
+  View.frame(b,"Symbol",UDim2.fromOffset(48,48),UDim2.fromOffset(11,3));icon(b,family.icon)
+  local keyText=View.label(b,"Key",UDim2.fromOffset(24,18),UDim2.fromOffset(2,-18),15);keyText.Text=key;keyText.TextColor3=View.Gold
+  local name=View.label(b,"Name",UDim2.fromOffset(68,25),UDim2.fromOffset(1,50),11);name.Text=family.name;name.TextWrapped=true
+  local status=View.label(b,"Status",UDim2.fromOffset(48,20),UDim2.fromOffset(11,18),15);status.TextStrokeTransparency=.1;status.ZIndex=3
+  b.Activated:Connect(function() local _,entry=Families.resolve(opened,key);if entry then activate(entry) else rootPress(key) end end)
+  b.MouseEnter:Connect(function() retainHover();hoveredFamily=key;hovered=nil;hoveredEntry=nil;scroll.CanvasPosition=Vector2.zero end)
+  b.MouseLeave:Connect(leaveHover)
+  if key=="Q" then addLearn(b,"Rasengan") elseif key=="E" then addLearn(b,"ShadowClones") elseif key=="R" then addLearn(b,"Gamakichi") end
  end
  for i=1,6 do
-  local q=button(quick,"Slot"..i,"",(i-1)*75,27,70,50);quickSlots[i]=q
-  local label=View.label(q,"Name",UDim2.new(1,-4,0,16),UDim2.fromOffset(2,33),10)
-  local key=View.label(q,"Key",UDim2.fromOffset(36,16),UDim2.fromOffset(34,1),9);key.Text="Shift+"..i;key.TextColor3=View.Gold
-  local state=View.label(q,"State",UDim2.fromOffset(36,14),UDim2.fromOffset(34,17),9)
-  q.MouseEnter:Connect(function() hovered=q:GetAttribute("AbilityId") :: string?;tipScroll.CanvasPosition=Vector2.zero end)
-  q.MouseLeave:Connect(function() hovered=nil end)
-  q.Activated:Connect(function() local id=q:GetAttribute("AbilityId");if typeof(id)=="string" then cast(id) end end)
-  local b=button(book,"Slot"..i,"",14+((i-1)%3)*144,82+math.floor((i-1)/3)*130,136,118);cards[i]=b
-  local heading=View.label(b,"Name",UDim2.fromOffset(126,38),UDim2.fromOffset(5,42),13);heading.TextWrapped=true
-  local shortcut=View.label(b,"Key",UDim2.fromOffset(89,32),UDim2.fromOffset(43,7),11);shortcut.TextColor3=View.Gold
-  local reason=View.label(b,"State",UDim2.fromOffset(126,33),UDim2.fromOffset(5,80),11);reason.TextWrapped=true
-  local function select() local id=b:GetAttribute("AbilityId");if typeof(id)=="string" and selected~=id then selected=id;detail.CanvasPosition=Vector2.zero end end
-  b.MouseEnter:Connect(select);b.Activated:Connect(select)
+  local b=makeButton(strip,"Choice"..i,(i-1)*75+2,25,70,71);choices[i]=b
+  View.frame(b,"Symbol",UDim2.fromOffset(25,25),UDim2.fromOffset(4,3))
+  local key=View.label(b,"Key",UDim2.fromOffset(34,23),UDim2.fromOffset(32,3),16);key.TextColor3=View.Gold
+  local name=View.label(b,"Name",UDim2.fromOffset(66,26),UDim2.fromOffset(2,29),11);name.TextWrapped=true
+  View.label(b,"State",UDim2.fromOffset(66,14),UDim2.fromOffset(2,55),10)
+  b.Activated:Connect(function() if opened then local entry=Families.Definitions[opened].entries[i];if entry then activate(entry) end end end)
+  b.MouseEnter:Connect(function() retainHover();hovered=b:GetAttribute("AbilityId") :: string?;hoveredEntry=if opened then Families.Definitions[opened].entries[i] else nil;hoveredFamily=nil;scroll.CanvasPosition=Vector2.zero end)
+  b.MouseLeave:Connect(leaveHover)
  end
- for i,g in Deck.Groups do
-  local b=button(quick,g.id,g.name,(i-1)*106,1,102,20);tabs[g.id]=b
-  local bb=button(book,g.id,g.name,14+(i-1)*144,46,136,26);bookTabs[g.id]=bb
-  local function choose() group=g.id;page=1;hovered=nil;redraw() end
-  b.Activated:Connect(choose);bb.Activated:Connect(choose)
+ -- Mode learning remains visible on its own choice, independent of the six families.
+ local sageLearn=makeButton(strip,"LearnSage",386,2,27,20);sageLearn.Text="4+";sageLearn.TextColor3=View.Gold;sageLearn.TextSize=17;sageLearn.ZIndex=5
+ local kcmLearn=makeButton(strip,"LearnKCM",418,2,27,20);kcmLearn.Text="5+";kcmLearn.TextColor3=View.Gold;kcmLearn.TextSize=17;kcmLearn.ZIndex=5
+ sageLearn.Activated:Connect(function() Learning.TryLearn("SageMode") end);kcmLearn.Activated:Connect(function() Learning.TryLearn("KCM") end)
+ local function overHUD(input:InputObject):boolean
+  local gui=player:FindFirstChildOfClass("PlayerGui");if not gui then return false end
+  for _,object in gui:GetGuiObjectsAtPosition(input.Position.X,input.Position.Y) do if object:IsDescendantOf(panel.Parent :: Instance) then return true end end
+  return false
  end
- local function turn(delta:number) page=((page-1+delta)%Deck.pages(group))+1;hovered=nil;redraw() end
- prev.Activated:Connect(function() turn(-1) end);nextButton.Activated:Connect(function() turn(1) end)
- bookPrev.Activated:Connect(function() turn(-1) end);bookNext.Activated:Connect(function() turn(1) end)
- use.Activated:Connect(function() if not Controller.AbilityUnavailable(selected) and Controller.Remaining(selected)<=0 then cast(selected) end end)
- close.Activated:Connect(function() setOpen(false) end);bookToggle.Activated:Connect(function() setOpen(not opened) end)
- Actions:BindActionAtPriority("TechniqueDeckKeys",function(_,state,input)
-  if Input:GetFocusedTextBox() or Gui.MenuIsOpen or player:GetAttribute("ShopOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true or player:GetAttribute("StatsOpen")==true then return Enum.ContextActionResult.Pass end
-  local key=input.KeyCode.Name;local modifier=Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)
-  local control=Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl)
-  local slot=Deck.slot(key,modifier,control,false,false)
-  local owns=key=="Tab" or (opened and key=="Escape") or ((opened or modifier) and (key=="PageUp" or key=="PageDown")) or slot~=nil
-  if not owns then return Enum.ContextActionResult.Pass end
-  if state==Enum.UserInputState.Begin then
-   if key=="Tab" then setOpen(not opened)
-   elseif key=="Escape" then setOpen(false)
-   elseif key=="PageUp" or key=="PageDown" then turn(if key=="PageUp" then -1 else 1)
-   elseif slot then local id=Deck.page(group,page)[slot];if id then cast(id) end end
+ Input.InputBegan:Connect(function(input,processed)
+  if blocked() then close();return end
+  if input.UserInputType==Enum.UserInputType.MouseButton2 or input.KeyCode==Enum.KeyCode.Escape then close();return end
+  if processed then return end
+  if input.UserInputType==Enum.UserInputType.MouseButton1 then if not overHUD(input) then close() end;return end
+  local key=input.KeyCode.Name
+  if Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl) then local id=Families.learning(key);if id then Learning.TryLearn(id) end;return end
+  local kind,entry=Families.resolve(opened,key)
+  if entry then activate(entry)
+  elseif kind=="Open" then rootPress(key)
+  elseif not opened and (key=="Z" or key=="X") and player.Character and player.Character:GetAttribute("RasenganHeld")==true then
+   Controller.TryCast(if key=="Z" then "Odama" else "Rasenshuriken")
   end
-  return Enum.ContextActionResult.Sink
- end,false,Enum.ContextActionPriority.High.Value+50,Enum.KeyCode.Tab,Enum.KeyCode.Escape,Enum.KeyCode.PageUp,Enum.KeyCode.PageDown,Enum.KeyCode.One,Enum.KeyCode.Two,Enum.KeyCode.Three,Enum.KeyCode.Four,Enum.KeyCode.Five,Enum.KeyCode.Six)
- player.CharacterRemoving:Connect(function() setOpen(false) end)
- Input.WindowFocusReleased:Connect(function() setOpen(false) end)
- require(script.Parent.RoundController).Watch(function() setOpen(false) end)
- redraw()
- local last=0
+ end)
+ Input.WindowFocusReleased:Connect(close);player.CharacterRemoving:Connect(close);require(script.Parent.RoundController).Watch(close)
+ local nextUpdate=0;local lastForm=""
  RunService.Heartbeat:Connect(function()
-  if os.clock()-last<.1 then return end;last=os.clock()
-  if player:GetAttribute("ShopOpen")==true or player:GetAttribute("StatsOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true or Gui.MenuIsOpen then setOpen(false) end
-  local c=player.Character;local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
-  if opened and (not h or h.Health<=0) then setOpen(false) end
-  for i=1,6 do
-   for _,b in {quickSlots[i],cards[i]} do
-    local id=b:GetAttribute("AbilityId");if typeof(id)~="string" then continue end
-    (b:FindFirstChild("Name") :: TextLabel).Text=name(id)
-    local unavailable=Controller.AbilityUnavailable(id);local remaining=Controller.Remaining(id)
-    local state=b:FindFirstChild("State") :: TextLabel
-    state.Text=if b==cards[i] then status(id) elseif active(id) then "ВКЛ" elseif remaining>0 then tostring(math.ceil(remaining)) elseif unavailable then "×" else ""
-    state.TextColor3=if active(id) then Color3.fromRGB(127,224,165) elseif unavailable or remaining>0 then Color3.fromRGB(193,164,134) else View.Text
-    if b==cards[i] then (b:FindFirstChild("Key") :: TextLabel).Text="Shift+"..i.."\n["..Config.Abilities[id].KeyLabel.."]" end
-    b.BackgroundColor3=if active(id) then Color3.fromRGB(38,85,64) elseif b==cards[i] and selected==id then Color3.fromRGB(83,68,38) else View.Card
-   end
+  local now=workspace:GetServerTimeNow();if now<nextUpdate then return end;nextUpdate=now+.1
+  local c=player.Character;local hero=player:FindFirstChild("HeroState")
+  local form=if c then tostring(c:GetAttribute("HeroVisualForm"))..":"..tostring(c:GetAttribute("LifeId"))..":"..tostring(c:GetAttribute("SageTechniquesReady")) else ""
+  if form~=lastForm then close();Controller.CancelCloneCommand();lastForm=form end
+  if blocked() then close() end
+  for _,learn in learnButtons do learn.button.Visible=hero~=nil and hero:GetAttribute("LearnReason_"..learn.id)=="Ready" end
+  sageLearn.Visible=opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_SageMode")=="Ready"
+  kcmLearn.Visible=opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_KCM")=="Ready"
+  for key,b in roots do
+   b.BackgroundColor3=if key==opened then Color3.fromRGB(100,77,35) else View.Card
+   local status=b:FindFirstChild("Status") :: TextLabel;status.Text=""
+   if key=="Q" then
+    local held=c~=nil and c:GetAttribute("RasenganHeld")==true
+    local variant=if held and c then tostring(c:GetAttribute("RasenganVariant")) else "Rasengan"
+    icon(b,if Config.Abilities[variant] then variant else "Rasengan")
+    local remaining=Controller.Remaining("Rasengan")
+    status.Text=if held and c then (if now<((c:GetAttribute("RasenganReadyAt") or 0) :: number) then "…" else "ГОТОВ") elseif remaining>0 then tostring(math.ceil(remaining)) else ""
+    status.TextColor3=if held then Color3.fromRGB(150,240,255) else View.Text
+   elseif key=="C" and c then status.Text=if c:GetAttribute("KuramaActive")==true then "КУРАМА" elseif c:GetAttribute("KcmActive")==true then (if c:GetAttribute("KcmRank")==3 then "РИКУДО" else "KCM") elseif c:GetAttribute("SagePhase")=="Active" then "МУДРЕЦ" else "";status.TextSize=10 end
   end
   if opened then
-   detailText.Text=description(selected)
-   local ready=not Controller.AbilityUnavailable(selected) and Controller.Remaining(selected)<=0
-   use.Text=if ready then "ПРИМЕНИТЬ  •  "..Config.Abilities[selected].KeyLabel else "НЕДОСТУПНО • условие выше"
-   use.BackgroundColor3=if ready then Color3.fromRGB(40,105,76) else View.Card;use.AutoButtonColor=ready
+   for i,b in choices do
+    local entry=Families.Definitions[opened].entries[i];if not entry then continue end
+    (b:FindFirstChild("Name") :: TextLabel).Text=labelName(entry)
+    local reason=Controller.AbilityUnavailable(entry.id);local remaining=Controller.Remaining(entry.id)
+    local active=c~=nil and ((entry.id=="KCM" and c:GetAttribute("KcmActive")==true) or (entry.id=="KuramaForm" and c:GetAttribute("KuramaActive")==true) or (entry.id=="SageMode" and c:GetAttribute("SagePhase")=="Active"))
+    local state=b:FindFirstChild("State") :: TextLabel
+    state.Text=if active then "АКТИВЕН" elseif remaining>0 then math.ceil(remaining).." с" elseif reason then "Недоступно" else "Готово"
+    state.TextColor3=if not reason and remaining<=0 then Color3.fromRGB(120,224,158) else Color3.fromRGB(210,167,130)
+   end
   end
-  tip.Visible=hovered~=nil and not opened
-  if hovered then tipText.Text=description(hovered) end
+  tip.Visible=(hovered~=nil or hoveredFamily~=nil) and not blocked()
+  if hoveredFamily then
+   local family=Families.Definitions[hoveredFamily];local text=family.name.." ["..family.key.."]\n\n"..family.hint.."\n\n"
+   for _,entry in family.entries do text..=family.key.." → "..entry.key.."  "..labelName(entry).."\n" end
+   if hoveredFamily=="Q" then text..="\n100 маны • "..(Controller.AbilityUnavailable("Rasengan") or "Готово").."\n"..Descriptions.Rasengan.."\n" end
+   tipText.Text=text.."\nПервое нажатие открывает выбор"..(if hoveredFamily=="Q" then " и формирует Расенган." else ", чакра не расходуется.")
+  elseif hovered then
+   local id=hovered;local def=Config.Abilities[id]
+   local resource=if id=="KuramaForm" then "2500 чакры Курамы" elseif id=="KCM" then "200 чакры Курамы • 40/с" elseif id=="KuramaConvert" then "200 чакры Курамы → 200 маны" else Controller.Cost(id).." маны"
+   local entry=hoveredEntry
+   local name=if entry then labelName(entry) else def.Name
+   local binding=if entry and opened then opened.." → "..entry.key else def.KeyLabel
+   local description=if entry and entry.command=="Follow" then "Возвращает всех боевых клонов и Гамакичи к Наруто. После возвращения они снова самостоятельно ищут врагов рядом с владельцем." elseif entry and entry.command=="Hold" then "Оставляет всех боевых клонов и Гамакичи на текущих позициях без автоматических атак. E → V возобновляет следование; E → X задаёт цель." else ((Descriptions :: {[string]:string})[id] or "")
+   tipText.Text=name.." ["..binding.."]\n"..resource.."\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then "КД "..math.ceil(Controller.Remaining(id)).." с" else "Готово")).."\n\n"..description
+  end
  end)
 end
 return Module
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="137">
-            <Properties>
-              <string name="Name">AbilityDescriptions</string>
-              <string name="Source"><![CDATA[--!strict
--- Player-facing descriptions shared by main and temporary ability slots.
-return {
- RasenshurikenThrow="Сначала включите режим мудреца и сформируйте Расенсюрикен: Q → X. Когда он готов в руке, ЛКМ бросает его по прицелу. В полёте раскрывает синий купол в области фактического урона.",
- ShadowSleep="Со II ранга клонов доступна техника сна противника. T → выберите врага → ЛКМ для подтверждения. Нужно 200 маны. ПКМ / Esc отменяет выбор.",
- KcmDash="Доступен в активном KCM или Рикудо. Удерживайте E, выберите место и отпустите E для рывка. При выборе кнопкой или через Shift используйте ЛКМ для подтверждения. ПКМ / Esc отменяет выбор.",
- KcmCancel="Завершает активный KCM или Рикудо. X возвращает обычную форму; самостоятельные бонусы мудреца сохраняют свой таймер. Эта команда не отменяет полную Кураму.",
- KuramaConvert="С уровня 16 переводит 200 отдельной чакры Курамы в 200 обычной маны способностей. Стрелка влево — применить. Нужен достаточный запас чакры Курамы.",
- MeditationToggle="Стрелка вправо переключает назначение кнопки 4: обычный режим мудреца или медитация с клонами. Включите медитацию, затем нажмите 4 для подготовки медитирующих клонов. J возвращает их накопленную энергию. Нужна изученная линия режима мудреца.",
- MeditationRecall="J возвращает накопленную энергию медитирующих клонов. Доступно, когда у Наруто есть такие клоны; боевые теневые клоны этой командой не отзываются.",
- Rasengan="Собирает вращающуюся чакру в ладони. После формирования подойдите к врагу и ударьте ЛКМ. Промах сохраняет заряд.\nПосле Q выберите Z — Одама или X — Расенсюрикен напрямую. Доступные варианты заменяют значок Q до выбора или окончания заряда. Без выбора остаётся обычный Расенган.",
- Odama="Увеличивает обычный Расенган до огромной сферы. Наруто поддерживает её второй рукой и наносит мощный удар вблизи.\nТребуется II ранг Расенгана. Q → Z. Доплата 200 чакры; всего 300. Урон: 250 + 3 × сила. ЛКМ по врагу — применить.",
- Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
- ShadowClones="Создаёт теневых клонов. Они распределяются между видимыми врагами в радиусе 28 студов, окружают их и занимают свободные места для атаки. Если враг один, клоны сменяют друг друга после ударов. После гибели цели выбирают новую.\nБез врагов следуют за Наруто; при удалении дальше 48 студов возвращаются. Призванные в воздухе клоны приземляются. F — общая приоритетная цель; R — отозвать; Y — стоять без атак. После возврата снова ищут врагов. Количество и длительность зависят от ранга. Со II ранга T открывает технику сна.",
- Gamakichi="Призывает Гамакичи. Ранг определяет силу и возраст жабы. Она помогает в бою и выполняет общие команды F / R / Y.\nG — выбрать точку для масла. Взрослая жаба получает H — серию ударов мечом по области. ЛКМ подтверждает цель, ПКМ отменяет.",
- SageMode="Наруто неподвижно собирает природную энергию: 10 / 7 / 4 секунды по рангу. Усиление действует 51 секунду, аура — первые 47. Даёт здоровье, броню, урон и скорость; восстанавливает 200 / 350 / 500 маны.\nМожно включить поверх KCM I–II или полной Курамы: бонусы складываются, таймер мудреца идёт отдельно. В Рикудо новый режим мудреца недоступен. При выходе из KCM бонусы мудреца сохраняются до конца таймера, но его техники отключаются.\nВ обычной форме доступны Q → Z — Одама и Q → X — Расенсюрикен. Стрелка вправо — медитация; J — вернуть чакру из медитирующих клонов.",
- KCM="Ранги: KCM I, KCM II, Рикудо. Вход расходует 200 чакры Курамы, поддержание — 40 в секунду. Это отдельный запас от маны способностей.\nДля сочетания сначала включите KCM I–II, затем режим мудреца: их бонусы складываются. Сам режим мудреца блокирует новый вход в KCM; выход из KCM или завершение полной Курамы снимают эту блокировку. Рикудо не позволяет заново включить мудреца. Полная Курама и KCM одновременно недоступны.\nE — прицелиться для рывка. X — выйти. Стрелка влево — обменять 200 чакры Курамы на 200 маны.",
- KuramaForm="Полная форма Курамы с уровня 21. Требует 2500 чакры Курамы, действует 30 секунд, перезарядка — 160 секунд. Даёт +2500 здоровья, +20 брони и +90 урона.\nЛКМ — тяжёлый удар лапой по одной цели впереди. Базовый интервал — 2 секунды; ловкость ускоряет атаки. Иногда начало атаки вызывает ударную волну: враги в радиусе 18,75 студов получают урон в размере 4% максимального здоровья Курамы до учёта защиты. Золотое кольцо показывает границу волны.\nБонусы режима мудреца складываются с этой формой и сохраняют свой таймер. KCM одновременно включить нельзя. В этой форме призыв создаёт ровно 4 клона без дополнительного расхода 30% маны. После завершения формы снова можно включить KCM.",
- CloneCommand="Направляет клонов и Гамакичи на вражескую цель под прицелом. Если цели нет, выберите её и подтвердите ЛКМ.\nR возвращает призывов к владельцу; Y оставляет их на месте. Союзников атаковать нельзя.",
- GamakichiOil="Гамакичи выпускает масло в выбранную точку. Замедление начинается после прилёта, а не при нажатии.\nНаведите прицел, нажмите G и подтвердите ЛКМ. ПКМ / Esc — отмена.",
- GamakichiChop="Взрослый Гамакичи проводит четыре последовательных удара мечом по выбранной области. Урон проходит волнами.\nH — выбрать область, ЛКМ — подтвердить. Требуется взрослый призыв. ПКМ / Esc — отмена.",
- RikudoHY="Временная техника Рикудо: мощная атака по выбранной точке. Требуется активная форма и 1800 чакры. V → прицел → ЛКМ. ПКМ / Esc — отмена.",
- RikudoHZ="Временная техника Рикудо с областью поражения. Требуется активная форма и 1800 чакры. B → прицел → ЛКМ. ПКМ / Esc — отмена.",
-}
 ]]></string>
             </Properties>
           </Item>
@@ -10090,20 +10076,15 @@ return {
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UserInput=game:GetService("UserInputService")
-local TextService=game:GetService("TextService")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
-local Config=require(Shared.Config.AbilityConfig)
 local Items=require(Shared.Config.ItemConfig)
 local Combat=require(Shared.Config.CombatConfig)
 local BasicRules=require(Shared.Combat.BasicAttackRules)
-local CloneRanks=require(Shared.Abilities.NarutoRankPolicy)
-local Gamakichi=require(Shared.Abilities.GamakichiState)
 local Controller=require(script.Parent.AbilityController)
 local Learning=require(script.Parent.LearningController)
 local View=require(script.Parent.MobaHUDView)
 local Layout=require(script.Parent.HUDLayout)
 local Icons=require(script.Parent.HUDIcons)
-local Descriptions=require(script.Parent.AbilityDescriptions)
 local HUD={}
 local started=false
 function HUD.Start()
@@ -10124,39 +10105,12 @@ function HUD.Start()
  local kda=View.label(panel,"KDA",UDim2.fromOffset(116,22),UDim2.fromOffset(119,2),12)
  local points=View.label(panel,"SkillPoints",UDim2.fromOffset(336,16),UDim2.fromOffset(240,0),12); points.TextColor3=View.Gold
  local gold=View.label(panel,"Gold",UDim2.fromOffset(186,27),UDim2.fromOffset(704,128),17); gold.TextColor3=View.Gold
- local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="C  Характеристики"; statsToggle.Size=UDim2.fromOffset(116,23); statsToggle.Position=UDim2.fromOffset(119,137); statsToggle.TextSize=10; statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=panel
+ local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="I  Характеристики"; statsToggle.Size=UDim2.fromOffset(116,23); statsToggle.Position=UDim2.fromOffset(119,137); statsToggle.TextSize=10; statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=panel
  local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(300,300),UDim2.fromOffset(0,-310)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
  local statsText=View.label(statsPanel,"Values",UDim2.new(1,-24,1,-24),UDim2.fromOffset(12,12),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
  local function toggle() statsPanel.Visible=not statsPanel.Visible; player:SetAttribute("StatsOpen",statsPanel.Visible) end
  statsToggle.Activated:Connect(toggle)
- UserInput.InputBegan:Connect(function(input,processed) if not processed and not UserInput:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.C then toggle() end end)
- local tooltip=View.frame(panel,"Tooltip",UDim2.fromOffset(410,300),UDim2.fromOffset(240,-310)); tooltip.Visible=false; tooltip.ZIndex=8; View.border(tooltip,View.Gold)
- local tooltipText=View.label(tooltip,"Text",UDim2.new(1,-20,1,-16),UDim2.fromOffset(10,8),14); tooltipText.TextSize=16; tooltipText.TextWrapped=true; tooltipText.TextXAlignment=Enum.TextXAlignment.Left; tooltipText.TextYAlignment=Enum.TextYAlignment.Top
- tooltipText.TextTruncate=Enum.TextTruncate.None
- local hovered: string?=nil
- local buttons: {[string]: TextButton}={}
- local learnButtons: {[string]: TextButton}={}
- for index,id in Config.Order do
-  local main=index<=6; local x,y,size=Layout.skill(index)
-  local button=Instance.new("TextButton"); button.Name=id; button.Size=UDim2.fromOffset(size,size)
-  button.Position=UDim2.fromOffset(x,y)
-  button.BackgroundColor3=View.Card; button.BorderSizePixel=0; button.Text=""; button.Parent=panel; View.border(button,View.Gold)
-  Icons.draw(button,id)
-  local shade=View.frame(button,"Cooldown",UDim2.fromScale(1,1),UDim2.new()); shade.BackgroundColor3=Color3.new(); shade.BackgroundTransparency=.35; shade.ZIndex=2
-  local key=View.label(button,"Key",UDim2.fromOffset(if main then 45 else 30,16),UDim2.fromOffset(0,-16),if main then 12 else 11); key.Text=Config.Abilities[id].KeyLabel; key.TextXAlignment=Enum.TextXAlignment.Left; key.TextColor3=View.Gold
-  local status=View.label(button,"Status",UDim2.fromScale(1,1),UDim2.new(),if main then 17 else 12); status.ZIndex=3; status.TextStrokeTransparency=.2
-  local cost=View.label(button,"Chakra",UDim2.new(1,-4,0,12),UDim2.new(0,2,1,-13),10); cost.TextXAlignment=Enum.TextXAlignment.Right; cost.TextColor3=Color3.fromRGB(128,203,255); cost.ZIndex=3
-  local rank=View.label(button,"Rank",UDim2.fromOffset(size,14),UDim2.fromOffset(0,size+2),11); rank.TextColor3=View.Gold; rank.Visible=main
-  button.MouseEnter:Connect(function() hovered=id; tooltip.Visible=true end)
-  button.MouseLeave:Connect(function() if hovered==id then hovered=nil; tooltip.Visible=false end end)
-  button.Activated:Connect(function() if id=="CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(id) end end)
-  buttons[id]=button
-  if index<=5 then
-   local plus=Instance.new("TextButton"); plus.Name="Learn"; plus.Text="+"; plus.Size=UDim2.fromOffset(22,20); plus.Position=UDim2.new(1,-22,0,-21); plus.ZIndex=4; plus.TextSize=20
-   plus.BackgroundColor3=Color3.fromRGB(152,112,33); plus.TextColor3=Color3.new(1,1,1); plus.Parent=button
-   plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
-  end
- end
+ UserInput.InputBegan:Connect(function(input,processed) if not processed and not UserInput:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.I then toggle() end end)
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
   local track=View.frame(panel,name,UDim2.fromOffset(450,17),UDim2.fromOffset(240,y)); track.BackgroundColor3=View.Card
   local fill=View.frame(track,"Fill",UDim2.fromScale(1,1),UDim2.new()); fill.BackgroundColor3=color
@@ -10174,18 +10128,7 @@ function HUD.Start()
  local itemTitle=View.label(panel,"Inventory",UDim2.fromOffset(186,22),UDim2.fromOffset(704,0),11); itemTitle.Text="ПРЕДМЕТЫ"
  local message=View.label(gui,"AbilityMessage",UDim2.fromOffset(620,28),UDim2.new(.5,0,1,-180),14); message.AnchorPoint=Vector2.new(.5,1); message.TextColor3=View.Gold; message.TextStrokeTransparency=.3
  local commands=View.label(gui,"SummonCommands",UDim2.fromOffset(620,24),UDim2.new(.5,0,1,-220),13); commands.AnchorPoint=Vector2.new(.5,1); commands.TextColor3=View.Gold; commands.TextStrokeTransparency=.3
- local choices: {[string]: TextButton}={}
- for _,id in {"Odama","Rasenshuriken"} do
-  local b=Instance.new("TextButton");b.Name="Choose"..id;b.Text="";b.BackgroundColor3=View.Card;b.BorderSizePixel=0;b.Parent=panel;b.Visible=false;View.border(b,View.Gold)
-  local symbol=View.frame(b,"Symbol",UDim2.new(1,0,0,30),UDim2.new());Icons.draw(symbol,id)
-  local key=View.label(b,"ChoiceKey",UDim2.new(1,0,0,16),UDim2.fromOffset(0,31),13);key.Text=Config.Abilities[id].KeyLabel;key.TextColor3=View.Gold
-  local cost=View.label(b,"Cost",UDim2.new(1,0,0,12),UDim2.fromOffset(0,47),9);cost.Text="200";cost.TextColor3=Color3.fromRGB(128,203,255)
-  b.Activated:Connect(function() Controller.TryCast(id) end)
-  b.MouseEnter:Connect(function() hovered=id;tooltip.Visible=true end)
-  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false end end)
-  choices[id]=b
- end
- require(script.Parent.AbilityDeckController).Start(panel)
+ require(script.Parent.AbilityFamilyController).Start(panel)
  local nextUpdate=0
  RunService.Heartbeat:Connect(function()
   local now=workspace:GetServerTimeNow(); if now<nextUpdate then return end; nextUpdate=now+.1
@@ -10198,7 +10141,7 @@ function HUD.Start()
   commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
   commands.Position=message.Position-UDim2.fromOffset(0,40)
   local order=tostring(if model then model:GetAttribute("SummonOrder") or "Follow" else "Follow")
-  commands.Text="F — атаковать · R — за мной · Y — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
+  commands.Text="E → X — атаковать · E → V — за мной · E → B — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
   local state=player:FindFirstChild("HeroState")
   local function number(name: string): number local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then value else 0 end
   local function shown(name: string,format: string): string local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then string.format(format,value) else "—" end
@@ -10228,81 +10171,12 @@ function HUD.Start()
   end
   local notice=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
   local formStatus=Controller.GetFormStatus()
-  message.Visible=hovered==nil and player:GetAttribute("AbilityBookOpen")~=true
-  if player:GetAttribute("AbilityBookOpen")==true then hovered=nil;tooltip.Visible=false;commands.Visible=false end
+  local familyTip=panel:FindFirstChild("FamilyTooltip")
+  message.Visible=not (familyTip and familyTip:IsA("GuiObject") and familyTip.Visible)
+  if not message.Visible then commands.Visible=false end
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
-  local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
-   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2
-   and model:GetAttribute("KcmActive")~=true and model:GetAttribute("KuramaActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="" or model:GetAttribute("SagePhase")=="Active")
-  buttons.Rasengan.Visible=not choosing
-  local sx,sy,ss=Layout.skill(1)
-  for i,id in {"Odama","Rasenshuriken"} do
-   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1
-   local width=if number("Rank_Rasengan")>=3 then (ss-3)/2 else ss
-   b.Position=UDim2.fromOffset(sx+(i-1)*(width+3),sy);b.Size=UDim2.fromOffset(width,ss)
-   local reason=Controller.AbilityUnavailable(id);b.BackgroundColor3=if reason or Controller.Remaining(id)>0 then View.Card else Color3.fromRGB(24,88,113)
-  end
-  for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
-  for id,button in buttons do
-   local shownId=id
-   if id=="Rasengan" and model then
-    local variant=model:GetAttribute("RasenganVariant")
-    if variant=="Odama" or variant=="Rasenshuriken" then shownId=variant end
-   end
-   if button:GetAttribute("ShownTechnique")~=shownId then
-    local old=button:FindFirstChild("Icon");if old then old:Destroy() end
-    local icon=Icons.draw(button,shownId);icon.ZIndex=1
-    button:SetAttribute("ShownTechnique",shownId)
-   end
-   local costLabel=button:FindFirstChild("Chakra") :: TextLabel; local cost=Controller.Cost(id); costLabel.Text=if cost>0 then tostring(cost) else ""
-   local remaining=Controller.Remaining(id); local reason=Controller.AbilityUnavailable(id); local rank=number("Rank_"..id)
-   local enabled=(Config.PrototypeEnabled :: {[string]: boolean})[id]==true
-   button.Active=true; button.AutoButtonColor=reason==nil and remaining<=0
-   button.BackgroundColor3=if Controller.SelectedAbility()==id then Color3.fromRGB(33,107,108) elseif reason=="Недостаточно маны" then Color3.fromRGB(30,48,88) else View.Card
-   local shade=button:FindFirstChild("Cooldown") :: Frame
-   shade.Visible=remaining>0 or reason~=nil or not enabled
-   local cooldown=Config.Abilities[id].Cooldown
-   if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cooldown=plan.cooldown end
-   elseif id=="Gamakichi" then local _,cd=Gamakichi.rank(rank);if cd then cooldown=cd end end
-   shade.Size=UDim2.fromScale(1,if remaining>0 then math.clamp(remaining/math.max(1,cooldown),0,1) else 1)
-   local status=button:FindFirstChild("Status") :: TextLabel
-   status.Text=if not enabled then "LOCK" elseif remaining>0 then tostring(math.ceil(remaining)) elseif reason then (if reason=="Недостаточно маны" then "ЧАКРА" elseif rank==0 and learnButtons[id] then "0" else "×") else ""
-   local rankLabel=button:FindFirstChild("Rank") :: TextLabel; rankLabel.Text=if rank>0 then string.rep("●",math.min(rank,5)) else "○"
-   if id=="KCM" then rankLabel.Text=if rank==3 then "РИКУДО" elseif rank==2 then "KCM II" else "KCM I" end
-   if id=="KuramaForm" then
-    rankLabel.Text="КУРАМА";rankLabel.TextSize=10
-    costLabel.Text="2500";costLabel.TextColor3=View.Gold
-    if model and model:GetAttribute("KuramaActive")==true then
-     shade.Visible=false;status.Text=tostring(math.max(0,math.ceil(((model:GetAttribute("KuramaExpiresAt") or now) :: number)-now)))
-     button.BackgroundColor3=Color3.fromRGB(123,87,22)
-    end
-   end
-   if id=="Rasengan" and model and model:GetAttribute("RasenganHeld")==true then
-    shade.Visible=false;status.Text="";button.BackgroundColor3=Color3.fromRGB(24,90,120)
-   end
-   if id=="SageMode" and model then
-    local phase=model:GetAttribute("SagePhase"); local deadline=model:GetAttribute(if phase=="Preparing" then "SageReadyAt" else "SageExpiresAt")
-    if (phase=="Preparing" or phase=="Active") and typeof(deadline)=="number" then
-     status.Text=(if phase=="Preparing" then "P " else "S ")..tostring(math.max(0,math.ceil(deadline-now))); shade.Visible=true; shade.Size=UDim2.fromScale(1,1); shade.BackgroundColor3=Color3.fromRGB(89,51,19)
-    else shade.BackgroundColor3=Color3.new() end
-   end
 
-  end
-  if hovered then
-   local id=if hovered=="Rasengan" then tostring(buttons.Rasengan:GetAttribute("ShownTechnique") or hovered) else hovered;local definition=Config.Abilities[id]
-   if definition then
-    local rank=number("Rank_"..(if id=="Odama" or id=="Rasenshuriken" then "Rasengan" else id))
-    local cd=definition.Cooldown
-    if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
-    if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
-    tooltipText.Text=(if id=="KCM" then (if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I") elseif id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..(if id=="KuramaForm" then "2500 чакры Курамы" elseif id=="KCM" then "200 чакры Курамы" else tostring(Controller.Cost(id)).." маны").."  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
-    local bounds=TextService:GetTextSize(tooltipText.Text,tooltipText.TextSize,tooltipText.Font,Vector2.new(390,10000))
-    local height=math.max(140,math.ceil(bounds.Y)+24)
-    tooltip.Size=UDim2.fromOffset(410,height)
-    tooltip.Position=UDim2.fromOffset(if id=="RikudoHY" or id=="RikudoHZ" then 490 else 240,-height-10)
-   end
-  end
  end)
 end
 return HUD
@@ -11016,7 +10890,7 @@ end
 function Controller.IsCaptured(): boolean
 	return started and enabled and active and Input.KeyboardEnabled and Rules.captured(focused, Gui.MenuIsOpen, Input:GetFocusedTextBox() ~= nil,
 		player:GetAttribute("ShopOpen") == true, player:GetAttribute("StatsOpen") == true,
-		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true or player:GetAttribute("AbilityBookOpen")==true)
+		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true)
 end
 
 function Controller.GetAimRay(): Ray?
@@ -11395,6 +11269,8 @@ function CombatController.TryAttack(): boolean
 	local match = ReplicatedStorage:FindFirstChild("SurvivalState")
 	if match and match:GetAttribute("Phase") ~= "InProgress" then return false end
 	local now = workspace:GetServerTimeNow()
+	local rasenganPhase=character:GetAttribute("RasenganPhase")
+	if rasenganPhase=="Consumed" or (character:GetAttribute("RasenganHeld")==true and now<((character:GetAttribute("RasenganReadyAt") or 0) :: number)) then return false end
 	local authoritative = snapshot
 	-- Form changes publish their profile even before the next combat-event snapshot.
 	currentProfile = Config.Profiles[tostring(character:GetAttribute("CombatProfileId"))] or currentProfile
@@ -11641,7 +11517,7 @@ return Icons
               <string name="Name">HUDLayout</string>
               <string name="Source"><![CDATA[--!strict
 -- Reference space: 1920x1080. Scale with height; never stretch on ultrawide.
-local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48, DeckHeight=86 }
+local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48, DeckHeight=126 }
 function Layout.skill(index: number): (number, number, number)
 	if index<=6 then return 240+(index-1)*66,38,60 end
 	return 638+(index-7)*30,54,26
@@ -12149,12 +12025,8 @@ local CombatController = require(script.Parent.CombatController)
 local Camera = require(script.Parent.CameraController)
 local Abilities = require(script.Parent.AbilityController)
 local CameraRules = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Combat.CombatCameraRules)
-local AbilityConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.AbilityConfig)
 local interruptKeys: { [string]: boolean } = {}
-for _, ability in AbilityConfig.Abilities do interruptKeys[ability.Key] = true end
-for key in (AbilityConfig.InputAliases :: { [string]: string }) do interruptKeys[key] = true end
-interruptKeys.R = true; interruptKeys.Y = true -- Follow/Hold orders also release a held attack.
-interruptKeys.Tab = true
+for _,key in {"Q","E","R","F","C","T","Z","X","V","B","I"} do interruptKeys[key]=true end
 
 local InputController = {}
 local started = false

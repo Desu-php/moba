@@ -44,13 +44,9 @@ local ok,err=xpcall(function()
  task.wait(2)
  local target=Fighters.GetOrCreate(enemy);assert(target)
  sa.pool.mana=sa.pool.maximum
- check("enemy target uses Sleep",Ability.HandleRequest(a,4,actor,"ShadowSleep",enemy,match.roundId))
- check("Sleep independent of stun",target.sleep~=nil and target.logic.mode~="Stunned" and next(sa.clones.clones)==nil)
- Fighters.StunSpell(target,2)
- Damage.AttackAttempt:Fire(actor,enemy)
- check("attack wakes but retains rigid stun",target.sleep==nil and target.logic.mode=="Stunned" and target.humanoid.WalkSpeed==0)
- task.wait(2.2);Fighters.Update(target,workspace:GetServerTimeNow())
- check("stun eventually restores movement",target.humanoid.WalkSpeed>0)
+ check("noncanonical sleep rejected",not Ability.HandleRequest(a,4,actor,"ShadowSleep",enemy,match.roundId))
+ check("targeted clone request cannot bypass removal",not Naruto.TryCast(a,"ShadowClones",100,workspace:GetServerTimeNow(),enemy))
+ check("rejected sleep has no effect",target.sleep==nil)
  -- Only fixture-owned deadlines are advanced; production cooldowns are unchanged.
  sa.clones.cooldownAt=0;sa.pool.mana=sa.pool.maximum
  check("mass IV request",Ability.HandleRequest(a,5,actor,"ShadowClones",match.roundId))

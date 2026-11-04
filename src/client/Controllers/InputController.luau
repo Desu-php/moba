@@ -6,12 +6,8 @@ local CombatController = require(script.Parent.CombatController)
 local Camera = require(script.Parent.CameraController)
 local Abilities = require(script.Parent.AbilityController)
 local CameraRules = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Combat.CombatCameraRules)
-local AbilityConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.AbilityConfig)
 local interruptKeys: { [string]: boolean } = {}
-for _, ability in AbilityConfig.Abilities do interruptKeys[ability.Key] = true end
-for key in (AbilityConfig.InputAliases :: { [string]: string }) do interruptKeys[key] = true end
-interruptKeys.R = true; interruptKeys.Y = true -- Follow/Hold orders also release a held attack.
-interruptKeys.Tab = true
+for _,key in {"Q","E","R","F","C","T","Z","X","V","B","I"} do interruptKeys[key]=true end
 
 local InputController = {}
 local started = false

@@ -1,3 +1,5 @@
+> Superseded on 2026-11-05 by [ability families](ABILITY-FAMILIES.md). This document records the retired Tab prototype.
+
 # Ability catalog and quick sets — 2026-11-05
 
 The primary HUD previously rendered only `AbilityConfig.Order`, which omitted KuramaForm even though 6 invoked it. Other auxiliary actions had no discoverable button; the Rikudo pair lived in a separate transient panel.

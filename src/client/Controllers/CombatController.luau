@@ -125,6 +125,8 @@ function CombatController.TryAttack(): boolean
 	local match = ReplicatedStorage:FindFirstChild("SurvivalState")
 	if match and match:GetAttribute("Phase") ~= "InProgress" then return false end
 	local now = workspace:GetServerTimeNow()
+	local rasenganPhase=character:GetAttribute("RasenganPhase")
+	if rasenganPhase=="Consumed" or (character:GetAttribute("RasenganHeld")==true and now<((character:GetAttribute("RasenganReadyAt") or 0) :: number)) then return false end
 	local authoritative = snapshot
 	-- Form changes publish their profile even before the next combat-event snapshot.
 	currentProfile = Config.Profiles[tostring(character:GetAttribute("CombatProfileId"))] or currentProfile

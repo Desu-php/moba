@@ -1,6 +1,6 @@
 --!strict
 -- Reference space: 1920x1080. Scale with height; never stretch on ultrawide.
-local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48, DeckHeight=86 }
+local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48, DeckHeight=126 }
 function Layout.skill(index: number): (number, number, number)
 	if index<=6 then return 240+(index-1)*66,38,60 end
 	return 638+(index-7)*30,54,26

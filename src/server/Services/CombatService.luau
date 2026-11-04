@@ -25,6 +25,8 @@ local CombatService = { AttackStarted = Instance.new("BindableEvent") }
 -- A prepared melee technique may replace the ordinary strike after the server
 -- has verified contact. It must never consume itself merely on attack intent.
 local contactHandler: ((Fighters.Fighter, Model) -> boolean)? = nil
+local attackGuard: ((Fighters.Fighter) -> boolean)? = nil
+function CombatService.SetAttackGuard(guard: (Fighters.Fighter) -> boolean) attackGuard=guard end
 function CombatService.SetContactHandler(handler: (Fighters.Fighter, Model) -> boolean)
 	contactHandler = handler
 end
@@ -77,6 +79,7 @@ end
 
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
+		and (not attackGuard or attackGuard(fighter))
 		and Damage.CanAct(fighter.character)
 		and not (fighter.sleep and fighter.sleep.active)
 		and ((fighter.character:GetAttribute("NarutoPausedUntil") or 0) :: number) <= Workspace:GetServerTimeNow()

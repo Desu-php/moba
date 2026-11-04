@@ -54,7 +54,7 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
   local ok,reason=Kcm.StudioEnableRikudo(player)
   if not ok then return false,"Не удалось включить Рикудо: завершите текущую технику или оглушение и повторите rikudo. ("..reason..")" end
   return true,if reason=="AlreadyActive" then "Рикудо уже активен, чакра пополнена. F8 закрыть → X выйти → rikudo для повторного перехода."
-   else "Рикудо включён без ожидания Хагоромо. F8 закрыть; X — выйти. Для повторного перехода: rikudo."
+   else "Рикудо включён без ожидания Хагоромо. F8 закрыть; C → V — выйти. Для повторного перехода: rikudo."
  elseif command.name=="level" then
   local target=command.level :: number
   if target<profile.Level then return false,"Команда повышает уровень. Для сброса перезапустите Play." end
