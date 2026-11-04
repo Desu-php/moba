@@ -33,7 +33,7 @@ function Icons.draw(parent: GuiObject, id: string): Frame
             local r=shape("CompressedFlow",.5,.5,.25+i*.16,.25+i*.16,true);r.BackgroundTransparency=1
             local stroke=Instance.new("UIStroke");stroke.Color=Color3.fromRGB(79,166,237);stroke.Thickness=2;stroke.Parent=r
         end
-    elseif id=="Rasenshuriken" then
+    elseif id=="Rasenshuriken" or id=="RasenshurikenThrow" or id=="RikudoHY" or id=="RikudoHZ" then
         for i=0,3 do
             local a=math.pi*i/2
             local blade=shape("WindBlade",.5+math.cos(a)*.24,.5+math.sin(a)*.24,.15,.48,false,45+i*90)
@@ -41,6 +41,19 @@ function Icons.draw(parent: GuiObject, id: string): Frame
         end
         shape("WindCore",.5,.5,.45,.45,true).BackgroundColor3=Color3.fromRGB(115,228,255)
         local core=shape("Core",.5,.5,.29,.29,true);core.BackgroundColor3=Color3.fromRGB(245,255,255)
+    elseif id=="KcmDash" then
+        canvas.BackgroundColor3=Color3.fromRGB(173,122,31)
+        shape("Dash",.55,.45,.16,.65,false,30);shape("DashTip",.55,.68,.20,.37,false,-34)
+        for i=1,3 do shape("Speed",.22,.22+i*.18,.32,.04,false,-12) end
+    elseif id=="ShadowSleep" then
+        canvas.BackgroundColor3=Color3.fromRGB(105,72,145)
+        for _,x in {.28,.72} do shape("ClosedEye",x,.58,.29,.06,false) end
+        shape("Sleep",.55,.22,.28,.05,false);shape("Sleep",.55,.31,.28,.05,false,-38);shape("Sleep",.55,.40,.28,.05,false)
+    elseif id=="MeditationToggle" or id=="MeditationRecall" then
+        canvas.BackgroundColor3=Color3.fromRGB(65,132,117)
+        shape("Head",.5,.25,.22,.25,true);shape("Body",.5,.55,.28,.36,true)
+        shape("Leg",.32,.79,.48,.13,true,-18);shape("Leg",.68,.79,.48,.13,true,18)
+        if id=="MeditationRecall" then shape("Return",.82,.30,.09,.35,false,35) end
     elseif id=="ShadowClones" or id=="CloneCommand" then
 		for i=1,3 do local x=.19+(i-1)*.30; shape("Head",x,.37,.18,.22,true); shape("Body",x,.66,.23,.30,true) end
 		if id=="CloneCommand" then shape("Command",.5,.20,.74,.035,false) end
@@ -53,7 +66,13 @@ function Icons.draw(parent: GuiObject, id: string): Frame
 			shape("EyeMark",x,.49,.32,.28,true).BackgroundColor3=Color3.fromRGB(78,36,28)
 			shape("Eye",x,.49,.24,.12,true); shape("Pupil",x,.49,.15,.035,false).BackgroundColor3=Color3.fromRGB(33,30,25)
 		end
-	elseif id=="KCM" then
+	elseif id=="KuramaForm" then
+        canvas.BackgroundColor3=Color3.fromRGB(210,145,34)
+        for i=1,9 do local a=(i-5)*.26;shape("Tail",.5+math.sin(a)*.32,.37+math.abs(a)*.08,.065,.50,true,(i-5)*17) end
+        shape("Fox",.5,.68,.42,.34,true).BackgroundColor3=Color3.fromRGB(255,220,102)
+        shape("Ear",.33,.5,.13,.28,false,-22);shape("Ear",.67,.5,.13,.28,false,22)
+        for _,x in {.4,.6} do shape("Eye",x,.65,.10,.04,false).BackgroundColor3=Color3.fromRGB(75,33,18) end
+	elseif id=="KCM" or id=="KcmCancel" or id=="KuramaConvert" then
 		for i=1,5 do shape("Flame",.18+(i-1)*.16,.43,.13,.52,true,(i-3)*18) end
 		shape("Seal",.5,.73,.40,.27,true).BackgroundColor3=Color3.fromRGB(77,49,22)
 	elseif id=="GuardianArmor" then

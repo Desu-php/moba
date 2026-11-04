@@ -13,6 +13,36 @@
         </Properties>
         <Item class="ModuleScript" referent="3">
           <Properties>
+            <string name="Name">AbilityDeck</string>
+            <string name="Source"><![CDATA[--!strict
+-- Stable, paged groups. Locked techniques keep their slots; forms never reshuffle hotkeys.
+local Deck={PageSize=6,DefaultGroup="Techniques"}
+Deck.Groups={
+ {id="Techniques",name="Атаки",abilities={"Odama","Rasenshuriken","ShadowSleep","KcmDash","RikudoHY","RikudoHZ","Rasengan","RasenshurikenThrow"}},
+ {id="Modes",name="Режимы",abilities={"SageMode","KCM","KuramaForm","KcmCancel"}},
+ {id="Support",name="Поддержка",abilities={"CloneCommand","GamakichiOil","GamakichiChop","MeditationToggle","MeditationRecall","KuramaConvert","ShadowClones","Gamakichi"}},
+}
+function Deck.group(id:string)
+ for _,group in Deck.Groups do if group.id==id then return group end end
+ return Deck.Groups[1]
+end
+function Deck.pages(id:string):number return math.max(1,math.ceil(#Deck.group(id).abilities/Deck.PageSize)) end
+function Deck.page(id:string,page:number):{string}
+ local list=Deck.group(id).abilities;local result={}
+ local start=(math.clamp(math.floor(page),1,Deck.pages(id))-1)*Deck.PageSize
+ for i=start+1,math.min(start+Deck.PageSize,#list) do table.insert(result,list[i]) end
+ return result
+end
+function Deck.slot(key:string,modifier:boolean,control:boolean,text:boolean,menu:boolean):number?
+ if not modifier or control or text or menu then return nil end
+ return table.find({"One","Two","Three","Four","Five","Six"},key)
+end
+return table.freeze(Deck)
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="4">
+          <Properties>
             <string name="Name">AbilityInputRules</string>
             <string name="Source"><![CDATA[--!strict
 -- One key resolves to one request. KCM cancel takes X only while that form is active.
@@ -28,7 +58,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="4">
+        <Item class="ModuleScript" referent="5">
           <Properties>
             <string name="Name">ChakraKnifeInstancePolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -58,7 +88,7 @@ return table.freeze(P)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="5">
+        <Item class="ModuleScript" referent="6">
           <Properties>
             <string name="Name">CloneAutonomyPolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -77,7 +107,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="6">
+        <Item class="ModuleScript" referent="7">
           <Properties>
             <string name="Name">CloneCastPlan</string>
             <string name="Source"><![CDATA[--!strict
@@ -99,7 +129,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="7">
+        <Item class="ModuleScript" referent="8">
           <Properties>
             <string name="Name">CloneCommands</string>
             <string name="Source"><![CDATA[--!strict
@@ -162,7 +192,7 @@ return Commands
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="9">
           <Properties>
             <string name="Name">CloneNavigationPolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -228,7 +258,7 @@ return table.freeze(Policy)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">CloneState</string>
             <string name="Source"><![CDATA[--!strict
@@ -325,7 +355,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">GamakichiSpells</string>
             <string name="Source"><![CDATA[--!strict
@@ -390,7 +420,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="11">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">GamakichiState</string>
             <string name="Source"><![CDATA[--!strict
@@ -432,7 +462,7 @@ return G
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="13">
           <Properties>
             <string name="Name">MeditationState</string>
             <string name="Source"><![CDATA[--!strict
@@ -494,7 +524,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
+        <Item class="ModuleScript" referent="14">
           <Properties>
             <string name="Name">NarutoAdvancedCatalog</string>
             <string name="Source"><![CDATA[--!strict
@@ -521,7 +551,7 @@ return table.freeze(Catalog)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="14">
+        <Item class="ModuleScript" referent="15">
           <Properties>
             <string name="Name">NarutoDefinitions</string>
             <string name="Source"><![CDATA[--!strict
@@ -572,7 +602,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="15">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">NarutoKcmAdapter</string>
             <string name="Source"><![CDATA[--!strict
@@ -826,7 +856,7 @@ return Adapter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="16">
+        <Item class="ModuleScript" referent="17">
           <Properties>
             <string name="Name">NarutoKcmConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -859,7 +889,7 @@ return table.freeze(C)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="17">
+        <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">NarutoKcmGameplay</string>
             <string name="Source"><![CDATA[--!strict
@@ -907,7 +937,7 @@ return G
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="19">
           <Properties>
             <string name="Name">NarutoKcmState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1067,7 +1097,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="19">
+        <Item class="ModuleScript" referent="20">
           <Properties>
             <string name="Name">NarutoKuramaState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1165,7 +1195,7 @@ return F
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="21">
           <Properties>
             <string name="Name">NarutoRangedState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1349,7 +1379,7 @@ return table.freeze(R)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="22">
           <Properties>
             <string name="Name">NarutoRankPolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -1424,7 +1454,7 @@ return table.freeze(Policy)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">NarutoResources</string>
             <string name="Source"><![CDATA[--!strict
@@ -1470,7 +1500,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">NarutoRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -1526,7 +1556,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="25">
           <Properties>
             <string name="Name">NarutoSharingState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1633,7 +1663,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">RasenganState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1728,7 +1758,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">RasenganUpgradeQueue</string>
             <string name="Source"><![CDATA[--!strict
@@ -1779,7 +1809,7 @@ return Queue
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">RasenganVariants</string>
             <string name="Source"><![CDATA[--!strict
@@ -1824,7 +1854,7 @@ return table.freeze(V)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="28">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">RasenshurikenThrowRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -1845,7 +1875,7 @@ return table.freeze(R)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="29">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">SageState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1898,7 +1928,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="30">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">SkillLearning</string>
             <string name="Source"><![CDATA[--!strict
@@ -1938,7 +1968,7 @@ return Learning
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">SleepState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1962,7 +1992,7 @@ return table.freeze(Sleep)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">StatLayers</string>
             <string name="Source"><![CDATA[--!strict
@@ -1985,7 +2015,7 @@ return L
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="33">
+        <Item class="ModuleScript" referent="34">
           <Properties>
             <string name="Name">WorldUnits</string>
             <string name="Source"><![CDATA[--!strict
@@ -1997,11 +2027,11 @@ return table.freeze(Scale)
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="34">
+      <Item class="Folder" referent="35">
         <Properties>
           <string name="Name">Combat</string>
         </Properties>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">AbilityState</string>
             <string name="Source"><![CDATA[--!strict
@@ -2047,7 +2077,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">BasicAttackRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2062,7 +2092,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="38">
           <Properties>
             <string name="Name">CombatCameraRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2092,7 +2122,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">CombatProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -2119,7 +2149,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="40">
           <Properties>
             <string name="Name">CombatState</string>
             <string name="Source"><![CDATA[--!strict
@@ -2236,7 +2266,7 @@ return CombatState
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="41">
           <Properties>
             <string name="Name">HeroPoses</string>
             <string name="Source"><![CDATA[--!strict
@@ -2373,7 +2403,7 @@ return Poses
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">MinionPoses</string>
             <string name="Source"><![CDATA[--!strict
@@ -2421,7 +2451,7 @@ return table.freeze(Poses)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="42">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">RigJoints</string>
             <string name="Source"><![CDATA[--!strict
@@ -2459,11 +2489,11 @@ return Rig
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="43">
+      <Item class="Folder" referent="44">
         <Properties>
           <string name="Name">Config</string>
         </Properties>
-        <Item class="ModuleScript" referent="44">
+        <Item class="ModuleScript" referent="45">
           <Properties>
             <string name="Name">AbilityConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2476,11 +2506,11 @@ local abilities: { [string]: Ability } = {
  MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="J",Cooldown=5,Windup=0,Duration=0},
  Odama={Name="Одама Расенган",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
  Rasenshuriken={Name="Расенсюрикен",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
- ShadowSleep={Name="Sleep (enemy)",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
+ ShadowSleep={Name="Сон противника",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
  KuramaForm={Name="Курама",Key="Six",KeyLabel="6",Cooldown=160,Windup=0,Duration=30},
- KcmDash={Name="KCM Dash",Key="E",KeyLabel="E",Cooldown=40,Windup=0,Duration=0},
- KcmCancel={Name="KCM Cancel",Key="X",KeyLabel="X",Cooldown=0,Windup=0,Duration=0},
- KuramaConvert={Name="Kurama Chakra",Key="Left",KeyLabel="Left",Cooldown=0,Windup=0,Duration=0},
+ KcmDash={Name="Рывок KCM",Key="E",KeyLabel="E",Cooldown=40,Windup=0,Duration=0},
+ KcmCancel={Name="Выйти из KCM",Key="X",KeyLabel="X",Cooldown=0,Windup=0,Duration=0},
+ KuramaConvert={Name="Обмен чакры",Key="Left",KeyLabel="←",Cooldown=0,Windup=0,Duration=0},
  GamakichiOil={Name="Масло",Key="G",KeyLabel="G",Cooldown=25,Windup=0,Duration=6},
  GamakichiChop={Name="Рубящий канал",Key="H",KeyLabel="H",Cooldown=30,Windup=.5,Duration=3.5},
 	Rasengan = { Name = "Расенган I", Key = "One", KeyLabel = "1 / Q", Cooldown = 60, Windup = 2, Duration = 15 },
@@ -2491,9 +2521,9 @@ local abilities: { [string]: Ability } = {
 	CloneCommand = { Name = "Цель клонам", Key = "F", KeyLabel = "F", Cooldown = 0, Windup = 0, Duration = 0 },
 }
 return table.freeze({
-	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand", "GamakichiOil", "GamakichiChop" },
+	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "KuramaForm" },
 	PrototypeEnabled = table.freeze({ RasenshurikenThrow=true, RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
-	InputAliases = table.freeze({ V="RikudoHY", B="RikudoHZ", Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
+	InputAliases = table.freeze({ F="CloneCommand", G="GamakichiOil", H="GamakichiChop", V="RikudoHY", B="RikudoHZ", Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,
 		MaxHits = 3, Interval = 0.8, UpdateInterval = 0.1, Speed = 16, SpawnOffset = 3, SpawnForward = 1 },
@@ -2502,7 +2532,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">AnimationIds</string>
             <string name="Source"><![CDATA[--!strict
@@ -2518,7 +2548,7 @@ return table.freeze(sets)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">CameraConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2541,7 +2571,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="47">
+        <Item class="ModuleScript" referent="48">
           <Properties>
             <string name="Name">ChakraParticleData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2550,7 +2580,7 @@ return {{rotSpeed={-1000,-1000},color={{0,0.6431372761726379,1,0.960784316062927
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="48">
+        <Item class="ModuleScript" referent="49">
           <Properties>
             <string name="Name">CombatConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2616,7 +2646,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="49">
+        <Item class="ModuleScript" referent="50">
           <Properties>
             <string name="Name">CreatorVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2630,7 +2660,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="50">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">DebugConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2644,7 +2674,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="51">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">GameModeConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2661,7 +2691,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">HeroAppearanceConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2674,7 +2704,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">HeroConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2687,7 +2717,7 @@ return table.freeze({ DefaultHero = "OrangeNinja", Heroes = heroes, AppearanceVe
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">ItemConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2705,7 +2735,7 @@ return { Order = { "IronBlade", "GuardianArmor", "SwiftBoots", "HealingPotion" }
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="55">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">JungleConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2725,7 +2755,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="56">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">KuramaAvatarConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2742,7 +2772,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="57">
+        <Item class="ModuleScript" referent="58">
           <Properties>
             <string name="Name">MapConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2765,7 +2795,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="58">
+        <Item class="ModuleScript" referent="59">
           <Properties>
             <string name="Name">MinionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2786,7 +2816,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="59">
+        <Item class="ModuleScript" referent="60">
           <Properties>
             <string name="Name">NarutoFormVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2797,7 +2827,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="60">
+        <Item class="ModuleScript" referent="61">
           <Properties>
             <string name="Name">ProgressionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2818,7 +2848,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="61">
+        <Item class="ModuleScript" referent="62">
           <Properties>
             <string name="Name">TowerConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2838,7 +2868,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="62">
+        <Item class="ModuleScript" referent="63">
           <Properties>
             <string name="Name">VFXConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2868,7 +2898,7 @@ return table.freeze({
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="63">
+      <Item class="ModuleScript" referent="64">
         <Properties>
           <string name="Name">CreatorVisualFactory</string>
           <string name="Source"><![CDATA[--!strict
@@ -2898,11 +2928,11 @@ return Factory
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="64">
+      <Item class="Folder" referent="65">
         <Properties>
           <string name="Name">Game</string>
         </Properties>
-        <Item class="ModuleScript" referent="65">
+        <Item class="ModuleScript" referent="66">
           <Properties>
             <string name="Name">DeveloperCommandRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2924,7 +2954,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="66">
+        <Item class="ModuleScript" referent="67">
           <Properties>
             <string name="Name">JungleRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2954,7 +2984,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="67">
+        <Item class="ModuleScript" referent="68">
           <Properties>
             <string name="Name">MapSceneryPlan</string>
             <string name="Source"><![CDATA[--!strict
@@ -3050,7 +3080,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="68">
+        <Item class="ModuleScript" referent="69">
           <Properties>
             <string name="Name">MatchRoster</string>
             <string name="Source"><![CDATA[--!strict
@@ -3138,7 +3168,7 @@ return Roster
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="69">
+        <Item class="ModuleScript" referent="70">
           <Properties>
             <string name="Name">MatchState</string>
             <string name="Source"><![CDATA[--!strict
@@ -3221,7 +3251,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="70">
+        <Item class="ModuleScript" referent="71">
           <Properties>
             <string name="Name">ProgressionRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3297,7 +3327,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="71">
+        <Item class="ModuleScript" referent="72">
           <Properties>
             <string name="Name">RewardLedger</string>
             <string name="Source"><![CDATA[--!strict
@@ -3333,7 +3363,7 @@ return Ledger
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="72">
+        <Item class="ModuleScript" referent="73">
           <Properties>
             <string name="Name">RewardRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3377,7 +3407,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="73">
+        <Item class="ModuleScript" referent="74">
           <Properties>
             <string name="Name">RoundProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -3393,7 +3423,7 @@ return Protocol
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="74">
+        <Item class="ModuleScript" referent="75">
           <Properties>
             <string name="Name">StructureRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3406,7 +3436,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="75">
+        <Item class="ModuleScript" referent="76">
           <Properties>
             <string name="Name">TowerRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3466,7 +3496,7 @@ return Rules
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="76">
+      <Item class="ModuleScript" referent="77">
         <Properties>
           <string name="Name">KuramaAvatar</string>
           <string name="Source"><![CDATA[--!strict
@@ -3539,15 +3569,15 @@ return Avatar
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="77">
+  <Item class="ServerScriptService" referent="78">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="78">
+    <Item class="Folder" referent="79">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="79">
+      <Item class="Script" referent="80">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -3566,11 +3596,11 @@ print("[Anime Battlegrounds] Server ready")
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="80">
+      <Item class="Folder" referent="81">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="81">
+        <Item class="ModuleScript" referent="82">
           <Properties>
             <string name="Name">AbilityDisplacementService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3621,7 +3651,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="82">
+        <Item class="ModuleScript" referent="83">
           <Properties>
             <string name="Name">AbilityLearningService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3671,7 +3701,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="83">
+        <Item class="ModuleScript" referent="84">
           <Properties>
             <string name="Name">AbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3764,7 +3794,7 @@ return Ability
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="84">
+        <Item class="ModuleScript" referent="85">
           <Properties>
             <string name="Name">AbilityTargetService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3814,7 +3844,7 @@ return Targets
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="85">
+        <Item class="ModuleScript" referent="86">
           <Properties>
             <string name="Name">BaseService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3893,7 +3923,7 @@ return BaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="86">
+        <Item class="ModuleScript" referent="87">
           <Properties>
             <string name="Name">CharacterStatsService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3997,7 +4027,7 @@ return Stats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="87">
+        <Item class="ModuleScript" referent="88">
           <Properties>
             <string name="Name">CloneNavigation</string>
             <string name="Source"><![CDATA[--!strict
@@ -4311,7 +4341,7 @@ return Navigation
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="88">
+        <Item class="ModuleScript" referent="89">
           <Properties>
             <string name="Name">CloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4419,7 +4449,7 @@ return CloneService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="89">
+        <Item class="ModuleScript" referent="90">
           <Properties>
             <string name="Name">CombatLifeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4500,7 +4530,7 @@ return LifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="90">
+        <Item class="ModuleScript" referent="91">
           <Properties>
             <string name="Name">CombatService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4753,7 +4783,7 @@ return CombatService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="91">
+        <Item class="ModuleScript" referent="92">
           <Properties>
             <string name="Name">DamageService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4813,7 +4843,7 @@ return DamageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="92">
+        <Item class="ModuleScript" referent="93">
           <Properties>
             <string name="Name">DeveloperCommandService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4915,7 +4945,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="93">
+        <Item class="ModuleScript" referent="94">
           <Properties>
             <string name="Name">EconomyService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4960,7 +4990,7 @@ return Economy
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="94">
+        <Item class="ModuleScript" referent="95">
           <Properties>
             <string name="Name">FighterStateService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5280,7 +5310,7 @@ return FighterStateService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="95">
+        <Item class="ModuleScript" referent="96">
           <Properties>
             <string name="Name">GamakichiService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5465,7 +5495,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="96">
+        <Item class="ModuleScript" referent="97">
           <Properties>
             <string name="Name">GameModeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5491,7 +5521,7 @@ return GameModeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="97">
+        <Item class="ModuleScript" referent="98">
           <Properties>
             <string name="Name">HeroAppearanceService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5589,7 +5619,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="98">
+        <Item class="ModuleScript" referent="99">
           <Properties>
             <string name="Name">HeroProgressionService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5683,7 +5713,7 @@ return Progression
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="99">
+        <Item class="ModuleScript" referent="100">
           <Properties>
             <string name="Name">HeroService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5756,7 +5786,7 @@ return HeroService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="100">
+        <Item class="ModuleScript" referent="101">
           <Properties>
             <string name="Name">HitboxService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5877,7 +5907,7 @@ return HitboxService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="101">
+        <Item class="ModuleScript" referent="102">
           <Properties>
             <string name="Name">ItemShopService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5989,7 +6019,7 @@ return Shop
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="102">
+        <Item class="ModuleScript" referent="103">
           <Properties>
             <string name="Name">JungleService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6115,7 +6145,7 @@ return Jungle
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="103">
+        <Item class="ModuleScript" referent="104">
           <Properties>
             <string name="Name">KnockbackService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6165,7 +6195,7 @@ return KnockbackService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="104">
+        <Item class="ModuleScript" referent="105">
           <Properties>
             <string name="Name">MapBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -6288,7 +6318,7 @@ return MapBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="105">
+        <Item class="ModuleScript" referent="106">
           <Properties>
             <string name="Name">MapScenery</string>
             <string name="Source"><![CDATA[--!strict
@@ -6341,7 +6371,7 @@ return MapScenery
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="106">
+        <Item class="ModuleScript" referent="107">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6475,7 +6505,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="107">
+        <Item class="ModuleScript" referent="108">
           <Properties>
             <string name="Name">MeditationCloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6573,7 +6603,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="108">
+        <Item class="ModuleScript" referent="109">
           <Properties>
             <string name="Name">MinionAIService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6815,7 +6845,7 @@ return AI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="109">
+        <Item class="ModuleScript" referent="110">
           <Properties>
             <string name="Name">MinionAppearance</string>
             <string name="Source"><![CDATA[--!strict
@@ -6891,7 +6921,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="110">
+        <Item class="ModuleScript" referent="111">
           <Properties>
             <string name="Name">MinionFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -6950,7 +6980,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="111">
+        <Item class="ModuleScript" referent="112">
           <Properties>
             <string name="Name">MinionSpawnerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7011,7 +7041,7 @@ return Spawner
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="112">
+        <Item class="ModuleScript" referent="113">
           <Properties>
             <string name="Name">NarutoAbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7510,7 +7540,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="113">
+        <Item class="ModuleScript" referent="114">
           <Properties>
             <string name="Name">NarutoKcmService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7795,7 +7825,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="114">
+        <Item class="ModuleScript" referent="115">
           <Properties>
             <string name="Name">NarutoKuramaService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8014,7 +8044,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="115">
+        <Item class="ModuleScript" referent="116">
           <Properties>
             <string name="Name">NarutoRangedService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8202,7 +8232,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="116">
+        <Item class="ModuleScript" referent="117">
           <Properties>
             <string name="Name">NarutoSleepService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8269,7 +8299,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="117">
+        <Item class="ModuleScript" referent="118">
           <Properties>
             <string name="Name">NarutoSummonService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8502,7 +8532,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="118">
+        <Item class="ModuleScript" referent="119">
           <Properties>
             <string name="Name">OilStatusService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8558,7 +8588,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="119">
+        <Item class="ModuleScript" referent="120">
           <Properties>
             <string name="Name">RasenshurikenMeleeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8613,7 +8643,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="120">
+        <Item class="ModuleScript" referent="121">
           <Properties>
             <string name="Name">RasenshurikenThrowService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8696,7 +8726,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="121">
+        <Item class="ModuleScript" referent="122">
           <Properties>
             <string name="Name">RequestLimiter</string>
             <string name="Source"><![CDATA[--!strict
@@ -8731,7 +8761,7 @@ return RequestLimiter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="122">
+        <Item class="ModuleScript" referent="123">
           <Properties>
             <string name="Name">RewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8801,7 +8831,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="123">
+        <Item class="ModuleScript" referent="124">
           <Properties>
             <string name="Name">StructureReset</string>
             <string name="Source"><![CDATA[--!strict
@@ -8844,7 +8874,7 @@ return Reset
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="124">
+        <Item class="ModuleScript" referent="125">
           <Properties>
             <string name="Name">StructureService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8880,7 +8910,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="125">
+        <Item class="ModuleScript" referent="126">
           <Properties>
             <string name="Name">SummonCollision</string>
             <string name="Source"><![CDATA[--!strict
@@ -8911,7 +8941,7 @@ return Collision
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="126">
+        <Item class="ModuleScript" referent="127">
           <Properties>
             <string name="Name">TeamService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9163,7 +9193,7 @@ return TeamService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="127">
+        <Item class="ModuleScript" referent="128">
           <Properties>
             <string name="Name">TowerFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -9216,7 +9246,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="128">
+        <Item class="ModuleScript" referent="129">
           <Properties>
             <string name="Name">TowerRewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9253,7 +9283,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="129">
+        <Item class="ModuleScript" referent="130">
           <Properties>
             <string name="Name">TowerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9443,25 +9473,25 @@ return Service
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="130">
+  <Item class="StarterPlayer" referent="131">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <token name="GameSettingsAvatar">1</token>
       <bool name="LoadCharacterAppearance">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="131">
+    <Item class="StarterPlayerScripts" referent="132">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="132">
+      <Item class="Folder" referent="133">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="133">
+        <Item class="Folder" referent="134">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="134">
+          <Item class="ModuleScript" referent="135">
             <Properties>
               <string name="Name">AbilityController</string>
               <string name="Source"><![CDATA[--!strict
@@ -9547,7 +9577,7 @@ function Controller.AbilityUnavailable(id: string): string?
 	if not (Config.PrototypeEnabled :: { [string]: boolean })[id] then return "В разработке" end
 	local unavailable = Controller.Unavailable(id=="CloneCommand" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
-	if (id=="RikudoHY" or id=="RikudoHZ") and model:GetAttribute("RikudoRangedGranted")~=true then return "Requires active Rikudo" end
+	if (id=="RikudoHY" or id=="RikudoHZ") and model:GetAttribute("RikudoRangedGranted")~=true then return "Нужен активный Рикудо" end
  local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
  local line=if id=="KcmDash" or id=="KcmCancel" then "KCM" elseif id=="MeditationToggle" or id=="MeditationRecall" then "SageMode" elseif id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
  if (id=="KCM" or id=="KcmDash" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="MeditationToggle" or id=="MeditationRecall" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
@@ -9562,14 +9592,20 @@ function Controller.AbilityUnavailable(id: string): string?
   if model:GetAttribute("RasenganVariant")~=wanted then return if id=="Odama" then "Сначала 1 — Расенган" else "Сначала Q — Расенган" end
   if untilAt<=workspace:GetServerTimeNow() then return "Окно усиления закрыто" end
  end
- if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Requires clones II" end
+ if id=="RasenshurikenThrow" and (model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("SageTechniquesReady")~=true or model:GetAttribute("RasenganVariant")~="Rasenshuriken" or model:GetAttribute("RasenganPhase")~="Holding") then return "Мудрец → Q → X → дождитесь формирования" end
+ if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Нужен II ранг клонов" end
 	if id=="KuramaForm" then
   if typeof(level)~="number" or level<21 then return "Курама с уровня 21" end
-  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaLocked")==true then return "Форма уже действует" end
+  if model:GetAttribute("KcmActive")==true then return "Сначала выйдите из KCM / Рикудо: X" end
+  if model:GetAttribute("KuramaLocked")==true then return "Форма Курамы уже действует" end
   if ((model:GetAttribute("KuramaChakra") or 0) :: number)<2500 then return "Нужно 2500 чакры Курамы" end
  end
  local kcm=model:GetAttribute("KcmActive")==true
- if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then return "KCM недоступен" end
+ if id=="KCM" and not kcm and state and state:GetAttribute("Rank_KCM")==3 and model:GetAttribute("HagoromoUnlocked")~=true then return "Для Рикудо нужен дар Хагоромо" end
+ if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then
+  if kcm then return "Режим уже действует • X — выйти" end
+  return "Сначала завершите текущий режим"
+ end
  if id=="KCM" and ((model:GetAttribute("KuramaChakra") or 0) :: number)<200 then return "Нужно 200 чакры Курамы" end
  if id=="KcmCancel" and not kcm then return "KCM не активен" end
  if id=="KcmDash" and model:GetAttribute("KcmDashReady")~=true then return "Рывок доступен в KCM" end
@@ -9753,6 +9789,7 @@ function Controller.Start()
 	-- Roblox camera controls consume arrows before InputBegan. Own only the two
 	-- gameplay arrows, while leaving text and menu/navigation input to the UI.
 	Actions:BindActionAtPriority("NarutoArrowTechniques", function(_, state, input)
+		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return Enum.ContextActionResult.Pass end
 		if not InputRules.ownsArrow(input.KeyCode.Name, Input:GetFocusedTextBox() ~= nil, Gui.MenuIsOpen,
 			Gui.SelectedObject ~= nil, Players.LocalPlayer:GetAttribute("ShopOpen") == true) then
 			return Enum.ContextActionResult.Pass
@@ -9787,6 +9824,8 @@ function Controller.Start()
 	end)
 	Players.LocalPlayer.CharacterAdded:Connect(function() pendingId = 0; pendingAbility=nil; clearUpgrades(); corrections = {}; correctionModel = nil; Controller.CancelCloneCommand() end)
 	Input.InputBegan:Connect(function(input, processed)
+		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return end
+		if (Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)) and table.find({"One","Two","Three","Four","Five","Six"},input.KeyCode.Name) then return end
 		if input.KeyCode == Enum.KeyCode.Right or input.KeyCode == Enum.KeyCode.Left then return end
 		if selectingCommand and input.KeyCode == Enum.KeyCode.Escape then Controller.CancelCloneCommand(); Controller.Changed:Fire(); return end
 		if processed or Input:GetFocusedTextBox() or Gui.MenuIsOpen then return end
@@ -9833,12 +9872,200 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="135">
+          <Item class="ModuleScript" referent="136">
+            <Properties>
+              <string name="Name">AbilityDeckController</string>
+              <string name="Source"><![CDATA[--!strict
+local Players=game:GetService("Players")
+local Input=game:GetService("UserInputService")
+local Actions=game:GetService("ContextActionService")
+local Gui=game:GetService("GuiService")
+local RunService=game:GetService("RunService")
+local Shared=game.ReplicatedStorage:WaitForChild("Shared")
+local Deck=require(Shared.Abilities.AbilityDeck)
+local Config=require(Shared.Config.AbilityConfig)
+local Controller=require(script.Parent.AbilityController)
+local View=require(script.Parent.MobaHUDView)
+local Icons=require(script.Parent.HUDIcons)
+local Descriptions=require(script.Parent.AbilityDescriptions)
+local Module={}
+local started=false
+function Module.Start(panel:Frame)
+ if started then return end;started=true
+ local player=Players.LocalPlayer
+ local group=Deck.DefaultGroup;local page=1;local selected="Odama";local opened=false
+ local hovered:string?=nil
+ local function name(id:string):string
+  if id=="KCM" then
+   local state=player:FindFirstChild("HeroState");local rank=if state then state:GetAttribute("Rank_KCM") else 0
+   return if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I"
+  end
+  return if id=="Rasengan" then "Расенган" elseif id=="ShadowClones" then "Теневые клоны" else Config.Abilities[id].Name
+ end
+ local function active(id:string):boolean
+  local c=player.Character;if not c then return false end
+  return (id=="KuramaForm" and c:GetAttribute("KuramaActive")==true) or (id=="KCM" and c:GetAttribute("KcmActive")==true)
+   or (id=="SageMode" and c:GetAttribute("SagePhase")=="Active") or (id=="MeditationToggle" and c:GetAttribute("MeditationMode")==true)
+ end
+ local function status(id:string):string
+  if active(id) then return "АКТИВЕН" end
+  local remaining=Controller.Remaining(id)
+  if remaining>0 then return string.format("КД %.1f с",remaining) end
+  return Controller.AbilityUnavailable(id) or "Готово"
+ end
+ local function cost(id:string):string
+  if id=="KuramaForm" then return "2500 чакры Курамы" end
+  if id=="KCM" then return "200 чакры Курамы • 40/с" end
+  if id=="KuramaConvert" then return "200 чакры Курамы → 200 маны" end
+  return tostring(Controller.Cost(id)).." маны"
+ end
+ local function description(id:string):string
+  return name(id).."  ["..Config.Abilities[id].KeyLabel.."]\n"..cost(id).."\n"..status(id).."\n\n"..((Descriptions :: {[string]:string})[id] or "")
+ end
+ local function button(parent:Instance,id:string,text:string,x:number,y:number,w:number,h:number):TextButton
+  local b=Instance.new("TextButton");b.Name=id;b.Text=text;b.Position=UDim2.fromOffset(x,y);b.Size=UDim2.fromOffset(w,h)
+  b.BackgroundColor3=View.Card;b.BorderSizePixel=0;b.TextColor3=View.Text;b.TextSize=13;b.Font=Enum.Font.GothamMedium;b.Parent=parent;View.border(b,View.Gold);return b
+ end
+ local quick=View.frame(panel,"TechniqueDeck",UDim2.fromOffset(450,80),UDim2.fromOffset(240,-88));quick.ZIndex=5
+ local tabs:{[string]:TextButton}={}
+ local book=View.frame(panel,"TechniqueBook",UDim2.fromOffset(760,390),UDim2.fromOffset(70,-398));book.ZIndex=12;book.Visible=false;View.border(book,View.Gold)
+ local title=View.label(book,"Title",UDim2.fromOffset(650,30),UDim2.fromOffset(14,8),20);title.Text="ВСЕ ТЕХНИКИ • НАРУТО";title.TextXAlignment=Enum.TextXAlignment.Left
+ local close=button(book,"Close","X",712,9,32,28)
+ local bookTabs:{[string]:TextButton}={}
+ local help=View.label(book,"Help",UDim2.fromOffset(730,24),UDim2.fromOffset(14,352),12);help.Text="Shift + 1–6 — выбранный набор • PgUp / PgDn — страницы • Tab / Esc — закрыть"
+ local quickSlots:{TextButton}={};local cards:{TextButton}={}
+ local detail=Instance.new("ScrollingFrame");detail.Name="Description";detail.Position=UDim2.fromOffset(454,82);detail.Size=UDim2.fromOffset(290,215)
+ detail.BackgroundColor3=View.Card;detail.BorderSizePixel=0;detail.ScrollBarThickness=4;detail.CanvasSize=UDim2.new();detail.AutomaticCanvasSize=Enum.AutomaticSize.Y;detail.Parent=book
+ local detailText=View.label(detail,"Text",UDim2.new(1,-24,0,0),UDim2.fromOffset(10,8),15);detailText.AutomaticSize=Enum.AutomaticSize.Y;detailText.TextWrapped=true;detailText.TextTruncate=Enum.TextTruncate.None;detailText.TextXAlignment=Enum.TextXAlignment.Left;detailText.TextYAlignment=Enum.TextYAlignment.Top
+ local use=button(book,"Use","ПРИМЕНИТЬ",454,308,290,32)
+ local tip=View.frame(panel,"DeckTooltip",UDim2.fromOffset(420,280),UDim2.fromOffset(240,-378));tip.ZIndex=15;tip.Visible=false;View.border(tip,View.Gold)
+ local tipScroll=Instance.new("ScrollingFrame");tipScroll.Name="Scroll";tipScroll.Size=UDim2.new(1,-16,1,-16);tipScroll.Position=UDim2.fromOffset(8,8);tipScroll.BackgroundTransparency=1;tipScroll.BorderSizePixel=0;tipScroll.ScrollBarThickness=4;tipScroll.CanvasSize=UDim2.new();tipScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y;tipScroll.Parent=tip
+ local tipText=View.label(tipScroll,"Text",UDim2.new(1,-8,0,0),UDim2.new(),15);tipText.AutomaticSize=Enum.AutomaticSize.Y;tipText.TextWrapped=true;tipText.TextTruncate=Enum.TextTruncate.None;tipText.TextXAlignment=Enum.TextXAlignment.Left;tipText.TextYAlignment=Enum.TextYAlignment.Top
+ local bookToggle=button(panel,"OpenTechniqueBook","Tab\nТехники",638,38,52,60);bookToggle.TextSize=11
+ local pageLabel=View.label(quick,"Page",UDim2.fromOffset(54,20),UDim2.fromOffset(348,1),12)
+ local prev=button(quick,"Previous","‹",326,1,22,20);local nextButton=button(quick,"Next","›",402,1,22,20)
+ local bookPage=View.label(book,"Page",UDim2.fromOffset(120,26),UDim2.fromOffset(530,46),12)
+ local bookPrev=button(book,"Previous","‹",492,46,30,26);local bookNext=button(book,"Next","›",662,46,30,26)
+ local function setOpen(value:boolean)
+  opened=value;book.Visible=value;hovered=nil;tip.Visible=false;player:SetAttribute("AbilityBookOpen",value)
+  if value then Controller.CancelCloneCommand() end
+ end
+ local function cast(id:string)
+  -- UI never grants a technique; all existing client and authoritative server gates still apply.
+  setOpen(false)
+  if id=="RasenshurikenThrow" then Controller.TryThrowRasenshuriken()
+  elseif id=="CloneCommand" then Controller.BeginCloneCommand()
+  else Controller.TryCast(id) end
+ end
+ local function redraw()
+  local ids=Deck.page(group,page)
+  player:SetAttribute("TechniqueDeckGroup",group);player:SetAttribute("TechniqueDeckPage",page)
+  for i=1,6 do
+   local id=ids[i]
+   for _,b in {quickSlots[i],cards[i]} do
+    b.Visible=id~=nil;b:SetAttribute("AbilityId",id)
+    local old=b:FindFirstChild("Symbol");if old then old:Destroy() end
+    if id then
+     local symbol=View.frame(b,"Symbol",UDim2.fromOffset(30,30),UDim2.fromOffset(5,if b==quickSlots[i] then 2 else 8));Icons.draw(symbol,id)
+    end
+   end
+  end
+  selected=ids[1] or "Rasengan";detail.CanvasPosition=Vector2.zero
+  pageLabel.Text=tostring(page).."/"..Deck.pages(group);bookPage.Text="Страница "..page.." / "..Deck.pages(group)
+  for id,b in tabs do b.BackgroundColor3=if id==group then Color3.fromRGB(100,76,34) else View.Card end
+  for id,b in bookTabs do b.BackgroundColor3=if id==group then Color3.fromRGB(100,76,34) else View.Card end
+  for _,b in {prev,nextButton,bookPrev,bookNext} do b.Visible=Deck.pages(group)>1 end
+ end
+ for i=1,6 do
+  local q=button(quick,"Slot"..i,"",(i-1)*75,27,70,50);quickSlots[i]=q
+  local label=View.label(q,"Name",UDim2.new(1,-4,0,16),UDim2.fromOffset(2,33),10)
+  local key=View.label(q,"Key",UDim2.fromOffset(36,16),UDim2.fromOffset(34,1),9);key.Text="Shift+"..i;key.TextColor3=View.Gold
+  local state=View.label(q,"State",UDim2.fromOffset(36,14),UDim2.fromOffset(34,17),9)
+  q.MouseEnter:Connect(function() hovered=q:GetAttribute("AbilityId") :: string?;tipScroll.CanvasPosition=Vector2.zero end)
+  q.MouseLeave:Connect(function() hovered=nil end)
+  q.Activated:Connect(function() local id=q:GetAttribute("AbilityId");if typeof(id)=="string" then cast(id) end end)
+  local b=button(book,"Slot"..i,"",14+((i-1)%3)*144,82+math.floor((i-1)/3)*130,136,118);cards[i]=b
+  local heading=View.label(b,"Name",UDim2.fromOffset(126,38),UDim2.fromOffset(5,42),13);heading.TextWrapped=true
+  local shortcut=View.label(b,"Key",UDim2.fromOffset(89,32),UDim2.fromOffset(43,7),11);shortcut.TextColor3=View.Gold
+  local reason=View.label(b,"State",UDim2.fromOffset(126,33),UDim2.fromOffset(5,80),11);reason.TextWrapped=true
+  local function select() local id=b:GetAttribute("AbilityId");if typeof(id)=="string" and selected~=id then selected=id;detail.CanvasPosition=Vector2.zero end end
+  b.MouseEnter:Connect(select);b.Activated:Connect(select)
+ end
+ for i,g in Deck.Groups do
+  local b=button(quick,g.id,g.name,(i-1)*106,1,102,20);tabs[g.id]=b
+  local bb=button(book,g.id,g.name,14+(i-1)*144,46,136,26);bookTabs[g.id]=bb
+  local function choose() group=g.id;page=1;hovered=nil;redraw() end
+  b.Activated:Connect(choose);bb.Activated:Connect(choose)
+ end
+ local function turn(delta:number) page=((page-1+delta)%Deck.pages(group))+1;hovered=nil;redraw() end
+ prev.Activated:Connect(function() turn(-1) end);nextButton.Activated:Connect(function() turn(1) end)
+ bookPrev.Activated:Connect(function() turn(-1) end);bookNext.Activated:Connect(function() turn(1) end)
+ use.Activated:Connect(function() if not Controller.AbilityUnavailable(selected) and Controller.Remaining(selected)<=0 then cast(selected) end end)
+ close.Activated:Connect(function() setOpen(false) end);bookToggle.Activated:Connect(function() setOpen(not opened) end)
+ Actions:BindActionAtPriority("TechniqueDeckKeys",function(_,state,input)
+  if Input:GetFocusedTextBox() or Gui.MenuIsOpen or player:GetAttribute("ShopOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true or player:GetAttribute("StatsOpen")==true then return Enum.ContextActionResult.Pass end
+  local key=input.KeyCode.Name;local modifier=Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)
+  local control=Input:IsKeyDown(Enum.KeyCode.LeftControl) or Input:IsKeyDown(Enum.KeyCode.RightControl)
+  local slot=Deck.slot(key,modifier,control,false,false)
+  local owns=key=="Tab" or (opened and key=="Escape") or ((opened or modifier) and (key=="PageUp" or key=="PageDown")) or slot~=nil
+  if not owns then return Enum.ContextActionResult.Pass end
+  if state==Enum.UserInputState.Begin then
+   if key=="Tab" then setOpen(not opened)
+   elseif key=="Escape" then setOpen(false)
+   elseif key=="PageUp" or key=="PageDown" then turn(if key=="PageUp" then -1 else 1)
+   elseif slot then local id=Deck.page(group,page)[slot];if id then cast(id) end end
+  end
+  return Enum.ContextActionResult.Sink
+ end,false,Enum.ContextActionPriority.High.Value+50,Enum.KeyCode.Tab,Enum.KeyCode.Escape,Enum.KeyCode.PageUp,Enum.KeyCode.PageDown,Enum.KeyCode.One,Enum.KeyCode.Two,Enum.KeyCode.Three,Enum.KeyCode.Four,Enum.KeyCode.Five,Enum.KeyCode.Six)
+ player.CharacterRemoving:Connect(function() setOpen(false) end)
+ Input.WindowFocusReleased:Connect(function() setOpen(false) end)
+ require(script.Parent.RoundController).Watch(function() setOpen(false) end)
+ redraw()
+ local last=0
+ RunService.Heartbeat:Connect(function()
+  if os.clock()-last<.1 then return end;last=os.clock()
+  if player:GetAttribute("ShopOpen")==true or player:GetAttribute("StatsOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true or Gui.MenuIsOpen then setOpen(false) end
+  local c=player.Character;local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
+  if opened and (not h or h.Health<=0) then setOpen(false) end
+  for i=1,6 do
+   for _,b in {quickSlots[i],cards[i]} do
+    local id=b:GetAttribute("AbilityId");if typeof(id)~="string" then continue end
+    (b:FindFirstChild("Name") :: TextLabel).Text=name(id)
+    local unavailable=Controller.AbilityUnavailable(id);local remaining=Controller.Remaining(id)
+    local state=b:FindFirstChild("State") :: TextLabel
+    state.Text=if b==cards[i] then status(id) elseif active(id) then "ВКЛ" elseif remaining>0 then tostring(math.ceil(remaining)) elseif unavailable then "×" else ""
+    state.TextColor3=if active(id) then Color3.fromRGB(127,224,165) elseif unavailable or remaining>0 then Color3.fromRGB(193,164,134) else View.Text
+    if b==cards[i] then (b:FindFirstChild("Key") :: TextLabel).Text="Shift+"..i.."\n["..Config.Abilities[id].KeyLabel.."]" end
+    b.BackgroundColor3=if active(id) then Color3.fromRGB(38,85,64) elseif b==cards[i] and selected==id then Color3.fromRGB(83,68,38) else View.Card
+   end
+  end
+  if opened then
+   detailText.Text=description(selected)
+   local ready=not Controller.AbilityUnavailable(selected) and Controller.Remaining(selected)<=0
+   use.Text=if ready then "ПРИМЕНИТЬ  •  "..Config.Abilities[selected].KeyLabel else "НЕДОСТУПНО • условие выше"
+   use.BackgroundColor3=if ready then Color3.fromRGB(40,105,76) else View.Card;use.AutoButtonColor=ready
+  end
+  tip.Visible=hovered~=nil and not opened
+  if hovered then tipText.Text=description(hovered) end
+ end)
+end
+return Module
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="137">
             <Properties>
               <string name="Name">AbilityDescriptions</string>
               <string name="Source"><![CDATA[--!strict
 -- Player-facing descriptions shared by main and temporary ability slots.
 return {
+ RasenshurikenThrow="Сначала включите режим мудреца и сформируйте Расенсюрикен: Q → X. Когда он готов в руке, ЛКМ бросает его по прицелу. В полёте раскрывает синий купол в области фактического урона.",
+ ShadowSleep="Со II ранга клонов доступна техника сна противника. T → выберите врага → ЛКМ для подтверждения. Нужно 200 маны. ПКМ / Esc отменяет выбор.",
+ KcmDash="Доступен в активном KCM или Рикудо. Удерживайте E, выберите место и отпустите E для рывка. При выборе кнопкой или через Shift используйте ЛКМ для подтверждения. ПКМ / Esc отменяет выбор.",
+ KcmCancel="Завершает активный KCM или Рикудо. X возвращает обычную форму; самостоятельные бонусы мудреца сохраняют свой таймер. Эта команда не отменяет полную Кураму.",
+ KuramaConvert="С уровня 16 переводит 200 отдельной чакры Курамы в 200 обычной маны способностей. Стрелка влево — применить. Нужен достаточный запас чакры Курамы.",
+ MeditationToggle="Стрелка вправо переключает назначение кнопки 4: обычный режим мудреца или медитация с клонами. Включите медитацию, затем нажмите 4 для подготовки медитирующих клонов. J возвращает их накопленную энергию. Нужна изученная линия режима мудреца.",
+ MeditationRecall="J возвращает накопленную энергию медитирующих клонов. Доступно, когда у Наруто есть такие клоны; боевые теневые клоны этой командой не отзываются.",
  Rasengan="Собирает вращающуюся чакру в ладони. После формирования подойдите к врагу и ударьте ЛКМ. Промах сохраняет заряд.\nПосле Q выберите Z — Одама или X — Расенсюрикен напрямую. Доступные варианты заменяют значок Q до выбора или окончания заряда. Без выбора остаётся обычный Расенган.",
  Odama="Увеличивает обычный Расенган до огромной сферы. Наруто поддерживает её второй рукой и наносит мощный удар вблизи.\nТребуется II ранг Расенгана. Q → Z. Доплата 200 чакры; всего 300. Урон: 250 + 3 × сила. ЛКМ по врагу — применить.",
  Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
@@ -9856,7 +10083,7 @@ return {
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="136">
+          <Item class="ModuleScript" referent="138">
             <Properties>
               <string name="Name">AbilityHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -9910,7 +10137,7 @@ function HUD.Start()
  local buttons: {[string]: TextButton}={}
  local learnButtons: {[string]: TextButton}={}
  for index,id in Config.Order do
-  local main=index<=5; local x,y,size=Layout.skill(index)
+  local main=index<=6; local x,y,size=Layout.skill(index)
   local button=Instance.new("TextButton"); button.Name=id; button.Size=UDim2.fromOffset(size,size)
   button.Position=UDim2.fromOffset(x,y)
   button.BackgroundColor3=View.Card; button.BorderSizePixel=0; button.Text=""; button.Parent=panel; View.border(button,View.Gold)
@@ -9924,20 +10151,11 @@ function HUD.Start()
   button.MouseLeave:Connect(function() if hovered==id then hovered=nil; tooltip.Visible=false end end)
   button.Activated:Connect(function() if id=="CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(id) end end)
   buttons[id]=button
-  if main then
+  if index<=5 then
    local plus=Instance.new("TextButton"); plus.Name="Learn"; plus.Text="+"; plus.Size=UDim2.fromOffset(22,20); plus.Position=UDim2.new(1,-22,0,-21); plus.ZIndex=4; plus.TextSize=20
    plus.BackgroundColor3=Color3.fromRGB(152,112,33); plus.TextColor3=Color3.new(1,1,1); plus.Parent=button
    plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
   end
- end
- local rikudoPanel=View.frame(panel,"RikudoTechniques",UDim2.fromOffset(370,45),UDim2.fromOffset(520,Layout.RikudoPanelY));rikudoPanel.Visible=false
- local rikudoTitle=View.label(rikudoPanel,"Title",UDim2.fromOffset(370,17),UDim2.fromOffset(0,-18),12);rikudoTitle.Text="РИКУДО • временные техники";rikudoTitle.TextColor3=View.Gold
- local rangedButtons:{[string]:TextButton}={}
- for i,id in {"RikudoHY","RikudoHZ"} do
-  local b=Instance.new("TextButton");b.Name=id;b.Size=UDim2.fromOffset(180,45);b.Position=UDim2.fromOffset((i-1)*190,0);b.BackgroundColor3=View.Card;b.TextColor3=View.Text;b.TextSize=12;b.Parent=rikudoPanel;View.border(b,View.Gold)
-  b.Activated:Connect(function() Controller.BeginTarget(id) end);rangedButtons[id]=b
-  b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,Layout.RikudoTooltipY);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
-  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-310) end end)
  end
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
   local track=View.frame(panel,name,UDim2.fromOffset(450,17),UDim2.fromOffset(240,y)); track.BackgroundColor3=View.Card
@@ -9967,25 +10185,20 @@ function HUD.Start()
   b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false end end)
   choices[id]=b
  end
+ require(script.Parent.AbilityDeckController).Start(panel)
  local nextUpdate=0
  RunService.Heartbeat:Connect(function()
   local now=workspace:GetServerTimeNow(); if now<nextUpdate then return end; nextUpdate=now+.1
   local camera=workspace.CurrentCamera
   if camera then
    scale.Scale=Layout.scale(camera.ViewportSize.X,camera.ViewportSize.Y)
-   message.Position=UDim2.new(.5,0,1,-(Layout.ConsoleHeight*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
+   message.Position=UDim2.new(.5,0,1,-((Layout.ConsoleHeight+Layout.DeckHeight)*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
   end
   local model=player.Character; View.updatePortrait(portrait,model)
   commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
   commands.Position=message.Position-UDim2.fromOffset(0,40)
   local order=tostring(if model then model:GetAttribute("SummonOrder") or "Follow" else "Follow")
   commands.Text="F — атаковать · R — за мной · Y — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
-  rikudoPanel.Visible=model~=nil and model:GetAttribute("RikudoRangedGranted")==true
-  for id,b in rangedButtons do
-   local left=Controller.Remaining(id);local reason=Controller.AbilityUnavailable(id)
-   b.Active=left<=0 and reason==nil;b.AutoButtonColor=b.Active;b.BackgroundColor3=if b.Active then View.Card else Color3.fromRGB(31,29,35)
-   b.Text=Config.Abilities[id].KeyLabel.."  "..Config.Abilities[id].Name.."\n"..(if left>0 then string.format("%.1f с",left) elseif reason then "1800 маны • недоступно" else "1800 маны • выбрать точку")
-  end
   local state=player:FindFirstChild("HeroState")
   local function number(name: string): number local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then value else 0 end
   local function shown(name: string,format: string): string local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then string.format(format,value) else "—" end
@@ -10015,7 +10228,8 @@ function HUD.Start()
   end
   local notice=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
   local formStatus=Controller.GetFormStatus()
-  message.Visible=hovered==nil
+  message.Visible=hovered==nil and player:GetAttribute("AbilityBookOpen")~=true
+  if player:GetAttribute("AbilityBookOpen")==true then hovered=nil;tooltip.Visible=false;commands.Visible=false end
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
   local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
@@ -10055,6 +10269,15 @@ function HUD.Start()
    local status=button:FindFirstChild("Status") :: TextLabel
    status.Text=if not enabled then "LOCK" elseif remaining>0 then tostring(math.ceil(remaining)) elseif reason then (if reason=="Недостаточно маны" then "ЧАКРА" elseif rank==0 and learnButtons[id] then "0" else "×") else ""
    local rankLabel=button:FindFirstChild("Rank") :: TextLabel; rankLabel.Text=if rank>0 then string.rep("●",math.min(rank,5)) else "○"
+   if id=="KCM" then rankLabel.Text=if rank==3 then "РИКУДО" elseif rank==2 then "KCM II" else "KCM I" end
+   if id=="KuramaForm" then
+    rankLabel.Text="КУРАМА";rankLabel.TextSize=10
+    costLabel.Text="2500";costLabel.TextColor3=View.Gold
+    if model and model:GetAttribute("KuramaActive")==true then
+     shade.Visible=false;status.Text=tostring(math.max(0,math.ceil(((model:GetAttribute("KuramaExpiresAt") or now) :: number)-now)))
+     button.BackgroundColor3=Color3.fromRGB(123,87,22)
+    end
+   end
    if id=="Rasengan" and model and model:GetAttribute("RasenganHeld")==true then
     shade.Visible=false;status.Text="";button.BackgroundColor3=Color3.fromRGB(24,90,120)
    end
@@ -10073,7 +10296,7 @@ function HUD.Start()
     local cd=definition.Cooldown
     if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
     if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
-    tooltipText.Text=(if id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..tostring(Controller.Cost(id)).." чакры  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
+    tooltipText.Text=(if id=="KCM" then (if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I") elseif id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..(if id=="KuramaForm" then "2500 чакры Курамы" elseif id=="KCM" then "200 чакры Курамы" else tostring(Controller.Cost(id)).." маны").."  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
     local bounds=TextService:GetTextSize(tooltipText.Text,tooltipText.TextSize,tooltipText.Font,Vector2.new(390,10000))
     local height=math.max(140,math.ceil(bounds.Y)+24)
     tooltip.Size=UDim2.fromOffset(410,height)
@@ -10086,7 +10309,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="137">
+          <Item class="ModuleScript" referent="139">
             <Properties>
               <string name="Name">AbilityTargeting</string>
               <string name="Source"><![CDATA[--!strict
@@ -10285,7 +10508,7 @@ return Targeting
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="138">
+          <Item class="ModuleScript" referent="140">
             <Properties>
               <string name="Name">AbilityVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10540,7 +10763,7 @@ return VFX
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="139">
+          <Item class="ModuleScript" referent="141">
             <Properties>
               <string name="Name">AnimationController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10709,7 +10932,7 @@ return AnimationController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="140">
+          <Item class="ModuleScript" referent="142">
             <Properties>
               <string name="Name">CameraController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10793,7 +11016,7 @@ end
 function Controller.IsCaptured(): boolean
 	return started and enabled and active and Input.KeyboardEnabled and Rules.captured(focused, Gui.MenuIsOpen, Input:GetFocusedTextBox() ~= nil,
 		player:GetAttribute("ShopOpen") == true, player:GetAttribute("StatsOpen") == true,
-		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true)
+		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true or player:GetAttribute("AbilityBookOpen")==true)
 end
 
 function Controller.GetAimRay(): Ray?
@@ -10940,7 +11163,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="141">
+          <Item class="ModuleScript" referent="143">
             <Properties>
               <string name="Name">ChakraAuraVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -11004,7 +11227,7 @@ return Aura
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="142">
+          <Item class="ModuleScript" referent="144">
             <Properties>
               <string name="Name">ChakraParticleVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -11042,7 +11265,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="143">
+          <Item class="ModuleScript" referent="145">
             <Properties>
               <string name="Name">CombatController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11271,7 +11494,7 @@ return CombatController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="144">
+          <Item class="ModuleScript" referent="146">
             <Properties>
               <string name="Name">DeveloperConsoleController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11318,7 +11541,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="145">
+          <Item class="ModuleScript" referent="147">
             <Properties>
               <string name="Name">HUDIcons</string>
               <string name="Source"><![CDATA[--!strict
@@ -11356,7 +11579,7 @@ function Icons.draw(parent: GuiObject, id: string): Frame
             local r=shape("CompressedFlow",.5,.5,.25+i*.16,.25+i*.16,true);r.BackgroundTransparency=1
             local stroke=Instance.new("UIStroke");stroke.Color=Color3.fromRGB(79,166,237);stroke.Thickness=2;stroke.Parent=r
         end
-    elseif id=="Rasenshuriken" then
+    elseif id=="Rasenshuriken" or id=="RasenshurikenThrow" or id=="RikudoHY" or id=="RikudoHZ" then
         for i=0,3 do
             local a=math.pi*i/2
             local blade=shape("WindBlade",.5+math.cos(a)*.24,.5+math.sin(a)*.24,.15,.48,false,45+i*90)
@@ -11364,6 +11587,19 @@ function Icons.draw(parent: GuiObject, id: string): Frame
         end
         shape("WindCore",.5,.5,.45,.45,true).BackgroundColor3=Color3.fromRGB(115,228,255)
         local core=shape("Core",.5,.5,.29,.29,true);core.BackgroundColor3=Color3.fromRGB(245,255,255)
+    elseif id=="KcmDash" then
+        canvas.BackgroundColor3=Color3.fromRGB(173,122,31)
+        shape("Dash",.55,.45,.16,.65,false,30);shape("DashTip",.55,.68,.20,.37,false,-34)
+        for i=1,3 do shape("Speed",.22,.22+i*.18,.32,.04,false,-12) end
+    elseif id=="ShadowSleep" then
+        canvas.BackgroundColor3=Color3.fromRGB(105,72,145)
+        for _,x in {.28,.72} do shape("ClosedEye",x,.58,.29,.06,false) end
+        shape("Sleep",.55,.22,.28,.05,false);shape("Sleep",.55,.31,.28,.05,false,-38);shape("Sleep",.55,.40,.28,.05,false)
+    elseif id=="MeditationToggle" or id=="MeditationRecall" then
+        canvas.BackgroundColor3=Color3.fromRGB(65,132,117)
+        shape("Head",.5,.25,.22,.25,true);shape("Body",.5,.55,.28,.36,true)
+        shape("Leg",.32,.79,.48,.13,true,-18);shape("Leg",.68,.79,.48,.13,true,18)
+        if id=="MeditationRecall" then shape("Return",.82,.30,.09,.35,false,35) end
     elseif id=="ShadowClones" or id=="CloneCommand" then
 		for i=1,3 do local x=.19+(i-1)*.30; shape("Head",x,.37,.18,.22,true); shape("Body",x,.66,.23,.30,true) end
 		if id=="CloneCommand" then shape("Command",.5,.20,.74,.035,false) end
@@ -11376,7 +11612,13 @@ function Icons.draw(parent: GuiObject, id: string): Frame
 			shape("EyeMark",x,.49,.32,.28,true).BackgroundColor3=Color3.fromRGB(78,36,28)
 			shape("Eye",x,.49,.24,.12,true); shape("Pupil",x,.49,.15,.035,false).BackgroundColor3=Color3.fromRGB(33,30,25)
 		end
-	elseif id=="KCM" then
+	elseif id=="KuramaForm" then
+        canvas.BackgroundColor3=Color3.fromRGB(210,145,34)
+        for i=1,9 do local a=(i-5)*.26;shape("Tail",.5+math.sin(a)*.32,.37+math.abs(a)*.08,.065,.50,true,(i-5)*17) end
+        shape("Fox",.5,.68,.42,.34,true).BackgroundColor3=Color3.fromRGB(255,220,102)
+        shape("Ear",.33,.5,.13,.28,false,-22);shape("Ear",.67,.5,.13,.28,false,22)
+        for _,x in {.4,.6} do shape("Eye",x,.65,.10,.04,false).BackgroundColor3=Color3.fromRGB(75,33,18) end
+	elseif id=="KCM" or id=="KcmCancel" or id=="KuramaConvert" then
 		for i=1,5 do shape("Flame",.18+(i-1)*.16,.43,.13,.52,true,(i-3)*18) end
 		shape("Seal",.5,.73,.40,.27,true).BackgroundColor3=Color3.fromRGB(77,49,22)
 	elseif id=="GuardianArmor" then
@@ -11394,16 +11636,15 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="146">
+          <Item class="ModuleScript" referent="148">
             <Properties>
               <string name="Name">HUDLayout</string>
               <string name="Source"><![CDATA[--!strict
 -- Reference space: 1920x1080. Scale with height; never stretch on ultrawide.
-local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48,
-	RikudoPanelY = -124, RikudoTooltipY = -284 }
+local Layout = { ConsoleWidth = 900, ConsoleHeight = 164, TopWidth = 920, TopHeight = 48, DeckHeight=86 }
 function Layout.skill(index: number): (number, number, number)
-	if index<=5 then return 240+(index-1)*66,38,60 end
-	return 582+(index-6)*38,54,32
+	if index<=6 then return 240+(index-1)*66,38,60 end
+	return 638+(index-7)*30,54,26
 end
 function Layout.item(index: number): (number,number)
 	return 704+((index-1)%3)*62,24+math.floor((index-1)/3)*52
@@ -11415,7 +11656,7 @@ return table.freeze(Layout)
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="147">
+          <Item class="ModuleScript" referent="149">
             <Properties>
               <string name="Name">HeroAppearanceTransition</string>
               <string name="Source"><![CDATA[--!strict
@@ -11548,7 +11789,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="148">
+          <Item class="ModuleScript" referent="150">
             <Properties>
               <string name="Name">HeroHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11705,7 +11946,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="149">
+          <Item class="ModuleScript" referent="151">
             <Properties>
               <string name="Name">HeroMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11897,7 +12138,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="150">
+          <Item class="ModuleScript" referent="152">
             <Properties>
               <string name="Name">InputController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11913,6 +12154,7 @@ local interruptKeys: { [string]: boolean } = {}
 for _, ability in AbilityConfig.Abilities do interruptKeys[ability.Key] = true end
 for key in (AbilityConfig.InputAliases :: { [string]: string }) do interruptKeys[key] = true end
 interruptKeys.R = true; interruptKeys.Y = true -- Follow/Hold orders also release a held attack.
+interruptKeys.Tab = true
 
 local InputController = {}
 local started = false
@@ -12001,7 +12243,7 @@ return InputController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="151">
+          <Item class="ModuleScript" referent="153">
             <Properties>
               <string name="Name">KuramaVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12093,7 +12335,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="152">
+          <Item class="ModuleScript" referent="154">
             <Properties>
               <string name="Name">LearningController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12121,7 +12363,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="153">
+          <Item class="ModuleScript" referent="155">
             <Properties>
               <string name="Name">MinionMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12211,7 +12453,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="154">
+          <Item class="ModuleScript" referent="156">
             <Properties>
               <string name="Name">MobaHUDView</string>
               <string name="Source"><![CDATA[--!strict
@@ -12317,7 +12559,7 @@ return View
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="155">
+          <Item class="ModuleScript" referent="157">
             <Properties>
               <string name="Name">NarutoRangedVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12417,7 +12659,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="156">
+          <Item class="ModuleScript" referent="158">
             <Properties>
               <string name="Name">RasenganEvolutionHUD</string>
               <string name="Source"><![CDATA[--!strict
@@ -12557,7 +12799,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="157">
+          <Item class="ModuleScript" referent="159">
             <Properties>
               <string name="Name">RasenganVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12702,7 +12944,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="158">
+          <Item class="ModuleScript" referent="160">
             <Properties>
               <string name="Name">RasenshurikenFlightVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12735,7 +12977,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="159">
+          <Item class="ModuleScript" referent="161">
             <Properties>
               <string name="Name">RoundController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12771,7 +13013,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="160">
+          <Item class="ModuleScript" referent="162">
             <Properties>
               <string name="Name">SurvivalHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12875,7 +13117,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="161">
+          <Item class="ModuleScript" referent="163">
             <Properties>
               <string name="Name">TowerVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12939,7 +13181,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="162">
+          <Item class="ModuleScript" referent="164">
             <Properties>
               <string name="Name">VFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13172,7 +13414,7 @@ return VFXController
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="163">
+        <Item class="LocalScript" referent="165">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -13199,7 +13441,7 @@ print("[Anime Battlegrounds] Client ready; left mouse button attacks")
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="164">
+  <Item class="Workspace" referent="166">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="NeedsPivotMigration">false</bool>

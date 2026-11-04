@@ -17,7 +17,7 @@ for _,active in {false,true} do
  check(Input.resolve(aliases,"X",active)==(if active then "KcmCancel" else "Rasenshuriken"),"context X preserved")
 end
 for _,id in {"RikudoHY","RikudoHZ"} do
- check(table.find(Config.Order,id)==nil,"temporary panel rather than learned hero slot")
+ check(table.find(Config.Order,id)==nil,"additional deck rather than learned hero slot")
  check(table.find(Heroes.Heroes.OrangeNinja.Abilities,id)~=nil,"network allowlist includes confirmed variants")
  check(Config.Abilities[id].Cooldown==60,"source cooldown")
  for existingId,ability in Config.Abilities do

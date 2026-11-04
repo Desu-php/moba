@@ -81,7 +81,7 @@ function Controller.AbilityUnavailable(id: string): string?
 	if not (Config.PrototypeEnabled :: { [string]: boolean })[id] then return "В разработке" end
 	local unavailable = Controller.Unavailable(id=="CloneCommand" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
 	local player = Players.LocalPlayer; local model = player.Character; if not model then return "Недоступно" end
-	if (id=="RikudoHY" or id=="RikudoHZ") and model:GetAttribute("RikudoRangedGranted")~=true then return "Requires active Rikudo" end
+	if (id=="RikudoHY" or id=="RikudoHZ") and model:GetAttribute("RikudoRangedGranted")~=true then return "Нужен активный Рикудо" end
  local state = player:FindFirstChild("HeroState"); local level = if state then state:GetAttribute("Level") else nil
  local line=if id=="KcmDash" or id=="KcmCancel" then "KCM" elseif id=="MeditationToggle" or id=="MeditationRecall" then "SageMode" elseif id=="CloneCommand" then "ShadowClones" elseif id=="GamakichiOil" or id=="GamakichiChop" then "Gamakichi" else id
  if (id=="KCM" or id=="KcmDash" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop" or id=="Rasengan" or id=="ShadowClones" or id=="Gamakichi" or id=="SageMode" or id=="MeditationToggle" or id=="MeditationRecall" or id=="CloneCommand") and (not state or (if id=="CloneCommand" then math.max((state:GetAttribute("Rank_ShadowClones") or 0) :: number,(state:GetAttribute("Rank_Gamakichi") or 0) :: number) else ((state:GetAttribute("Rank_"..line) or 0) :: number))<1) then return "Не изучено" end
@@ -96,14 +96,20 @@ function Controller.AbilityUnavailable(id: string): string?
   if model:GetAttribute("RasenganVariant")~=wanted then return if id=="Odama" then "Сначала 1 — Расенган" else "Сначала Q — Расенган" end
   if untilAt<=workspace:GetServerTimeNow() then return "Окно усиления закрыто" end
  end
- if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Requires clones II" end
+ if id=="RasenshurikenThrow" and (model:GetAttribute("SagePhase")~="Active" or model:GetAttribute("SageTechniquesReady")~=true or model:GetAttribute("RasenganVariant")~="Rasenshuriken" or model:GetAttribute("RasenganPhase")~="Holding") then return "Мудрец → Q → X → дождитесь формирования" end
+ if id=="ShadowSleep" and (not state or ((state:GetAttribute("Rank_ShadowClones") or 0) :: number)<2) then return "Нужен II ранг клонов" end
 	if id=="KuramaForm" then
   if typeof(level)~="number" or level<21 then return "Курама с уровня 21" end
-  if model:GetAttribute("KcmActive")==true or model:GetAttribute("KuramaLocked")==true then return "Форма уже действует" end
+  if model:GetAttribute("KcmActive")==true then return "Сначала выйдите из KCM / Рикудо: X" end
+  if model:GetAttribute("KuramaLocked")==true then return "Форма Курамы уже действует" end
   if ((model:GetAttribute("KuramaChakra") or 0) :: number)<2500 then return "Нужно 2500 чакры Курамы" end
  end
  local kcm=model:GetAttribute("KcmActive")==true
- if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then return "KCM недоступен" end
+ if id=="KCM" and not kcm and state and state:GetAttribute("Rank_KCM")==3 and model:GetAttribute("HagoromoUnlocked")~=true then return "Для Рикудо нужен дар Хагоромо" end
+ if id=="KCM" and model:GetAttribute("KcmAllowed")~=true then
+  if kcm then return "Режим уже действует • X — выйти" end
+  return "Сначала завершите текущий режим"
+ end
  if id=="KCM" and ((model:GetAttribute("KuramaChakra") or 0) :: number)<200 then return "Нужно 200 чакры Курамы" end
  if id=="KcmCancel" and not kcm then return "KCM не активен" end
  if id=="KcmDash" and model:GetAttribute("KcmDashReady")~=true then return "Рывок доступен в KCM" end
@@ -287,6 +293,7 @@ function Controller.Start()
 	-- Roblox camera controls consume arrows before InputBegan. Own only the two
 	-- gameplay arrows, while leaving text and menu/navigation input to the UI.
 	Actions:BindActionAtPriority("NarutoArrowTechniques", function(_, state, input)
+		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return Enum.ContextActionResult.Pass end
 		if not InputRules.ownsArrow(input.KeyCode.Name, Input:GetFocusedTextBox() ~= nil, Gui.MenuIsOpen,
 			Gui.SelectedObject ~= nil, Players.LocalPlayer:GetAttribute("ShopOpen") == true) then
 			return Enum.ContextActionResult.Pass
@@ -321,6 +328,8 @@ function Controller.Start()
 	end)
 	Players.LocalPlayer.CharacterAdded:Connect(function() pendingId = 0; pendingAbility=nil; clearUpgrades(); corrections = {}; correctionModel = nil; Controller.CancelCloneCommand() end)
 	Input.InputBegan:Connect(function(input, processed)
+		if Players.LocalPlayer:GetAttribute("AbilityBookOpen")==true then return end
+		if (Input:IsKeyDown(Enum.KeyCode.LeftShift) or Input:IsKeyDown(Enum.KeyCode.RightShift)) and table.find({"One","Two","Three","Four","Five","Six"},input.KeyCode.Name) then return end
 		if input.KeyCode == Enum.KeyCode.Right or input.KeyCode == Enum.KeyCode.Left then return end
 		if selectingCommand and input.KeyCode == Enum.KeyCode.Escape then Controller.CancelCloneCommand(); Controller.Changed:Fire(); return end
 		if processed or Input:GetFocusedTextBox() or Gui.MenuIsOpen then return end

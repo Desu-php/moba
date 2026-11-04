@@ -79,7 +79,7 @@ end
 function Controller.IsCaptured(): boolean
 	return started and enabled and active and Input.KeyboardEnabled and Rules.captured(focused, Gui.MenuIsOpen, Input:GetFocusedTextBox() ~= nil,
 		player:GetAttribute("ShopOpen") == true, player:GetAttribute("StatsOpen") == true,
-		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true)
+		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true or player:GetAttribute("AbilityBookOpen")==true)
 end
 
 function Controller.GetAimRay(): Ray?

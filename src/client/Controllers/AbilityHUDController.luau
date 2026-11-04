@@ -49,7 +49,7 @@ function HUD.Start()
  local buttons: {[string]: TextButton}={}
  local learnButtons: {[string]: TextButton}={}
  for index,id in Config.Order do
-  local main=index<=5; local x,y,size=Layout.skill(index)
+  local main=index<=6; local x,y,size=Layout.skill(index)
   local button=Instance.new("TextButton"); button.Name=id; button.Size=UDim2.fromOffset(size,size)
   button.Position=UDim2.fromOffset(x,y)
   button.BackgroundColor3=View.Card; button.BorderSizePixel=0; button.Text=""; button.Parent=panel; View.border(button,View.Gold)
@@ -63,20 +63,11 @@ function HUD.Start()
   button.MouseLeave:Connect(function() if hovered==id then hovered=nil; tooltip.Visible=false end end)
   button.Activated:Connect(function() if id=="CloneCommand" then Controller.BeginCloneCommand() else Controller.TryCast(id) end end)
   buttons[id]=button
-  if main then
+  if index<=5 then
    local plus=Instance.new("TextButton"); plus.Name="Learn"; plus.Text="+"; plus.Size=UDim2.fromOffset(22,20); plus.Position=UDim2.new(1,-22,0,-21); plus.ZIndex=4; plus.TextSize=20
    plus.BackgroundColor3=Color3.fromRGB(152,112,33); plus.TextColor3=Color3.new(1,1,1); plus.Parent=button
    plus.Activated:Connect(function() Learning.TryLearn(id) end); learnButtons[id]=plus
   end
- end
- local rikudoPanel=View.frame(panel,"RikudoTechniques",UDim2.fromOffset(370,45),UDim2.fromOffset(520,Layout.RikudoPanelY));rikudoPanel.Visible=false
- local rikudoTitle=View.label(rikudoPanel,"Title",UDim2.fromOffset(370,17),UDim2.fromOffset(0,-18),12);rikudoTitle.Text="РИКУДО • временные техники";rikudoTitle.TextColor3=View.Gold
- local rangedButtons:{[string]:TextButton}={}
- for i,id in {"RikudoHY","RikudoHZ"} do
-  local b=Instance.new("TextButton");b.Name=id;b.Size=UDim2.fromOffset(180,45);b.Position=UDim2.fromOffset((i-1)*190,0);b.BackgroundColor3=View.Card;b.TextColor3=View.Text;b.TextSize=12;b.Parent=rikudoPanel;View.border(b,View.Gold)
-  b.Activated:Connect(function() Controller.BeginTarget(id) end);rangedButtons[id]=b
-  b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,Layout.RikudoTooltipY);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
-  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-310) end end)
  end
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
   local track=View.frame(panel,name,UDim2.fromOffset(450,17),UDim2.fromOffset(240,y)); track.BackgroundColor3=View.Card
@@ -106,25 +97,20 @@ function HUD.Start()
   b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false end end)
   choices[id]=b
  end
+ require(script.Parent.AbilityDeckController).Start(panel)
  local nextUpdate=0
  RunService.Heartbeat:Connect(function()
   local now=workspace:GetServerTimeNow(); if now<nextUpdate then return end; nextUpdate=now+.1
   local camera=workspace.CurrentCamera
   if camera then
    scale.Scale=Layout.scale(camera.ViewportSize.X,camera.ViewportSize.Y)
-   message.Position=UDim2.new(.5,0,1,-(Layout.ConsoleHeight*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
+   message.Position=UDim2.new(.5,0,1,-((Layout.ConsoleHeight+Layout.DeckHeight)*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
   end
   local model=player.Character; View.updatePortrait(portrait,model)
   commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
   commands.Position=message.Position-UDim2.fromOffset(0,40)
   local order=tostring(if model then model:GetAttribute("SummonOrder") or "Follow" else "Follow")
   commands.Text="F — атаковать · R — за мной · Y — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
-  rikudoPanel.Visible=model~=nil and model:GetAttribute("RikudoRangedGranted")==true
-  for id,b in rangedButtons do
-   local left=Controller.Remaining(id);local reason=Controller.AbilityUnavailable(id)
-   b.Active=left<=0 and reason==nil;b.AutoButtonColor=b.Active;b.BackgroundColor3=if b.Active then View.Card else Color3.fromRGB(31,29,35)
-   b.Text=Config.Abilities[id].KeyLabel.."  "..Config.Abilities[id].Name.."\n"..(if left>0 then string.format("%.1f с",left) elseif reason then "1800 маны • недоступно" else "1800 маны • выбрать точку")
-  end
   local state=player:FindFirstChild("HeroState")
   local function number(name: string): number local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then value else 0 end
   local function shown(name: string,format: string): string local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then string.format(format,value) else "—" end
@@ -154,7 +140,8 @@ function HUD.Start()
   end
   local notice=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
   local formStatus=Controller.GetFormStatus()
-  message.Visible=hovered==nil
+  message.Visible=hovered==nil and player:GetAttribute("AbilityBookOpen")~=true
+  if player:GetAttribute("AbilityBookOpen")==true then hovered=nil;tooltip.Visible=false;commands.Visible=false end
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
   local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
@@ -194,6 +181,15 @@ function HUD.Start()
    local status=button:FindFirstChild("Status") :: TextLabel
    status.Text=if not enabled then "LOCK" elseif remaining>0 then tostring(math.ceil(remaining)) elseif reason then (if reason=="Недостаточно маны" then "ЧАКРА" elseif rank==0 and learnButtons[id] then "0" else "×") else ""
    local rankLabel=button:FindFirstChild("Rank") :: TextLabel; rankLabel.Text=if rank>0 then string.rep("●",math.min(rank,5)) else "○"
+   if id=="KCM" then rankLabel.Text=if rank==3 then "РИКУДО" elseif rank==2 then "KCM II" else "KCM I" end
+   if id=="KuramaForm" then
+    rankLabel.Text="КУРАМА";rankLabel.TextSize=10
+    costLabel.Text="2500";costLabel.TextColor3=View.Gold
+    if model and model:GetAttribute("KuramaActive")==true then
+     shade.Visible=false;status.Text=tostring(math.max(0,math.ceil(((model:GetAttribute("KuramaExpiresAt") or now) :: number)-now)))
+     button.BackgroundColor3=Color3.fromRGB(123,87,22)
+    end
+   end
    if id=="Rasengan" and model and model:GetAttribute("RasenganHeld")==true then
     shade.Visible=false;status.Text="";button.BackgroundColor3=Color3.fromRGB(24,90,120)
    end
@@ -212,7 +208,7 @@ function HUD.Start()
     local cd=definition.Cooldown
     if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
     if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
-    tooltipText.Text=(if id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..tostring(Controller.Cost(id)).." чакры  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
+    tooltipText.Text=(if id=="KCM" then (if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I") elseif id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..(if id=="KuramaForm" then "2500 чакры Курамы" elseif id=="KCM" then "200 чакры Курамы" else tostring(Controller.Cost(id)).." маны").."  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
     local bounds=TextService:GetTextSize(tooltipText.Text,tooltipText.TextSize,tooltipText.Font,Vector2.new(390,10000))
     local height=math.max(140,math.ceil(bounds.Y)+24)
     tooltip.Size=UDim2.fromOffset(410,height)
