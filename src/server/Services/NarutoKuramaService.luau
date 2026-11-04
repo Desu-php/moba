@@ -2,6 +2,8 @@
 local Players=game:GetService("Players")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Form=require(Shared.Abilities.NarutoKuramaState)
+local CombatConfig=require(Shared.Config.CombatConfig)
+local Avatar=require(Shared.Config.KuramaAvatarConfig)
 local Units=require(Shared.Abilities.WorldUnits)
 local Structures=require(Shared.Game.StructureRules)
 local Stats=require(script.Parent.CharacterStatsService)
@@ -11,13 +13,15 @@ local Damage=require(script.Parent.DamageService)
 local Hitboxes=require(script.Parent.HitboxService)
 export type Hooks={chakra: (Player)->number?,spend: (Player,number)->boolean,kcm: (Player)->boolean,
  busy: (Player)->boolean,restoreMana: (Player,number)->(),released: (Player)->()}
-type Record={state: Form.State,model: Model?,visual: Highlight?,lastRequest: number,applied: boolean}
+type PreviousCombat={id: string,profile: CombatConfig.AttackProfile}
+type Record={state: Form.State,model: Model?,visual: Highlight?,body: BasePart?,previousCombat: PreviousCombat?,
+ cleanupConnections: {RBXScriptConnection},lastRequest: number,applied: boolean}
 local records: {[Player]: Record}={}
 local retained: {[string]: {epoch: number,balance: Form.Balance}}={}
 local hooks: Hooks?=nil
 local rng=Random.new()
 local summonMana: ((Model,number)->boolean)?=nil
-local S={}
+local S={Visual=Instance.new("BindableEvent")}
 local function epoch(): number local m=Teams.GetState(); return if m then m.roundId else 0 end
 local function valid(p: Player,r: Record): boolean
  local model=r.model
@@ -25,13 +29,38 @@ local function valid(p: Player,r: Record): boolean
   and epoch()==r.state.epoch and Damage.CanAct(model)
 end
 local function teardown(r: Record)
- if not r.applied and not r.visual then return end; r.applied=false
+ if not r.applied and not r.visual and not r.body and not r.previousCombat then return end; r.applied=false
+ for _,connection in r.cleanupConnections do connection:Disconnect() end
+ table.clear(r.cleanupConnections)
+ if r.body then r.body:Destroy();r.body=nil end
  local model=r.model
  if model then
+  model:SetAttribute("CombatBodyRadius",nil)
+  local fighter=Fighters.Get(model);local previous=r.previousCombat
+  if fighter and previous then Fighters.SetAttackProfile(fighter,previous.id,previous.profile) end
   Stats.SetLayer(model,"NarutoKurama",nil); Stats.SetLayer(model,"NarutoKuramaThreeHead",nil)
   model:SetAttribute("KuramaActive",false); model:SetAttribute("KuramaProcPending",false)
  end
+ r.previousCombat=nil
  if r.visual then r.visual:Destroy(); r.visual=nil end
+end
+local function applyBody(r: Record,fighter: Fighters.Fighter)
+ local model=fighter.character
+ r.previousCombat={id=fighter.profileId,profile=fighter.profile}
+ Fighters.SetAttackProfile(fighter,"Kurama")
+ local body=Instance.new("Part");body.Name="KuramaCombatBody";body.Transparency=1;body.CastShadow=false
+ body.Size=Vector3.new(Avatar.BodySize.X,Avatar.BodySize.Y,Avatar.BodySize.Z)
+ body.CFrame=fighter.root.CFrame*CFrame.new(Avatar.BodyOffset.X,Avatar.BodyOffset.Y,Avatar.BodyOffset.Z)
+ body.Anchored=false;body.Massless=true;body.CanCollide=true;body.CanQuery=true;body.CanTouch=false
+ body.CollisionGroup="SurvivalHeroes";body:SetAttribute("HeroCosmetic",false)
+ local weld=Instance.new("WeldConstraint");weld.Part0=fighter.root;weld.Part1=body;weld.Parent=body
+ body.Parent=model;r.body=body
+ model:SetAttribute("CombatBodyRadius",Avatar.BodyRadius)
+ table.insert(r.cleanupConnections,fighter.humanoid.Died:Connect(function() teardown(r) end))
+ table.insert(r.cleanupConnections,model.AncestryChanged:Connect(function()
+  if not model:IsDescendantOf(workspace) then teardown(r) end
+ end))
+ table.insert(r.cleanupConnections,model.Destroying:Connect(function() teardown(r) end))
 end
 local function events(r: Record,list: {Form.Event})
  local h=hooks
@@ -48,7 +77,8 @@ local function record(p: Player,now: number): Record
  local r=records[p]; local model=p.Character; local life=if model then (model:GetAttribute("LifeId") or 0) :: number else 0
  if not r then
   local owner=tostring(p.UserId); local saved=retained[owner]
-  local created: Record={state=Form.new(owner,epoch(),life,now,if saved and saved.epoch==epoch() then saved.balance else nil),model=model,visual=nil,lastRequest=0,applied=false}
+  local created: Record={state=Form.new(owner,epoch(),life,now,if saved and saved.epoch==epoch() then saved.balance else nil),model=model,visual=nil,
+   body=nil,previousCombat=nil,cleanupConnections={},lastRequest=0,applied=false}
   retained[owner]=nil
   r=created; records[p]=created
  elseif r.state.epoch~=epoch() or r.state.life~=life or r.model~=model then
@@ -83,13 +113,14 @@ function S.TryCast(p: Player,request: number,now: number,target: any): (boolean,
  -- Resource owner and policy application are synchronous; no client debit/attributes are accepted.
  if not h.spend(p,cost) then r.state=before; return false,"Chakra" end
  r.applied=true
+ applyBody(r,fighter)
  local m=Form.modifier()
  Stats.SetLayer(model,"NarutoKurama",{health=m.health,armor=m.armor,attack=m.attack,speed=Units.toStuds(m.speedWarcraft)})
  model:SetAttribute("KuramaActive",true); model:SetAttribute("KuramaLocked",true)
  model:SetAttribute("KuramaCastId",r.state.serial); model:SetAttribute("KuramaExpiresAt",now+Form.Duration)
  model:SetAttribute("Ready_KuramaForm",r.state.cooldownAt); model:SetAttribute("KuramaPolicy",Form.Policy.Retention)
  local v=Instance.new("Highlight"); v.Name="NarutoKuramaAura"; v.Archivable=false; v.Adornee=model
- v.FillColor=Color3.fromRGB(255,90,10); v.OutlineColor=Color3.fromRGB(255,220,40); v.FillTransparency=.55
+ v.FillColor=Color3.fromRGB(255,202,70); v.OutlineColor=Color3.fromRGB(255,237,146); v.FillTransparency=1;v.OutlineTransparency=.45
  v.DepthMode=Enum.HighlightDepthMode.Occluded; v.Parent=model; r.visual=v
  return true,"Accepted"
 end
@@ -147,6 +178,7 @@ function S.Update(now: number)
    if proc and amount then
     model:SetAttribute("KuramaProcPending",false)
     local center=Vector3.new(proc.x,proc.y,proc.z)
+    S.Visual:Fire({kind="KuramaShockwave",character=model,center=center,radius=Units.toStuds(Form.ProcRadius),startAt=now,castId=proc.id})
     for target,fighter in Fighters.GetAll() do
      local kind=target:GetAttribute("EntityKind")
      if not Structures.isStructure(kind) and Damage.CanDamage(model,target)

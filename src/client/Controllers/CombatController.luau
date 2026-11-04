@@ -106,7 +106,7 @@ local function onEvent(message: Protocol.Event)
 		local attackId, step, hits = message.attackId, message.step, message.hits
 		if not attackId or not step or not hits or (seenHits[character] or 0) >= attackId then return end
 		seenHits[character] = attackId
-		local heavy = false
+		local heavy = character:GetAttribute("CombatProfileId")=="Kurama"
 		for _, hit in hits do
 			if hit.character.Parent then VFX.Hit(hit.character, hit.position, heavy) end
 		end
@@ -126,6 +126,8 @@ function CombatController.TryAttack(): boolean
 	if match and match:GetAttribute("Phase") ~= "InProgress" then return false end
 	local now = workspace:GetServerTimeNow()
 	local authoritative = snapshot
+	-- Form changes publish their profile even before the next combat-event snapshot.
+	currentProfile = Config.Profiles[tostring(character:GetAttribute("CombatProfileId"))] or currentProfile
 	if not authoritative then
 		currentProfile = Config.Profiles[tostring(character:GetAttribute("CombatProfileId"))] or currentProfile
 	end

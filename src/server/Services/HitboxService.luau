@@ -6,6 +6,11 @@ local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 local Damage = require(script.Parent.DamageService)
 local HitboxService = {}
 
+local function bodyRadius(character: Model): number
+	local radius = character:GetAttribute("CombatBodyRadius")
+	return if typeof(radius) == "number" and radius == radius and radius > 0 and radius < math.huge then radius else 0
+end
+
 function HitboxService.IsFiniteCFrame(frame: CFrame): boolean
 	for _, value in { frame:GetComponents() } do
 		if value ~= value or math.abs(value) == math.huge then
@@ -85,8 +90,10 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
 			continue
 		end
 		local delta = targetRoot.Position - origin.Position
-		if delta.Magnitude > profile.MaxTargetDistance then continue end
-		if delta.Magnitude > Config.PositionEpsilon and origin.LookVector:Dot(delta.Unit) < profile.MinimumForwardDot then continue end
+		-- The overlap already touched a real hurtbox. A giant's root must not reject a hit on its flank.
+		local radius = bodyRadius(character)
+		if delta.Magnitude > profile.MaxTargetDistance + radius then continue end
+		if delta.Magnitude > Config.PositionEpsilon and origin.LookVector:Dot(delta) < delta.Magnitude * profile.MinimumForwardDot - radius then continue end
 		-- A nearby limb alone must not let an attack pass through a solid wall.
 		local obstruction = Workspace:Raycast(origin.Position, targetRoot.Position - origin.Position, rayParams)
 		if not obstruction or obstruction.Instance:IsDescendantOf(character) then
@@ -98,7 +105,8 @@ function HitboxService.GetTargets(attacker: Model, root: BasePart, profile: Conf
  table.sort(targets, function(a: Humanoid, b: Humanoid): boolean
   local first = (a.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart
   local second = (b.Parent :: Model):FindFirstChild("HumanoidRootPart") :: BasePart
-  return (first.Position - origin.Position).Magnitude < (second.Position - origin.Position).Magnitude
+  return math.max(0,(first.Position - origin.Position).Magnitude-bodyRadius(a.Parent :: Model))
+   < math.max(0,(second.Position - origin.Position).Magnitude-bodyRadius(b.Parent :: Model))
  end)
  while #targets > profile.MaxTargets do table.remove(targets) end
  return targets, box, size

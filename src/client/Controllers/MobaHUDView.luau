@@ -83,7 +83,9 @@ function View.updatePortrait(portrait: Portrait, source: Model?)
  camera.CFrame=CFrame.lookAt(Vector3.new(0,headY+.3,-4.8),Vector3.new(0,headY-.25,0))
  if kurama then
   -- Frame the fox's face, rather than the invisible humanoid head inside its body.
-  camera.CFrame=CFrame.lookAt(Vector3.new(0,2,-12),Vector3.new(0,.8,-2))
+  local config=require(game:GetService("ReplicatedStorage").Shared.Config.KuramaAvatarConfig)
+  local lift=Vector3.new(0,config.Lift,0)
+  camera.CFrame=CFrame.lookAt(Vector3.new(0,2,-12)*config.Scale+lift,Vector3.new(0,.8,-2)*config.Scale+lift)
  end
  -- Build and preload a replacement off-screen, then swap in one non-yielding step.
  task.spawn(function()

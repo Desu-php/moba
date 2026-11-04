@@ -10,6 +10,10 @@ local Stats=require(Services.CharacterStatsService)
 local Naruto=require(Services.NarutoAbilityService)
 local Kurama=require(Services.NarutoKuramaService)
 local Ability=require(Services.AbilityService)
+local Fighters=require(Services.FighterStateService)
+local Hitboxes=require(Services.HitboxService)
+local CombatState=require(RS.Shared.Combat.CombatState)
+local Avatar=require(RS.Shared.Config.KuramaAvatarConfig)
 local Learning=require(RS.Shared.Abilities.SkillLearning)
 local Rules=require(RS.Shared.Game.ProgressionRules).configure(require(RS.Shared.Config.ProgressionConfig),require(RS.Shared.Config.ItemConfig).Items)
 local count=0
@@ -53,7 +57,23 @@ local ok,err=xpcall(function(): string
  sa.pool.mana=100; sb.pool.mana=100; ha.Health=100; hb.Health=100
  local base=Stats.Get(a); local points=pa.SkillPoints; local pool=actor:GetAttribute("KuramaChakra") :: number
  local otherPool=other:GetAttribute("KuramaChakra")
+ local fa,fb=Fighters.Get(actor),Fighters.Get(other);assert(fa and fb)
+ local priorA,priorB=fa.profile,fb.profile;local priorIdA,priorIdB=fa.profileId,fb.profileId
  check("real A01F-like admission",cast(a,"KuramaForm"))
+ check("form uses authoritative combat profile",fa.profileId=="Kurama" and actor:GetAttribute("CombatProfileId")=="Kurama")
+ local body=actor:FindFirstChild("KuramaCombatBody");assert(body and body:IsA("BasePart"))
+ check("giant has solid queryable noncosmetic body",body.CanCollide and body.CanQuery and body.Massless and body.Transparency==1 and body:GetAttribute("HeroCosmetic")==false and body.CollisionGroup=="SurvivalHeroes")
+ check("body is grounded independently from cosmetic scale",body.Size==Vector3.new(Avatar.BodySize.X,Avatar.BodySize.Y,Avatar.BodySize.Z) and actor:GetAttribute("CombatBodyRadius")==Avatar.BodyRadius)
+ local savedOther=other:GetPivot()
+ local side=fa.root.Position+Vector3.new(9,0,0)
+ other:PivotTo(CFrame.lookAt(side,fa.root.Position))
+ check("normal melee can hit giant flank beyond root range",table.find(Hitboxes.GetTargets(other,fb.root,priorB),ha)~=nil)
+ local wall=Instance.new("Part");wall.Anchored=true;wall.Size=Vector3.new(.5,20,20);wall.CFrame=CFrame.new(fa.root.Position+Vector3.new(7,0,0));wall.Parent=workspace
+ check("giant flank still respects wall",table.find(Hitboxes.GetTargets(other,fb.root,priorB),ha)==nil)
+ wall:Destroy()
+ local shield=Instance.new("ForceField");shield.Parent=actor
+ check("giant flank still respects forcefield",table.find(Hitboxes.GetTargets(other,fb.root,priorB),ha)==nil)
+ shield:Destroy();other:PivotTo(savedOther)
  check("exact2500 debit",actor:GetAttribute("KuramaChakra")==pool-2500)
  check("no crossowner debit",other:GetAttribute("KuramaChakra")==otherPool)
  check("no skillpoint purchase",pa.SkillPoints==points)
@@ -69,13 +89,23 @@ local ok,err=xpcall(function(): string
  local id=other:GetAttribute("KuramaCastId") :: number
  local life=other:GetAttribute("LifeId") :: number
  check("stale buff report denied",not Kurama.ObserveBuffRemoved(b,life,match.roundId,id+1))
+ local swingAt=workspace:GetServerTimeNow()
+ check("unfinished giant swing staged",CombatState.Request(fb.logic,fb.profile,swingAt,999)=="Started")
+ fb.logic.buffered={requestId=1000,dueAt=fb.logic.nextAttackAt,expiresAt=fb.logic.nextAttackAt+.12}
+ local swingDeadline=fb.logic.nextAttackAt
  check("correct buff report",Kurama.ObserveBuffRemoved(b,life,match.roundId,id))
+ Kurama.Update(swingAt)
  waitFor(function() return not Kurama.IsActive(b) and other:GetAttribute("KuramaActive")==false end,2,"early removal")
+ check("exit restores exact previous profile",fb.profileId==priorIdB and fb.profile==priorB)
+ check("exit cancels pending swing and buffer without resetting cooldown",fb.logic.active==nil and fb.logic.buffered==nil and fb.logic.nextAttackAt==swingDeadline)
+ check("early exit removes physical body and radius",other:FindFirstChild("KuramaCombatBody")==nil and other:GetAttribute("CombatBodyRadius")==nil)
+ waitFor(function() return workspace:GetServerTimeNow()>=swingDeadline end,3,"preserved attack cooldown")
  accepted,reason=cast(b,"KCM"); check("script25wait independent ofbuff",not accepted and reason=="KuramaLocked")
  check("other owner's nativeform unaffected",Kurama.IsActive(a))
  waitFor(function() return not Kurama.IsActive(a) and actor:GetAttribute("KuramaActive")==false end,31,"native30expiry")
  check("formlayer removed retained stats",Stats.Get(a).MaxHealth==base.MaxHealth and Stats.Get(a).AttackDamageBonus==base.AttackDamageBonus)
  check("no aura orphan",actor:FindFirstChild("NarutoKuramaAura")==nil)
+ check("expiry restores exact profile and body",fa.profile==priorA and fa.profileId==priorIdA and actor:FindFirstChild("KuramaCombatBody")==nil and actor:GetAttribute("CombatBodyRadius")==nil)
  check("scriptlock released",not Kurama.IsLocked(a) and not Kurama.IsLocked(b))
  accepted,reason=cast(a,"KuramaForm"); check("CD160 outlives form",not accepted and reason=="Cooldown")
  check("KCM restored after earlybuff cleanup25plus",cast(b,"KCM"))

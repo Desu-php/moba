@@ -55,6 +55,7 @@ local function announceStart(fighter: Fighters.Fighter)
 	Fighters.Publish(fighter)
 	fighter.attackLifeId = fighter.character:GetAttribute("LifeId")
 	fighter.attackRoundId = fighter.character:GetAttribute("RoundId")
+	fighter.attackProfileId = fighter.profileId
 	fighter.wakeOnlyAttackId=nil
 	local candidates=Hitboxes.GetTargets(fighter.character,fighter.root,fighter.profile,function(target)
 		return Sleep.CanWakeAlly(fighter.character,target)
@@ -154,6 +155,7 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 	if Fighters.Get(fighter.character) ~= fighter
 		or fighter.attackLifeId ~= fighter.character:GetAttribute("LifeId")
 		or fighter.attackRoundId ~= fighter.character:GetAttribute("RoundId")
+		or fighter.attackProfileId ~= fighter.profileId
 		or not canAttack(fighter) then return end
 	local profile = fighter.profile
 	local targets, box, size = Hitboxes.GetTargets(fighter.character, fighter.root, profile)

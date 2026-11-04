@@ -61,6 +61,7 @@ local function part(name: string, position: Vector3, size: Vector3, color: Color
 end
 
 function VFXController.Swing(character: Model, step: number)
+ if character:GetAttribute("CombatProfileId")=="Kurama" then return end -- Fox claw trails follow the authoritative articulated paw.
 	local handName = if step % 2 == 0 then "LeftHand" else "RightHand"
 	local hand = character:FindFirstChild(handName) or character:FindFirstChild("Right Arm")
 	if not hand then return end

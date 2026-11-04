@@ -1,5 +1,6 @@
 --!strict
 local Players=game:GetService("Players")
+local Kurama=require(script.Parent.KuramaVisual)
 local Aura={}
 type Layer={folder:Folder,parts:{Part},at:number}
 type State={folder:Folder,layers:{[string]:Layer}}
@@ -43,27 +44,7 @@ function Aura.Update(parent:Folder,now:number)
   local camera=workspace.CurrentCamera
   if not (chakra or sage) or not root or not root:IsA("BasePart") or not hp or hp.Health<=0 or (camera and (root.Position-camera.CFrame.Position).Magnitude>120) then continue end
   live[model]=true
-  local costume=model:FindFirstChild("DisplayedHeroAppearance") or model:FindFirstChild("HeroAppearance")
-  if costume and model:GetAttribute("HeroVisualForm")=="Kurama" then
-   local moving=math.clamp(Vector3.new(root.AssemblyLinearVelocity.X,0,root.AssemblyLinearVelocity.Z).Magnitude/12,0,1)
-   for _,part in costume:GetChildren() do
-    if not part:IsA("BasePart") then continue end
-    local weld=part:FindFirstChild("FormVisualWeld");local base=part:GetAttribute("CosmeticOffset")
-    if not weld or not weld:IsA("Weld") or typeof(base)~="CFrame" then continue end
-    local tail=tonumber(string.match(part.Name,"Tail(%d+)$"))
-    local motion=CFrame.new(0,math.sin(now*2)*.035,0)
-    if tail then
-     local pivot=Vector3.new(0,.7,2.5)
-     motion*=CFrame.new(pivot)*CFrame.Angles(0,math.sin(now*1.8+tail*.45)*.045,0)*CFrame.new(-pivot)
-    elseif string.find(part.Name,"Left") or string.find(part.Name,"Right") then
-     local side=if string.find(part.Name,"Left") then 0 else math.pi
-     local hind=if string.find(part.Name,"Leg") then math.pi else 0
-     local stride=math.sin(now*9+side+hind)*moving
-     motion*=CFrame.new(0,math.max(0,stride)*.18,stride*.32)
-    end
-    weld.C0=motion*base
-   end
-  end
+  if model:GetAttribute("HeroVisualForm")=="Kurama" then Kurama.Avatar(model,root,now) end
   local state=states[model]
   if not state then
    local f=Instance.new("Folder");f.Name="ChakraAura";f.Parent=parent

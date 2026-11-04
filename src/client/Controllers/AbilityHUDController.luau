@@ -137,7 +137,7 @@ function HUD.Start()
   level.Text=shown("Level","%d"); gold.Text=shown("Gold","%d GOLD")
   kda.Text=string.format("K/D/A  %d / %d / %d",number("TotalKills"),number("TotalDeaths"),number("Assists"))
   xpFill.Size=UDim2.fromScale(if number("XPToNextLevel")==0 then 1 else math.clamp(number("CurrentXP")/number("XPToNextLevel"),0,1),1)
-  local profile=Combat.Profiles.OrangeNinja
+  local profile=Combat.Profiles[if model then tostring(model:GetAttribute("CombatProfileId")) else "OrangeNinja"] or Combat.Profiles.OrangeNinja
   local rawAttack=profile.Damage*number("AttackDamageMultiplier")+number("AttackDamageBonus")
   local attacksPerSecond=BasicRules.speed(profile,number("Agility"))/profile.AttackCooldown
   stats.Text="STR  "..shown("Strength","%.1f").."\nAGI  "..shown("Agility","%.1f").."\nINT   "..shown("Intelligence","%.1f")..string.format("\nАтака %.1f · %.2f/с",rawAttack,attacksPerSecond).."\nБроня  "..shown("Defense","%.1f").."\nСкор.  "..shown("WalkSpeed","%.1f")

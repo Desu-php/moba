@@ -1,6 +1,7 @@
 --!strict
 
 -- Plain Luau data: the same timing profile can be tested without Roblox.
+local KuramaAvatar = require("./KuramaAvatarConfig")
 local profileValues = {
 	AttackCooldown = 0.5,
 	InputBufferWindow = 0.12,
@@ -32,6 +33,19 @@ local profiles: { [string]: AttackProfile } = { Default = defaultProfile }
 local ninja = table.clone(profileValues)
 ninja.AnimationSet = "OrangeNinja"
 profiles.OrangeNinja = table.freeze(ninja)
+local kurama = table.clone(profileValues)
+-- Ewar attack cooldown/range from the map; windup, box and animation are the third-person adaptation.
+-- Keep damage in the existing stat ledger (+90 for the form), rather than applying the bonus twice.
+kurama.AttackCooldown = 2
+kurama.HitDelay = 0.8
+kurama.AttackDuration = 1.7
+kurama.HitboxSize = table.freeze({ X = 18, Y = 9, Z = 16 })
+kurama.HitboxOffset = table.freeze({ X = 0, Y = 0, Z = -8 })
+kurama.MaxTargetDistance = KuramaAvatar.AttackReach
+kurama.MinimumForwardDot = 0.25
+kurama.AnimationSet = "Kurama"
+kurama.AnimationKey = "ClawSwipe"
+profiles.Kurama = table.freeze(kurama)
 
 return table.freeze({
 	DefaultProfile = "Default",

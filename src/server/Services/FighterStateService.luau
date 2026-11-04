@@ -19,7 +19,7 @@ type NetworkLease = { automatic: boolean, owner: Player?, untilAt: number }
 export type Fighter = {
 	character: Model, humanoid: Humanoid, root: BasePart, player: Player?,
 	sleep: Sleep.Status?, logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
-	attackLifeId: any?, attackRoundId: any?, revision: number, connections: { RBXScriptConnection }, movement: Movement?, networkLease: NetworkLease?,
+	attackLifeId: any?, attackRoundId: any?, attackProfileId: string?, revision: number, connections: { RBXScriptConnection }, movement: Movement?, networkLease: NetworkLease?,
 	wakeOnlyAttackId: number?,
 }
 
@@ -106,8 +106,25 @@ function FighterStateService.Publish(fighter: Fighter)
 	fighter.character:SetAttribute("CombatProfileId", fighter.profileId)
 	fighter.character:SetAttribute("CombatLastAttackAt", fighter.logic.lastAttackAt)
 	fighter.character:SetAttribute("CombatAttackEndsAt", if fighter.logic.active then fighter.logic.active.endsAt else 0)
+	fighter.character:SetAttribute("CombatAttackHitAt", if fighter.logic.active then fighter.logic.active.hitAt else 0)
 	fighter.character:SetAttribute("CombatAttackSerial", fighter.logic.attackSerial)
 	FighterStateService.Changed:Fire(fighter)
+end
+
+-- Morphs cannot carry an unfinished swing or buffered input into another profile.
+-- Preserve the existing cooldown and stun deadlines; switching forms is not an attack reset.
+function FighterStateService.SetAttackProfile(fighter: Fighter, profileId: string, exactProfile: Config.AttackProfile?): boolean
+	if fighters[fighter.character] ~= fighter then return false end
+	local profile = exactProfile or Config.Profiles[profileId]
+	if not profile then return false end
+	fighter.logic.active = nil
+	fighter.logic.buffered = nil
+	if fighter.logic.mode == "Attacking" then fighter.logic.mode = "Idle" end
+	fighter.attackLifeId = nil; fighter.attackRoundId = nil; fighter.attackProfileId = nil
+	fighter.wakeOnlyAttackId = nil
+	fighter.profileId = profileId; fighter.profile = profile
+	FighterStateService.Publish(fighter)
+	return true
 end
 
 function FighterStateService.Remove(character: Model)

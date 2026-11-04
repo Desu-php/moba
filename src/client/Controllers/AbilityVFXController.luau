@@ -9,6 +9,7 @@ local Rounds=require(script.Parent.RoundController)
 local Ranged=require(script.Parent.NarutoRangedVFXController)
 local RasenganArt=require(script.Parent.RasenganVisual)
 local ChakraAura=require(script.Parent.ChakraAuraVisual)
+local KuramaArt=require(script.Parent.KuramaVisual)
 local FlightArt=require(script.Parent.RasenshurikenFlightVisual)
 local AreaRules=require(Shared.Abilities.RasenshurikenThrowRules)
 local Units=require(Shared.Abilities.WorldUnits)
@@ -87,6 +88,7 @@ local function visible(model:Model,now:number): boolean
 	return model:GetAttribute("RasenganHeld")==true and typeof(at)=="number" and now>=at+.08
 end
 function VFX.Event(message:any)
+ if folder and message.kind=="KuramaShockwave" then KuramaArt.Event(message,folder);return end
  if folder then FlightArt.Event(message,folder) end
  if message.kind=="RasenshurikenAreaEnd" then
   for i=#effects,1,-1 do if effects[i].areaId==message.id then remove(i) end end;return
@@ -124,6 +126,7 @@ function VFX.Start()
 	if started then return end; started=true
 	local created=Instance.new("Folder"); created.Name="LocalHeroVFX"; created.Parent=workspace; folder=created
 	Rounds.Watch(function()
+        KuramaArt.Clear()
         FlightArt.Clear()
 		for i=#effects,1,-1 do remove(i) end
 		for model in helpers do removeHelper(model,false) end
@@ -132,6 +135,7 @@ function VFX.Start()
 		local now=workspace:GetServerTimeNow(); local match=game:GetService("ReplicatedStorage"):FindFirstChild("SurvivalState")
 		local active=match~=nil and match:GetAttribute("Phase")=="InProgress"
         ChakraAura.Update(created,now)
+        KuramaArt.Update(now)
         FlightArt.Update(now,dt)
 		local sageTagged:{[Model]:boolean}={}
         if active then for _,model in game:GetService("CollectionService"):GetTagged("NarutoSage") do

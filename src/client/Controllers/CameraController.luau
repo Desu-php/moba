@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.CameraConfig)
 local Rules = require(Shared.Combat.CombatCameraRules)
+local Kurama = require(Shared.Config.KuramaAvatarConfig)
 
 local Controller = {}
 local player = Players.LocalPlayer
@@ -187,12 +188,12 @@ function Controller.Start()
 		end
 		local rotation = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
 		local fox = model:GetAttribute("HeroVisualForm") == "Kurama"
-		local desiredPivot = root.Position + Vector3.new(0, if fox then 4.5 else setting("Height", Config.Height, 0.5, 6), 0)
+		local desiredPivot = root.Position + Vector3.new(0, if fox then Kurama.CameraHeight else setting("Height", Config.Height, 0.5, 6), 0)
 		local oldPivot = pivot
 		pivot = if not oldPivot or (oldPivot - desiredPivot).Magnitude > Config.TeleportDistance then desiredPivot
 			else oldPivot:Lerp(desiredPivot, Rules.alpha(setting("Smoothing", Config.Smoothing, 0, 60), dt))
 		local focus = (pivot :: Vector3) + CFrame.Angles(0, yaw, 0):VectorToWorldSpace(humanoid.CameraOffset)
-		local desiredOffset = -rotation.LookVector * (if fox then math.max(20,setting("Distance", Config.Distance, 4, 24)) else setting("Distance", Config.Distance, 4, 24))
+		local desiredOffset = -rotation.LookVector * (if fox then Kurama.CameraDistance else setting("Distance", Config.Distance, 4, 24))
 			+ rotation.RightVector * setting("Shoulder", Config.Shoulder, -3, 3)
 		local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = exclusions(model); params.RespectCanCollide = true

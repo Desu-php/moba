@@ -3,6 +3,7 @@ local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Data=require(Shared.Config.CreatorVisualData)
 local Forms=require(Shared.Config.NarutoFormVisualData)
 local Factory=require(Shared.CreatorVisualFactory)
+local KuramaAvatar=require(Shared.KuramaAvatar)
 local Appearance={}
 local bound: {[Model]: {RBXScriptConnection}}=setmetatable({}, {__mode="k"})
 local function dress(model: Model)
@@ -10,7 +11,7 @@ local function dress(model: Model)
  if not head or not head:IsA("BasePart") or not model:FindFirstChild("UpperTorso") then return end
  local form=if model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("KcmActive")==true then "KCM" elseif model:GetAttribute("SagePhase")=="Active" then "Sage" else "Normal"
  if form=="KCM" and model:GetAttribute("KcmRank")==3 then form="Rikudo" end
- local version="CreatorStore-v4:"..form
+ local version="CreatorStore-v5:"..form
  if model:GetAttribute("HeroAppearanceVersion")==version and model:FindFirstChild("HeroAppearance") then return end
  local sage=form=="Sage"
  local kcm=form=="KCM" or form=="Rikudo"
@@ -21,7 +22,7 @@ local function dress(model: Model)
   if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end
  end
  for _,item in head:GetChildren() do if item:IsA("Decal") then item:Destroy() end end
- for _,item in model:GetChildren() do if item:IsA("BasePart") and item.Name~="HumanoidRootPart" then
+ for _,item in model:GetChildren() do if item:IsA("BasePart") and item.Name~="HumanoidRootPart" and item.Name~="KuramaCombatBody" then
   item.Transparency=if item.Name=="Head" or form=="Kurama" then 1 else 0
   item.Color=if kcm then Color3.fromRGB(255,184,31) else Color3.fromRGB(255,204,153);item.Material=Enum.Material.SmoothPlastic
  end end
@@ -44,11 +45,14 @@ local function dress(model: Model)
   if spec.form~="All" and spec.form~=form then continue end
   local body=model:FindFirstChild(spec.body)
   if not body or not body:IsA("BasePart") then continue end
-  local part=Factory.Part(spec);part:SetAttribute("HeroCosmetic",true)
-  part:SetAttribute("CosmeticBody",spec.body);part:SetAttribute("CosmeticOffset",Factory.Frame(spec.cf))
-  part.CFrame=body.CFrame*Factory.Frame(spec.cf);part.Parent=folder
-  local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=body;weld.Part1=part;weld.C0=Factory.Frame(spec.cf);weld.Parent=part
+  local part,mesh=Factory.Part(spec);part:SetAttribute("HeroCosmetic",true)
+  local offset=Factory.Frame(spec.cf)
+  if form=="Kurama" then KuramaAvatar.Style(part,mesh);offset=KuramaAvatar.Offset(offset) end
+  part:SetAttribute("CosmeticBody",spec.body);part:SetAttribute("CosmeticOffset",offset)
+  part.CFrame=body.CFrame*offset;part.Parent=folder
+  local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=body;weld.Part1=part;weld.C0=offset;weld.Parent=part
  end
+ if form=="Kurama" then local root=model:FindFirstChild("HumanoidRootPart");if root and root:IsA("BasePart") then KuramaAvatar.Markings(folder,root) end end
  if form=="Rikudo" then
   local torso=model:FindFirstChild("UpperTorso") :: BasePart
   for i=1,9 do

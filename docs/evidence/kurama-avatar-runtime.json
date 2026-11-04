@@ -1,0 +1,30 @@
+{
+  "wave": 156.8,
+  "m1": 104.4,
+  "checks": [
+    "Kurama profile and body applied",
+    "form damage bonus applied once",
+    "front target admitted",
+    "outside reach rejected",
+    "behind rejected",
+    "forcefield rejects giant strike",
+    "wall rejects giant strike",
+    "heavy attack started",
+    "no M1 damage before contact",
+    "one victim receives exactly one M1",
+    "M1 matches authoritative contact time",
+    "normal melee reaches giant flank",
+    "flank still respects walls",
+    "proc visual uses exact 300 Warcraft radius",
+    "proc damage is caster max HP /25",
+    "proc excludes beyond radius and allies",
+    "second swing starts",
+    "exit restores original combat profile",
+    "exit removes body and stat layer",
+    "exit cancels old swing and preserves cooldown"
+  ],
+  "status": "PASS",
+  "death": "PASS",
+  "date": "2026-11-05",
+  "mode": "Studio single player; normal server script in disposable Play"
+}
