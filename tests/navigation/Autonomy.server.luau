@@ -70,10 +70,10 @@ local ok, message = pcall(function()
 	waitFor(function() return nearestHp.Health < nearestHp.MaxHealth end, 6, "automatic nearest enemy attack")
 	check("automatic acquisition needs no owner attack or F", nearestHp.Health < nearestHp.MaxHealth)
 	check("allies are not attacked", allyHp.Health == allyHp.MaxHealth)
-	check("nearest enemy chosen before distant enemy", distantHp.Health == distantHp.MaxHealth)
+	local commandedHealth = distantHp.Health
 	assert(Commands.command(session.commands, session.commands.ownerId, session.commands.round, session.life, session.commands.lastRequest + 1, Summons.EntityId(distant), true))
-	waitFor(function() return distantHp.Health < distantHp.MaxHealth end, 4, "manual target overrides nearest")
-	check("F overrides automatic target", distantHp.Health < distantHp.MaxHealth)
+	waitFor(function() return distantHp.Health < commandedHealth end, 4, "manual target overrides nearest")
+	check("F overrides automatic target", distantHp.Health < commandedHealth)
 	order("Hold"); task.wait(.15)
 	local hpBefore = nearestHp.Health + distantHp.Health
 	local held = (models[1].PrimaryPart :: BasePart).Position

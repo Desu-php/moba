@@ -27,7 +27,7 @@ check("death expiry reset removes pending result", not Policy.finish(state, gene
 check("global concurrency and start limits bounded", Policy.MaxConcurrent == 2 and Policy.RequestInterval == 0.25)
 for i = 1, 24 do
 	local x, z = Policy.slot(i, 4.5, 3)
-	check("slot ring " .. i, math.abs(math.sqrt(x*x+z*z) - (4.5 + math.floor((i-1)/8)*3)) < 1e-6)
+	check("slot ring " .. i, math.abs(math.sqrt(x*x+z*z) - (4.5 + math.floor((i-1)/Policy.SlotsPerRing)*3)) < 1e-6)
 	for j = 1, i - 1 do
 		local px, pz = Policy.slot(j, 4.5, 3)
 		assert(math.sqrt((x-px)^2+(z-pz)^2) > 2.35, "distinct body slots")

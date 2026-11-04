@@ -7,4 +7,7 @@ return table.freeze({
 	ReturnRadius = 10,
 	ScanInterval = .4,
 	RecallGrace = 2,
+	CrowdCost = 8,
+	SwitchMargin = 10,
+	AssistBonus = 4,
 })

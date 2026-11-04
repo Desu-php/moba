@@ -70,6 +70,9 @@ return table.freeze({
 	ReturnRadius = 10,
 	ScanInterval = .4,
 	RecallGrace = 2,
+	CrowdCost = 8,
+	SwitchMargin = 10,
+	AssistBonus = 4,
 })
 ]]></string>
           </Properties>
@@ -166,6 +169,10 @@ Policy.StuckTime = 1.2
 Policy.RequestInterval = 0.25
 Policy.MaxConcurrent = 2
 Policy.SlotInterval = 0.5
+Policy.SlotsPerRing = 10
+-- Leave two angular gaps for incoming/outgoing fighters instead of sealing the ring.
+Policy.FrontlineLimit = 8
+Policy.RingSpacing = 5
 export type Clock = { generation: number, key: string, nextPath: number, pending: boolean, alive: boolean }
 function Policy.new(): Clock
 	return { generation = 0, key = "", nextPath = 0, pending = false, alive = true }
@@ -192,10 +199,9 @@ function Policy.finish(state: Clock, generation: number, now: number, success: b
 	return true
 end
 function Policy.slot(index: number, radius: number, spacing: number): (number, number)
-	-- Fixed eight-angle inner ring; overflow waits outside melee range.
-	local ring = math.floor((index - 1) / 8)
+	local ring = math.floor((index - 1) / Policy.SlotsPerRing)
 	-- Stagger waiting rings so settled overflow does not seal the radial lanes.
-	local angle = ((index - 1) % 8) * math.pi / 4 + ring * math.pi / 8
+	local angle = ((index - 1) % Policy.SlotsPerRing) * 2 * math.pi / Policy.SlotsPerRing + ring * math.pi / Policy.SlotsPerRing
 	local distance = radius + ring * spacing
 	return math.cos(angle) * distance, math.sin(angle) * distance
 end
@@ -3890,6 +3896,7 @@ local Policy = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 export type Agent = {
 	model: Model, root: BasePart, clock: Policy.Clock, target: Model?, slot: number?, goal: Vector3?,
 	waypoints: { Vector3 }, waypoint: number, pathGoal: Vector3?, nextSlot: number,
+	formationTarget: Model?, frontline: boolean?,
 	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean, fallSpeed: number,
 }
 local Navigation = {}
@@ -3904,6 +3911,7 @@ end
 function Navigation.Register(model: Model, root: BasePart, humanoid: Humanoid)
 	serial += 1
 	agents[model] = { model = model, root = root, clock = Policy.new(), target = nil, slot = nil, goal = nil,
+		formationTarget = nil, frontline = nil,
 		waypoints = {}, waypoint = 1, pathGoal = nil, nextSlot = 0, progressAt = 0,
 		progressPosition = root.Position, failures = 0, serial = serial, fallSpeed = 0,
 		groundOffset = math.max(humanoid.HipHeight + root.Size.Y / 2, math.max(4, root.Size.Y) / 2 + 0.05), queued = false }
@@ -3918,6 +3926,20 @@ function Navigation.Stop(model: Model)
 		agent.target = nil; agent.slot = nil; agent.goal = nil; table.clear(agent.waypoints); agent.pathGoal = nil; unqueue(agent)
 	end
 	model:SetAttribute("SummonMoving", false)
+end
+function Navigation.SetFrontline(model: Model, target: Model, frontline: boolean)
+	local agent = agents[model]; if not agent then return end
+	if agent.formationTarget == target and agent.frontline == frontline then return end
+	agent.formationTarget = target; agent.frontline = frontline
+	agent.slot = nil; agent.goal = nil; agent.nextSlot = 0; agent.pathGoal = nil
+	table.clear(agent.waypoints); unqueue(agent)
+	Policy.change(agent.clock, tostring(agent.clock.generation + 1))
+	model:SetAttribute("SummonFrontline", frontline)
+end
+function Navigation.CanStrike(model: Model, target: Model): boolean
+	local agent = agents[model]
+	return agent ~= nil and agent.formationTarget == target and agent.frontline == true
+		and agent.target == target
 end
 local function parameters(agent: Agent, owner: Model, target: Model): RaycastParams
 	local excluded: { Instance } = { agent.model, owner, target }
@@ -3940,7 +3962,7 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
 	if hit then
 		local y = hit.Position.Y + agent.groundOffset
-		model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0))
+		if math.abs(y - position.Y) > .001 then model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0)) end
 		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
 		return true
 	end
@@ -3977,8 +3999,10 @@ end
 local function chooseGoal(agent: Agent, target: Model, destination: BasePart, radius: number, ray: RaycastParams, now: number): Vector3?
 	local center = destination.Position
 	local function candidate(index: number): Vector3?
+		if agent.formationTarget == target and agent.frontline ~= nil
+			and (index <= Policy.SlotsPerRing) ~= agent.frontline then return nil end
 		if not available(agent, target, index) then return nil end
-		local x, z = Policy.slot(index, radius, 3)
+		local x, z = Policy.slot(index, radius, Policy.RingSpacing)
 		local point = ground(agent, center + Vector3.new(x, 0, z), ray)
 		if not point then return nil end
 		-- Blockcast omits initial overlap, so also validate destination body bounds.
@@ -3989,7 +4013,7 @@ local function chooseGoal(agent: Agent, target: Model, destination: BasePart, ra
 	if now < agent.nextSlot and agent.goal then
 		-- Translate the existing slot with a moving target between selection ticks.
 		if agent.slot then
-			local x, z = Policy.slot(agent.slot, radius, 3)
+			local x, z = Policy.slot(agent.slot, radius, Policy.RingSpacing)
 			return Vector3.new(center.X + x, agent.goal.Y, center.Z + z)
 		end
 		return agent.goal
@@ -3999,28 +4023,28 @@ local function chooseGoal(agent: Agent, target: Model, destination: BasePart, ra
 		-- A settled waiting clone must claim newly freed inner positions instead
 		-- of keeping its outer reservation forever after a front clone dies.
 		local innerBest: Vector3? = nil; local innerSlot: number? = nil; local innerDistance = math.huge
-		for index = 1, math.floor((agent.slot - 1) / 8) * 8 do
+		for index = 1, math.floor((agent.slot - 1) / Policy.SlotsPerRing) * Policy.SlotsPerRing do
 			local point = candidate(index)
 			if point then
 				local distance = flat(point-agent.root.Position).Magnitude
 				if distance < innerDistance then innerBest = point; innerSlot = index; innerDistance = distance end
 			end
-			if index % 8 == 0 and innerBest then break end
+			if index % Policy.SlotsPerRing == 0 and innerBest then break end
 		end
 		if innerBest then agent.slot = innerSlot; return innerBest end
 		local point = candidate(agent.slot); if point then return point end
 	end
 	local best: Vector3? = nil; local bestSlot: number? = nil; local bestScore = math.huge
-	-- Eight attack positions plus waiting rings for mass-clone casts. Occupied
+	-- Attack positions plus waiting rings for mass-clone casts. Occupied
 	-- slots do not query geometry; stop after the first ring with a usable slot.
-	for index = 1, 64 do
+	for index = 1, 80 do
 		local point = candidate(index)
 		if point then
-			local score = flat(point - agent.root.Position).Magnitude + math.floor((index - 1) / 8) * 20
+			local score = flat(point - agent.root.Position).Magnitude + math.floor((index - 1) / Policy.SlotsPerRing) * 20
 			if index == agent.slot and agent.failures >= 2 then score += 100 end
 			if score < bestScore then best = point; bestSlot = index; bestScore = score end
 		end
-		if index % 8 == 0 and best then break end
+		if index % Policy.SlotsPerRing == 0 and best then break end
 	end
 	agent.slot = bestSlot; agent.failures = 0
 	return best
@@ -4111,6 +4135,23 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		if not agent.pathGoal or flat(agent.pathGoal - goal).Magnitude > Policy.GoalDrift or not waypoint then request(agent, now) end
 	else
 		table.clear(agent.waypoints); agent.pathGoal = nil; unqueue(agent)
+		if agent.formationTarget == target and agent.frontline then
+			-- Approach a free melee place from its outside. Cutting straight through
+			-- the occupied front arc traps rear clones behind settled attackers.
+			local from = flat(position - destination.Position)
+			local to = flat(goal - destination.Position)
+			if from.Magnitude > .1 and to.Magnitude > .1 then
+				local angle = math.atan2(from.X * to.Z - from.Z * to.X, from:Dot(to))
+				if math.abs(angle) > .25 then
+					local step = math.clamp(angle, -.35, .35)
+					local direction = from.Unit
+					local radial = Vector3.new(direction.X * math.cos(step) - direction.Z * math.sin(step), 0,
+						direction.X * math.sin(step) + direction.Z * math.cos(step))
+					local orbit = Vector3.new(destination.Position.X, position.Y, destination.Position.Z) + radial * (to.Magnitude + Policy.RingSpacing / 2)
+					if clear(agent, position, orbit, ray) then aim = orbit end
+				end
+			end
+		end
 	end
 	local direction = flat(aim - position)
 	if direction.Magnitude < 0.001 then return false end
@@ -8053,12 +8094,43 @@ local Oil=require(script.Parent.OilStatusService)
 local Navigation = require(script.Parent.CloneNavigation)
 local Collision = require(script.Parent.SummonCollision)
 local Autonomy = require(Shared.Abilities.CloneAutonomyPolicy)
+local Formation = require(Shared.Abilities.CloneNavigationPolicy)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
 	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number,
-	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean }
+	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean,
+	assignedTarget: Model?, lastStrike: number }
 local Service = { Spawned = Instance.new("BindableEvent") }
 local records: { [Model]: Record } = {}
 local targetSerial = 0
+local nextFormation = 0
+local function coordinate(now: number)
+	if now < nextFormation then return end; nextFormation = now + .2
+	local groups: { [Model]: { Record } } = {}
+	for _, record in records do
+		local target = record.assignedTarget
+		if target and record.humanoid.Health > 0 and Damage.CanDamage(record.model, target) then
+			if not groups[target] then groups[target] = {} end
+			table.insert(groups[target], record)
+		end
+	end
+	for target, group in groups do
+		-- Clones that have not struck yet get the next free place. Regular attack cooldowns remain intact.
+		table.sort(group, function(a: Record, b: Record): boolean
+			if a.lastStrike ~= b.lastStrike then return a.lastStrike < b.lastStrike end
+			if a.owner.UserId ~= b.owner.UserId then return a.owner.UserId < b.owner.UserId end
+			return a.clone.id < b.clone.id
+		end)
+		for index, record in group do Navigation.SetFrontline(record.model, target, index <= Formation.FrontlineLimit) end
+	end
+end
+local function targetScore(record: Record, target: Model, root: BasePart, assistId: string?): number
+	local assigned = 0
+	for _, other in records do
+		if other ~= record and other.assignedTarget == target and other.humanoid.Health > 0 then assigned += 1 end
+	end
+	return (root.Position - record.root.Position).Magnitude + assigned * Autonomy.CrowdCost
+		- (if assistId and target:GetAttribute("AbilityEntityId") == assistId then Autonomy.AssistBonus else 0)
+end
 local function targetId(model: Model): string
 	local id = model:GetAttribute("AbilityEntityId")
 	if typeof(id) == "string" then return id end
@@ -8105,8 +8177,17 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	humanoid.WalkSpeed=Stats.Get(player).WalkSpeed; humanoid.MaxHealth = sourceHumanoid.MaxHealth; humanoid.Health = sourceHumanoid.Health
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None; humanoid.BreakJointsOnDeath = false
 	root.Anchored = true; model.PrimaryPart = root
-	local spacing = sourceRoot.Size.X * 2
-	local offset = sourceRoot.CFrame.RightVector * ((clone.id % 3) - 1) * spacing + sourceRoot.CFrame.LookVector * -spacing
+	-- Give each new clone its own spawn position, including a mass cast.
+	local offset = Vector3.zero
+	for index = 1, 80 do
+		local x, z = Formation.slot(index, math.max(4.2, sourceRoot.Size.X * 2), 3)
+		local candidate = sourceRoot.CFrame:VectorToWorldSpace(Vector3.new(x, 0, z))
+		local free = true
+		for _, other in records do
+			if (other.root.Position - (sourceRoot.Position + candidate)).Magnitude < 2.5 then free = false; break end
+		end
+		if free then offset = candidate; break end
+	end
 	local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances = { character }; ray.RespectCanCollide = true
 	local wall = workspace:Blockcast(sourceRoot.CFrame, sourceRoot.Size, offset, ray)
 	if wall and offset.Magnitude > 0 then offset = offset.Unit * math.max(0, wall.Distance - 0.01) end
@@ -8116,6 +8197,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
+		assignedTarget = nil, lastStrike = 0,
 		autoTarget = nil, nextScan = 0, lastOrder = commands.lastRequest, recallUntil = 0, returning = false,
 		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.CloneDamage * stats.AttackDamageMultiplier + stats.AttackDamageBonus }
 	Navigation.Register(model, root, humanoid)
@@ -8123,7 +8205,9 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	return model
 end
 function Service.Update(now: number, delta: number, sourceStats: (Player) -> (number, number))
+	coordinate(now)
 	for model, record in records do
+		record.assignedTarget = nil
 		local clone, owner = record.clone, record.owner
 		if not model.Parent or record.humanoid.Health <= 0 or owner.Parent ~= Players or now >= clone.expiresAt
 			or record.root.Position.Y < workspace.FallenPartsDestroyHeight
@@ -8151,7 +8235,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		if ownerDistance > Autonomy.OwnerLeash then record.returning = true end
 		if record.returning and ownerDistance < Autonomy.ReturnRadius and now >= record.recallUntil then record.returning = false end
 		local target: Model? = nil
-		if intent.targetId and (intent.mode == "Command" or not record.returning) then
+		if intent.targetId and intent.mode == "Command" then
 			for candidate in Fighters.GetAll() do
 				if candidate:GetAttribute("AbilityEntityId") == intent.targetId then target = candidate; break end
 			end
@@ -8165,20 +8249,27 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 				or (currentRoot.Position - ownerRoot.Position).Magnitude > Autonomy.OwnerLeash then record.autoTarget = nil end
 			if now >= record.nextScan then
 				record.nextScan = now + Autonomy.ScanInterval
-				-- Keep a valid target through the swing; reacquire immediately after it dies.
-				if not record.autoTarget then
-					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 8) do
+				-- Rebalance with hysteresis: a moving crowd cannot strand clones on one enemy,
+				-- while small distance changes do not make the entire group swap targets.
+				local best = record.autoTarget
+				local bestRoot = if best then best:FindFirstChild("HumanoidRootPart") else nil
+				local bestScore = if best and bestRoot and bestRoot:IsA("BasePart") then targetScore(record, best, bestRoot, intent.targetId) - Autonomy.SwitchMargin else math.huge
+				if now >= record.nextHit - 1.7 then
+					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 16) do
 						local candidate = enemy.Parent
 						local candidateRoot = if candidate then candidate:FindFirstChild("HumanoidRootPart") else nil
 						if candidate and candidate:IsA("Model") and candidateRoot and candidateRoot:IsA("BasePart")
 							and (candidateRoot.Position - ownerRoot.Position).Magnitude <= Autonomy.OwnerLeash then
-							record.autoTarget = candidate; break
+							local score = targetScore(record, candidate, candidateRoot, intent.targetId)
+							if score < bestScore then best = candidate; bestScore = score end
 						end
 					end
 				end
+				record.autoTarget = best
 			end
 			target = record.autoTarget
 		else record.autoTarget = nil end
+		record.assignedTarget = target
 		model:SetAttribute("SummonBehavior", if target then "Attack" elseif record.returning then "Return" else "Follow")
 		model:SetAttribute("SummonTarget", if target then target.Name else "")
 		local destination = if target then target:FindFirstChild("HumanoidRootPart") else character:FindFirstChild("HumanoidRootPart")
@@ -8187,8 +8278,9 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		local flat = distance * Vector3.new(1, 0, 1)
 		local stop = if target then Units.toStuds(50) + (record.root.Size.X + destination.Size.X) / 2 else record.root.Size.X * 3
 		if flat.Magnitude > 0.001 then record.root.CFrame = CFrame.lookAt(record.root.Position, record.root.Position + flat) end
-		if target and Damage.CanDamage(model, target) and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
+		if target and Navigation.CanStrike(model, target) and Damage.CanDamage(model, target) and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
 			record.nextHit = now + 2 -- Hpal ua1c; M1 damage itself retains current prototype combat balance.
+			record.lastStrike = now
 			model:SetAttribute("SummonSwingAt", now); model:SetAttribute("SummonSwingStep", 1)
 			local humanoid = target:FindFirstChildOfClass("Humanoid")
 			if humanoid then
@@ -9545,7 +9637,7 @@ return {
  Rasengan="Собирает вращающуюся чакру в ладони. После формирования подойдите к врагу и ударьте ЛКМ. Промах сохраняет заряд.\nПосле Q выберите Z — Одама или X — Расенсюрикен напрямую. Доступные варианты заменяют значок Q до выбора или окончания заряда. Без выбора остаётся обычный Расенган.",
  Odama="Увеличивает обычный Расенган до огромной сферы. Наруто поддерживает её второй рукой и наносит мощный удар вблизи.\nТребуется II ранг Расенгана. Q → Z. Доплата 200 чакры; всего 300. Урон: 250 + 3 × сила. ЛКМ по врагу — применить.",
  Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
- ShadowClones="Создаёт теневых клонов. Они сами атакуют ближайшего видимого врага в радиусе 28 студов, переключаются после его гибели и возвращаются, если удалились от Наруто дальше 48 студов. Без врагов следуют за владельцем. Призванные в воздухе клоны приземляются.\nF — приоритетная цель; R — отозвать к себе; Y — стоять и не атаковать. После возврата клоны снова ищут врагов. Количество и длительность зависят от ранга. Со II ранга T открывает технику сна.",
+ ShadowClones="Создаёт теневых клонов. Они распределяются между видимыми врагами в радиусе 28 студов, окружают их и занимают свободные места для атаки. Если враг один, клоны сменяют друг друга после ударов. После гибели цели выбирают новую.\nБез врагов следуют за Наруто; при удалении дальше 48 студов возвращаются. Призванные в воздухе клоны приземляются. F — общая приоритетная цель; R — отозвать; Y — стоять без атак. После возврата снова ищут врагов. Количество и длительность зависят от ранга. Со II ранга T открывает технику сна.",
  Gamakichi="Призывает Гамакичи. Ранг определяет силу и возраст жабы. Она помогает в бою и выполняет общие команды F / R / Y.\nG — выбрать точку для масла. Взрослая жаба получает H — серию ударов мечом по области. ЛКМ подтверждает цель, ПКМ отменяет.",
  SageMode="Наруто неподвижно собирает природную энергию, затем входит в режим мудреца. Оранжевая аура отмечает действующий режим.\nПодготовка требует времени: учитывайте опасность рядом. Стрелка вправо — медитация; J — вернуть чакру из медитирующих клонов. Параметры зависят от изученного ранга.",
  KCM="Использует отдельный запас чакры Курамы и окружает Наруто золотой энергией. Доступность формы зависит от ранга и условий прогрессии.\nE — удерживать для прицеливания рывка, отпустить для применения. X — выйти из формы. Стрелка влево — преобразование чакры.",

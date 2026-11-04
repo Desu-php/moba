@@ -8,6 +8,10 @@ Policy.StuckTime = 1.2
 Policy.RequestInterval = 0.25
 Policy.MaxConcurrent = 2
 Policy.SlotInterval = 0.5
+Policy.SlotsPerRing = 10
+-- Leave two angular gaps for incoming/outgoing fighters instead of sealing the ring.
+Policy.FrontlineLimit = 8
+Policy.RingSpacing = 5
 export type Clock = { generation: number, key: string, nextPath: number, pending: boolean, alive: boolean }
 function Policy.new(): Clock
 	return { generation = 0, key = "", nextPath = 0, pending = false, alive = true }
@@ -34,10 +38,9 @@ function Policy.finish(state: Clock, generation: number, now: number, success: b
 	return true
 end
 function Policy.slot(index: number, radius: number, spacing: number): (number, number)
-	-- Fixed eight-angle inner ring; overflow waits outside melee range.
-	local ring = math.floor((index - 1) / 8)
+	local ring = math.floor((index - 1) / Policy.SlotsPerRing)
 	-- Stagger waiting rings so settled overflow does not seal the radial lanes.
-	local angle = ((index - 1) % 8) * math.pi / 4 + ring * math.pi / 8
+	local angle = ((index - 1) % Policy.SlotsPerRing) * 2 * math.pi / Policy.SlotsPerRing + ring * math.pi / Policy.SlotsPerRing
 	local distance = radius + ring * spacing
 	return math.cos(angle) * distance, math.sin(angle) * distance
 end

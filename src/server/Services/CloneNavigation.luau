@@ -4,6 +4,7 @@ local Policy = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 export type Agent = {
 	model: Model, root: BasePart, clock: Policy.Clock, target: Model?, slot: number?, goal: Vector3?,
 	waypoints: { Vector3 }, waypoint: number, pathGoal: Vector3?, nextSlot: number,
+	formationTarget: Model?, frontline: boolean?,
 	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean, fallSpeed: number,
 }
 local Navigation = {}
@@ -18,6 +19,7 @@ end
 function Navigation.Register(model: Model, root: BasePart, humanoid: Humanoid)
 	serial += 1
 	agents[model] = { model = model, root = root, clock = Policy.new(), target = nil, slot = nil, goal = nil,
+		formationTarget = nil, frontline = nil,
 		waypoints = {}, waypoint = 1, pathGoal = nil, nextSlot = 0, progressAt = 0,
 		progressPosition = root.Position, failures = 0, serial = serial, fallSpeed = 0,
 		groundOffset = math.max(humanoid.HipHeight + root.Size.Y / 2, math.max(4, root.Size.Y) / 2 + 0.05), queued = false }
@@ -32,6 +34,20 @@ function Navigation.Stop(model: Model)
 		agent.target = nil; agent.slot = nil; agent.goal = nil; table.clear(agent.waypoints); agent.pathGoal = nil; unqueue(agent)
 	end
 	model:SetAttribute("SummonMoving", false)
+end
+function Navigation.SetFrontline(model: Model, target: Model, frontline: boolean)
+	local agent = agents[model]; if not agent then return end
+	if agent.formationTarget == target and agent.frontline == frontline then return end
+	agent.formationTarget = target; agent.frontline = frontline
+	agent.slot = nil; agent.goal = nil; agent.nextSlot = 0; agent.pathGoal = nil
+	table.clear(agent.waypoints); unqueue(agent)
+	Policy.change(agent.clock, tostring(agent.clock.generation + 1))
+	model:SetAttribute("SummonFrontline", frontline)
+end
+function Navigation.CanStrike(model: Model, target: Model): boolean
+	local agent = agents[model]
+	return agent ~= nil and agent.formationTarget == target and agent.frontline == true
+		and agent.target == target
 end
 local function parameters(agent: Agent, owner: Model, target: Model): RaycastParams
 	local excluded: { Instance } = { agent.model, owner, target }
@@ -54,7 +70,7 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
 	if hit then
 		local y = hit.Position.Y + agent.groundOffset
-		model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0))
+		if math.abs(y - position.Y) > .001 then model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0)) end
 		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
 		return true
 	end
@@ -91,8 +107,10 @@ end
 local function chooseGoal(agent: Agent, target: Model, destination: BasePart, radius: number, ray: RaycastParams, now: number): Vector3?
 	local center = destination.Position
 	local function candidate(index: number): Vector3?
+		if agent.formationTarget == target and agent.frontline ~= nil
+			and (index <= Policy.SlotsPerRing) ~= agent.frontline then return nil end
 		if not available(agent, target, index) then return nil end
-		local x, z = Policy.slot(index, radius, 3)
+		local x, z = Policy.slot(index, radius, Policy.RingSpacing)
 		local point = ground(agent, center + Vector3.new(x, 0, z), ray)
 		if not point then return nil end
 		-- Blockcast omits initial overlap, so also validate destination body bounds.
@@ -103,7 +121,7 @@ local function chooseGoal(agent: Agent, target: Model, destination: BasePart, ra
 	if now < agent.nextSlot and agent.goal then
 		-- Translate the existing slot with a moving target between selection ticks.
 		if agent.slot then
-			local x, z = Policy.slot(agent.slot, radius, 3)
+			local x, z = Policy.slot(agent.slot, radius, Policy.RingSpacing)
 			return Vector3.new(center.X + x, agent.goal.Y, center.Z + z)
 		end
 		return agent.goal
@@ -113,28 +131,28 @@ local function chooseGoal(agent: Agent, target: Model, destination: BasePart, ra
 		-- A settled waiting clone must claim newly freed inner positions instead
 		-- of keeping its outer reservation forever after a front clone dies.
 		local innerBest: Vector3? = nil; local innerSlot: number? = nil; local innerDistance = math.huge
-		for index = 1, math.floor((agent.slot - 1) / 8) * 8 do
+		for index = 1, math.floor((agent.slot - 1) / Policy.SlotsPerRing) * Policy.SlotsPerRing do
 			local point = candidate(index)
 			if point then
 				local distance = flat(point-agent.root.Position).Magnitude
 				if distance < innerDistance then innerBest = point; innerSlot = index; innerDistance = distance end
 			end
-			if index % 8 == 0 and innerBest then break end
+			if index % Policy.SlotsPerRing == 0 and innerBest then break end
 		end
 		if innerBest then agent.slot = innerSlot; return innerBest end
 		local point = candidate(agent.slot); if point then return point end
 	end
 	local best: Vector3? = nil; local bestSlot: number? = nil; local bestScore = math.huge
-	-- Eight attack positions plus waiting rings for mass-clone casts. Occupied
+	-- Attack positions plus waiting rings for mass-clone casts. Occupied
 	-- slots do not query geometry; stop after the first ring with a usable slot.
-	for index = 1, 64 do
+	for index = 1, 80 do
 		local point = candidate(index)
 		if point then
-			local score = flat(point - agent.root.Position).Magnitude + math.floor((index - 1) / 8) * 20
+			local score = flat(point - agent.root.Position).Magnitude + math.floor((index - 1) / Policy.SlotsPerRing) * 20
 			if index == agent.slot and agent.failures >= 2 then score += 100 end
 			if score < bestScore then best = point; bestSlot = index; bestScore = score end
 		end
-		if index % 8 == 0 and best then break end
+		if index % Policy.SlotsPerRing == 0 and best then break end
 	end
 	agent.slot = bestSlot; agent.failures = 0
 	return best
@@ -225,6 +243,23 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		if not agent.pathGoal or flat(agent.pathGoal - goal).Magnitude > Policy.GoalDrift or not waypoint then request(agent, now) end
 	else
 		table.clear(agent.waypoints); agent.pathGoal = nil; unqueue(agent)
+		if agent.formationTarget == target and agent.frontline then
+			-- Approach a free melee place from its outside. Cutting straight through
+			-- the occupied front arc traps rear clones behind settled attackers.
+			local from = flat(position - destination.Position)
+			local to = flat(goal - destination.Position)
+			if from.Magnitude > .1 and to.Magnitude > .1 then
+				local angle = math.atan2(from.X * to.Z - from.Z * to.X, from:Dot(to))
+				if math.abs(angle) > .25 then
+					local step = math.clamp(angle, -.35, .35)
+					local direction = from.Unit
+					local radial = Vector3.new(direction.X * math.cos(step) - direction.Z * math.sin(step), 0,
+						direction.X * math.sin(step) + direction.Z * math.cos(step))
+					local orbit = Vector3.new(destination.Position.X, position.Y, destination.Position.Z) + radial * (to.Magnitude + Policy.RingSpacing / 2)
+					if clear(agent, position, orbit, ray) then aim = orbit end
+				end
+			end
+		end
 	end
 	local direction = flat(aim - position)
 	if direction.Magnitude < 0.001 then return false end

@@ -16,12 +16,43 @@ local Oil=require(script.Parent.OilStatusService)
 local Navigation = require(script.Parent.CloneNavigation)
 local Collision = require(script.Parent.SummonCollision)
 local Autonomy = require(Shared.Abilities.CloneAutonomyPolicy)
+local Formation = require(Shared.Abilities.CloneNavigationPolicy)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
 	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number,
-	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean }
+	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean,
+	assignedTarget: Model?, lastStrike: number }
 local Service = { Spawned = Instance.new("BindableEvent") }
 local records: { [Model]: Record } = {}
 local targetSerial = 0
+local nextFormation = 0
+local function coordinate(now: number)
+	if now < nextFormation then return end; nextFormation = now + .2
+	local groups: { [Model]: { Record } } = {}
+	for _, record in records do
+		local target = record.assignedTarget
+		if target and record.humanoid.Health > 0 and Damage.CanDamage(record.model, target) then
+			if not groups[target] then groups[target] = {} end
+			table.insert(groups[target], record)
+		end
+	end
+	for target, group in groups do
+		-- Clones that have not struck yet get the next free place. Regular attack cooldowns remain intact.
+		table.sort(group, function(a: Record, b: Record): boolean
+			if a.lastStrike ~= b.lastStrike then return a.lastStrike < b.lastStrike end
+			if a.owner.UserId ~= b.owner.UserId then return a.owner.UserId < b.owner.UserId end
+			return a.clone.id < b.clone.id
+		end)
+		for index, record in group do Navigation.SetFrontline(record.model, target, index <= Formation.FrontlineLimit) end
+	end
+end
+local function targetScore(record: Record, target: Model, root: BasePart, assistId: string?): number
+	local assigned = 0
+	for _, other in records do
+		if other ~= record and other.assignedTarget == target and other.humanoid.Health > 0 then assigned += 1 end
+	end
+	return (root.Position - record.root.Position).Magnitude + assigned * Autonomy.CrowdCost
+		- (if assistId and target:GetAttribute("AbilityEntityId") == assistId then Autonomy.AssistBonus else 0)
+end
 local function targetId(model: Model): string
 	local id = model:GetAttribute("AbilityEntityId")
 	if typeof(id) == "string" then return id end
@@ -68,8 +99,17 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	humanoid.WalkSpeed=Stats.Get(player).WalkSpeed; humanoid.MaxHealth = sourceHumanoid.MaxHealth; humanoid.Health = sourceHumanoid.Health
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None; humanoid.BreakJointsOnDeath = false
 	root.Anchored = true; model.PrimaryPart = root
-	local spacing = sourceRoot.Size.X * 2
-	local offset = sourceRoot.CFrame.RightVector * ((clone.id % 3) - 1) * spacing + sourceRoot.CFrame.LookVector * -spacing
+	-- Give each new clone its own spawn position, including a mass cast.
+	local offset = Vector3.zero
+	for index = 1, 80 do
+		local x, z = Formation.slot(index, math.max(4.2, sourceRoot.Size.X * 2), 3)
+		local candidate = sourceRoot.CFrame:VectorToWorldSpace(Vector3.new(x, 0, z))
+		local free = true
+		for _, other in records do
+			if (other.root.Position - (sourceRoot.Position + candidate)).Magnitude < 2.5 then free = false; break end
+		end
+		if free then offset = candidate; break end
+	end
 	local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances = { character }; ray.RespectCanCollide = true
 	local wall = workspace:Blockcast(sourceRoot.CFrame, sourceRoot.Size, offset, ray)
 	if wall and offset.Magnitude > 0 then offset = offset.Unit * math.max(0, wall.Distance - 0.01) end
@@ -79,6 +119,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
+		assignedTarget = nil, lastStrike = 0,
 		autoTarget = nil, nextScan = 0, lastOrder = commands.lastRequest, recallUntil = 0, returning = false,
 		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.CloneDamage * stats.AttackDamageMultiplier + stats.AttackDamageBonus }
 	Navigation.Register(model, root, humanoid)
@@ -86,7 +127,9 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	return model
 end
 function Service.Update(now: number, delta: number, sourceStats: (Player) -> (number, number))
+	coordinate(now)
 	for model, record in records do
+		record.assignedTarget = nil
 		local clone, owner = record.clone, record.owner
 		if not model.Parent or record.humanoid.Health <= 0 or owner.Parent ~= Players or now >= clone.expiresAt
 			or record.root.Position.Y < workspace.FallenPartsDestroyHeight
@@ -114,7 +157,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		if ownerDistance > Autonomy.OwnerLeash then record.returning = true end
 		if record.returning and ownerDistance < Autonomy.ReturnRadius and now >= record.recallUntil then record.returning = false end
 		local target: Model? = nil
-		if intent.targetId and (intent.mode == "Command" or not record.returning) then
+		if intent.targetId and intent.mode == "Command" then
 			for candidate in Fighters.GetAll() do
 				if candidate:GetAttribute("AbilityEntityId") == intent.targetId then target = candidate; break end
 			end
@@ -128,20 +171,27 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 				or (currentRoot.Position - ownerRoot.Position).Magnitude > Autonomy.OwnerLeash then record.autoTarget = nil end
 			if now >= record.nextScan then
 				record.nextScan = now + Autonomy.ScanInterval
-				-- Keep a valid target through the swing; reacquire immediately after it dies.
-				if not record.autoTarget then
-					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 8) do
+				-- Rebalance with hysteresis: a moving crowd cannot strand clones on one enemy,
+				-- while small distance changes do not make the entire group swap targets.
+				local best = record.autoTarget
+				local bestRoot = if best then best:FindFirstChild("HumanoidRootPart") else nil
+				local bestScore = if best and bestRoot and bestRoot:IsA("BasePart") then targetScore(record, best, bestRoot, intent.targetId) - Autonomy.SwitchMargin else math.huge
+				if now >= record.nextHit - 1.7 then
+					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 16) do
 						local candidate = enemy.Parent
 						local candidateRoot = if candidate then candidate:FindFirstChild("HumanoidRootPart") else nil
 						if candidate and candidate:IsA("Model") and candidateRoot and candidateRoot:IsA("BasePart")
 							and (candidateRoot.Position - ownerRoot.Position).Magnitude <= Autonomy.OwnerLeash then
-							record.autoTarget = candidate; break
+							local score = targetScore(record, candidate, candidateRoot, intent.targetId)
+							if score < bestScore then best = candidate; bestScore = score end
 						end
 					end
 				end
+				record.autoTarget = best
 			end
 			target = record.autoTarget
 		else record.autoTarget = nil end
+		record.assignedTarget = target
 		model:SetAttribute("SummonBehavior", if target then "Attack" elseif record.returning then "Return" else "Follow")
 		model:SetAttribute("SummonTarget", if target then target.Name else "")
 		local destination = if target then target:FindFirstChild("HumanoidRootPart") else character:FindFirstChild("HumanoidRootPart")
@@ -150,8 +200,9 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		local flat = distance * Vector3.new(1, 0, 1)
 		local stop = if target then Units.toStuds(50) + (record.root.Size.X + destination.Size.X) / 2 else record.root.Size.X * 3
 		if flat.Magnitude > 0.001 then record.root.CFrame = CFrame.lookAt(record.root.Position, record.root.Position + flat) end
-		if target and Damage.CanDamage(model, target) and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
+		if target and Navigation.CanStrike(model, target) and Damage.CanDamage(model, target) and distance.Magnitude <= stop + 0.01 and now >= record.nextHit and Targets.Visible(model, target, record.root.Position, destination.Position) then
 			record.nextHit = now + 2 -- Hpal ua1c; M1 damage itself retains current prototype combat balance.
+			record.lastStrike = now
 			model:SetAttribute("SummonSwingAt", now); model:SetAttribute("SummonSwingStep", 1)
 			local humanoid = target:FindFirstChildOfClass("Humanoid")
 			if humanoid then
