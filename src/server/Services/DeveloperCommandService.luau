@@ -17,7 +17,7 @@ local Service={}
 local noCooldown: {[Player]: boolean}={}
 local requests: {[Player]: number}={}
 local started=false
-local help="level 30 — уровень • learnall — изучить навыки\nnocd on / nocd off — убрать / вернуть КД\nrefresh — восстановить HP, чакру и КД\nsolo — начать тест одному • help — команды"
+local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД\nrefresh — восстановить HP, чакру и КД\nsolo — начать тест одному • help — команды"
 local function cooldowns(player: Player)
  local s=Naruto.Get(player)
  if s then
@@ -42,7 +42,20 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
  end
  local profile=Progression.Get(player);local s=Naruto.Get(player)
  if not profile or not s then return false,"Дождитесь появления героя." end
- if command.name=="level" then
+ if command.name=="rikudo" then
+  local match=require(script.Parent.MatchService).GetState()
+  if not match or match.phase~="InProgress" or not player.Character or not require(script.Parent.DamageService).CanAct(player.Character) then
+   return false,"Дождитесь начала матча и появления живого героя."
+  end
+  local raised,message=Service.Execute(player,"level "..math.max(27,profile.Level))
+  if not raised then return false,message end
+  while Learning.reason(profile,"KCM")==nil do Learning.learn(profile,"KCM") end
+  Progression.Publish(player)
+  local ok,reason=Kcm.StudioEnableRikudo(player)
+  if not ok then return false,"Не удалось включить Рикудо: завершите текущую технику или оглушение и повторите rikudo. ("..reason..")" end
+  return true,if reason=="AlreadyActive" then "Рикудо уже активен, чакра пополнена. F8 закрыть → X выйти → rikudo для повторного перехода."
+   else "Рикудо включён без ожидания Хагоромо. F8 закрыть; X — выйти. Для повторного перехода: rikudo."
+ elseif command.name=="level" then
   local target=command.level :: number
   if target<profile.Level then return false,"Команда повышает уровень. Для сброса перезапустите Play." end
   local xp=-profile.CurrentXP

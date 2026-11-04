@@ -10,7 +10,7 @@ function Rules.parse(raw: any): Command?
   local n=tonumber(words[2]);if not n or n~=n or n%1~=0 or n<1 or n>30 then return nil end
   return {name=name,level=n}
  elseif name=="nocd" and #words==2 and (words[2]=="on" or words[2]=="off") then return {name=name,enabled=words[2]=="on"}
- elseif #words==1 and (name=="help" or name=="refresh" or name=="learnall" or name=="solo") then return {name=name} end
+ elseif #words==1 and (name=="help" or name=="refresh" or name=="learnall" or name=="solo" or name=="rikudo") then return {name=name} end
  return nil
 end
 return Rules

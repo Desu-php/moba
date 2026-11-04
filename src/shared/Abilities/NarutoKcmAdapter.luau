@@ -11,6 +11,7 @@ export type Event = {kind: string, id: number?, rank: number?, reason: string?, 
 export type Balance = {chakra: number, cooldownAt: number}
 export type Rules<S> = {
  clearCooldown: (S)->(),
+ credit: (S,number)->boolean,
  new: (number, Balance?) -> S, balance: (S) -> Balance, spend: (S,number) -> boolean,
  update: (S, number, Context) -> {Event}, close: (S, Context) -> {Event},
  canEnter: (S, Context) -> (boolean,string), enter: (S, Context) -> (boolean,string,{Event}),
@@ -181,6 +182,10 @@ function Adapter.configure<S>(rules: Rules<S>, ports: Ports, policy: MorphPolicy
  end
  function A.Chakra(token: Token): number?
   local r=records[token.owner]; return if r and r.token==token then rules.balance(r.state).chakra else nil
+ end
+ function A.CreditChakra(token: Token,amount: number): boolean
+  local r,s=acquire(token);if not r or not s then return false end
+  local ok=rules.credit(r.state,amount);publish(r,s);r.busy=false;return ok
  end
  function A.SpendChakra(token: Token,amount: number): boolean
   local r,s=acquire(token); if not r or not s then return false end

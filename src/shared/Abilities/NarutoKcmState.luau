@@ -42,6 +42,10 @@ function M.configure(config: Config)
   s.chakra-=amount; return true
  end
  function D.clearCooldown(s: State) s.cooldownAt=0 end
+ function D.credit(s: State,amount: number): boolean
+  if s.closed or not finite(amount) or amount<0 or not finite(s.chakra+amount) then return false end
+  s.chakra+=amount;return true
+ end
  function D.balance(s: State): Balance return {chakra=s.chakra,cooldownAt=s.cooldownAt} end
  -- Process elapsed whole ticks. Context must be advanced at each authoritative context change.
  -- On a long gap caller supplies historically correct context or chooses a runtime suspension policy.

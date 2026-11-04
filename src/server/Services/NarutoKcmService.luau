@@ -233,6 +233,28 @@ function S.StudioResetCooldowns(p: Player)
  local r=records[tostring(p.UserId)]
  if r then r.dash.cooldownAt=0;if runtime and r.token then runtime.ResetCooldown(r.token) end end
 end
+function S.StudioEnableRikudo(p: Player): (boolean,string)
+ if not game:GetService("RunService"):IsStudio() or p.Parent~=Players then return false,"StudioOnly" end
+ local rt=runtime;local r=refresh(p);local snap=snapshot(tostring(p.UserId))
+ if not rt or not r or not r.token or not snap or not snap.eligible or not snap.canCast then return false,"Busy" end
+ if snap.context.level<27 or snap.context.rank~=3 then return false,"Rank" end
+ -- Real owner-scoped progression and domain state; never fake replicated form flags.
+ r.hagoromo.granted=true;r.hagoromo.deadline=nil;r.hagoromo.cutsceneAt=nil;r.sageEntryBlocked=false
+ if rt.ActiveRank(r.token)==3 then
+  rt.CreditChakra(r.token,math.max(0,900+100*snap.context.level-(rt.Chakra(r.token) or 0)))
+  refresh(p);return true,"AlreadyActive"
+ end
+ Kurama.Remove(p)
+ -- Close a lower KCM rank through normal cleanup before binding a fresh cast token.
+ if rt.IsActive(r.token) then
+  local old=r.token;rt.Remove(old);models[old]=nil;r.token=nil
+ end
+ r=refresh(p);if not r or not r.token then return false,"Unavailable" end
+ local token=r.token
+ rt.ResetCooldown(token)
+ rt.CreditChakra(token,math.max(0,900+100*snap.context.level-(rt.Chakra(token) or 0)))
+ return rt.Enter(token)
+end
 function S.Update()
  if runtime then for _,p in Players:GetPlayers() do refresh(p) end; Kurama.Update(workspace:GetServerTimeNow()) end
 end

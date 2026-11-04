@@ -184,3 +184,10 @@ do
  g.snapshots.a.life=2;assert(not g.a.ResetCooldown(a))
  print("PASS KCM cooldown reset: active form/chakra preserved, owner and life isolated")
 end
+do
+ local g=fixture();local a=g.a.Bind("a");local b=g.a.Bind("b");assert(a and b)
+ local other=g.a.Chakra(b);assert(g.a.CreditChakra(a,3000));assert(g.a.Chakra(a)==3600 and g.a.Chakra(b)==other)
+ assert(not g.a.CreditChakra(a,-1) and not g.a.CreditChakra(a,math.huge) and not g.a.CreditChakra(a,0/0))
+ assert(g.a.Chakra(a)==3600);g.snapshots.a.life=2;assert(not g.a.CreditChakra(a,1))
+ print("PASS KCM chakra credit: finite, positive, owner/life isolated")
+end
