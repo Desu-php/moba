@@ -13,7 +13,7 @@ function Aura.Update(parent:Folder,now:number)
   local camera=workspace.CurrentCamera
   if form=="" or not root or not root:IsA("BasePart") or not hp or hp.Health<=0 or (camera and (root.Position-camera.CFrame.Position).Magnitude>120) then continue end
   live[model]=true
-  local costume=model:FindFirstChild("HeroAppearance")
+  local costume=model:FindFirstChild("DisplayedHeroAppearance") or model:FindFirstChild("HeroAppearance")
   if costume and model:GetAttribute("HeroVisualForm")=="Kurama" then
    local moving=math.clamp(Vector3.new(root.AssemblyLinearVelocity.X,0,root.AssemblyLinearVelocity.Z).Magnitude/12,0,1)
    for _,part in costume:GetChildren() do

@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "frames": 871,
+  "missingHeadFrames": 0,
+  "blankPortraitFrames": 0,
+  "unmaskedSourceParts": 0,
+  "fadeFrames": 124,
+  "finalDisplays": 1,
+  "readinessDelaySeconds": 4.2,
+  "fullCheckSeconds": 43.03,
+  "rikudoAssetFetches": 17,
+  "rikudoAssetFetchFailures": 0
+}

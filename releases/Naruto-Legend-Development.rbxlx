@@ -5276,14 +5276,15 @@ local function dress(model: Model)
  if not head or not head:IsA("BasePart") or not model:FindFirstChild("UpperTorso") then return end
  local form=if model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("KcmActive")==true then "KCM" elseif model:GetAttribute("SagePhase")=="Active" then "Sage" else "Normal"
  if form=="KCM" and model:GetAttribute("KcmRank")==3 then form="Rikudo" end
- local version="CreatorStore-v3:"..form
+ local version="CreatorStore-v4:"..form
  if model:GetAttribute("HeroAppearanceVersion")==version and model:FindFirstChild("HeroAppearance") then return end
  local sage=form=="Sage"
  local kcm=form=="KCM" or form=="Rikudo"
  -- Keep the physical head and its rig joints; the imported face supplies the visible head.
  head.Transparency=1
+ local previous=model:FindFirstChild("HeroAppearance")
  for _,item in model:GetChildren() do
-  if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item.Name=="HeroAppearance" then item:Destroy() end
+  if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end
  end
  for _,item in head:GetChildren() do if item:IsA("Decal") then item:Destroy() end end
  for _,item in model:GetChildren() do if item:IsA("BasePart") and item.Name~="HumanoidRootPart" then
@@ -5292,7 +5293,8 @@ local function dress(model: Model)
  end end
  local shirt=Instance.new("Shirt");shirt.ShirtTemplate=if form=="Rikudo" then "rbxassetid://6510073285" elseif kcm then "rbxassetid://7923921567" elseif sage then "rbxassetid://7472900840" else "rbxassetid://6764794671";shirt.Parent=model
  local pants=Instance.new("Pants");pants.PantsTemplate=if form=="Rikudo" then "rbxassetid://6510069460" elseif kcm then "rbxassetid://7923927930" elseif sage then "rbxassetid://7472928447" else "rbxassetid://3237352364";pants.Parent=model
- local folder=Instance.new("Folder");folder.Name="HeroAppearance";folder.Parent=model
+ -- Build off-tree so clients never observe a deliberately empty costume.
+ local folder=Instance.new("Folder");folder.Name="HeroAppearance"
  if sage or kcm then
   -- A classic head supports this store face decal. The avatar's dynamic head does not.
   local faceHead=Instance.new("Part");faceHead.Name=form.."FaceHead";faceHead.Size=Vector3.new(2,1,1)
@@ -5325,8 +5327,20 @@ local function dress(model: Model)
    local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=torso;weld.Part1=orb;weld.C0=offset;weld.Parent=orb
   end
  end
+ for _,part in folder:GetChildren() do
+  if part:IsA("BasePart") then part:SetAttribute("AppearanceTransparency",part.Transparency) end
+ end
+ folder:SetAttribute("AppearanceVersion",version)
+ folder:SetAttribute("AppearanceForm",form)
+ folder:SetAttribute("AppearanceParts",#folder:GetChildren())
+ folder:SetAttribute("AppearanceDescendants",#folder:GetDescendants())
+ if previous then previous.Name="PreviousHeroAppearance" end
+ folder.Parent=model
  model:SetAttribute("HeroVisualForm",form)
  model:SetAttribute("HeroAppearanceVersion",version)
+ -- Each client retains its own loaded visual until the next one is ready.
+ -- This grace window also covers replication of the new folder and its children.
+ if previous then game:GetService("Debris"):AddItem(previous,3) end
 end
 function Appearance.Apply(model: Model)
  dress(model)
@@ -10504,7 +10518,7 @@ function Aura.Update(parent:Folder,now:number)
   local camera=workspace.CurrentCamera
   if form=="" or not root or not root:IsA("BasePart") or not hp or hp.Health<=0 or (camera and (root.Position-camera.CFrame.Position).Magnitude>120) then continue end
   live[model]=true
-  local costume=model:FindFirstChild("HeroAppearance")
+  local costume=model:FindFirstChild("DisplayedHeroAppearance") or model:FindFirstChild("HeroAppearance")
   if costume and model:GetAttribute("HeroVisualForm")=="Kurama" then
    local moving=math.clamp(Vector3.new(root.AssemblyLinearVelocity.X,0,root.AssemblyLinearVelocity.Z).Magnitude/12,0,1)
    for _,part in costume:GetChildren() do
@@ -10964,6 +10978,139 @@ return table.freeze(Layout)
           </Item>
           <Item class="ModuleScript" referent="144">
             <Properties>
+              <string name="Name">HeroAppearanceTransition</string>
+              <string name="Source"><![CDATA[--!strict
+-- Presentation only: keep a loaded costume while its successor is replicated/preloaded.
+local Content=game:GetService("ContentProvider")
+local Run=game:GetService("RunService")
+local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Controller={}
+type State={model:Model,source:Folder?,shown:Folder?,generation:number,connection:RBXScriptConnection?}
+local states:{[Model]:State}={}
+local started=false
+local function hide(folder:Instance)
+ for _,part in folder:GetDescendants() do if part:IsA("BasePart") then part.Transparency=1 end end
+end
+local function alpha(folder:Folder,value:number)
+ for _,part in folder:GetChildren() do
+  if part:IsA("BasePart") then
+   local original=part:GetAttribute("TransitionTransparency")
+   part.Transparency=(if typeof(original)=="number" then original else 0)+(1-(if typeof(original)=="number" then original else 0))*value
+  end
+ end
+end
+local function visualCopy(source:Folder,model:Model):Folder
+ local copy=Instance.new("Folder");copy.Name="DisplayedHeroAppearance"
+ copy:SetAttribute("AppearanceVersion",source:GetAttribute("AppearanceVersion"))
+ copy:SetAttribute("AppearanceForm",source:GetAttribute("AppearanceForm"))
+ for _,original in source:GetChildren() do
+  if not original:IsA("BasePart") then continue end
+  local bodyName=original:GetAttribute("CosmeticBody");local offset=original:GetAttribute("CosmeticOffset")
+  local body=if typeof(bodyName)=="string" then model:FindFirstChild(bodyName) else nil
+  if not body or not body:IsA("BasePart") or typeof(offset)~="CFrame" then continue end
+  local part=original:Clone()
+  for _,child in part:GetDescendants() do
+   if not child:IsA("DataModelMesh") and not child:IsA("Decal") and not child:IsA("SurfaceAppearance") then child:Destroy() end
+  end
+  local target=original:GetAttribute("AppearanceTransparency")
+  part.Transparency=if typeof(target)=="number" then target else 0
+  part:SetAttribute("TransitionTransparency",part.Transparency)
+  part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Massless=true;part.Anchored=false
+  part.LocalTransparencyModifier=0;part.CFrame=body.CFrame*offset;part.Parent=copy
+  local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=body;weld.Part1=part;weld.C0=offset;weld.Parent=part
+ end
+ return copy
+end
+local function stage(state:State,folder:Folder)
+ if state.source==folder then return end
+ state.source=folder;state.generation+=1
+ local generation=state.generation
+ hide(folder)
+ task.spawn(function()
+  local function current():boolean return state.model.Parent~=nil and state.generation==generation and folder.Parent==state.model end
+  -- Attribute/descendant replication is not atomic, even when the server builds off-tree.
+  while current() do
+   local expected=folder:GetAttribute("AppearanceParts")
+   local descendants=folder:GetAttribute("AppearanceDescendants")
+   if typeof(expected)=="number" and #folder:GetChildren()>=expected and typeof(descendants)=="number" and #folder:GetDescendants()>=descendants then break end
+   Run.Heartbeat:Wait()
+  end
+  if not current() then return end
+  local copy=visualCopy(folder,state.model)
+  if not state.shown then
+   -- First spawn has no previous costume; show it while warming its textures.
+   copy.Parent=state.model;state.shown=copy
+   pcall(function() Content:PreloadAsync({copy}) end)
+   return
+  end
+  local fetched=true
+  local ready=pcall(function() Content:PreloadAsync({copy},function(_id,status)
+   if status~=Enum.AssetFetchStatus.Success then fetched=false end
+  end) end)
+  if not current() or not ready or not fetched then copy:Destroy();return end
+  local previous=state.shown
+  alpha(copy,1);copy.Parent=state.model
+  local at=os.clock()
+  while current() do
+   local t=math.clamp((os.clock()-at)/.55,0,1)
+   -- Keep the old face fully opaque until the new face is opaque.
+   local incoming=math.clamp(t/.6,0,1);incoming=incoming*incoming*(3-2*incoming)
+   local outgoing=math.clamp((t-.6)/.4,0,1);outgoing=outgoing*outgoing*(3-2*outgoing)
+   alpha(copy,1-incoming);if previous then alpha(previous,outgoing) end
+   if t>=1 then break end
+   Run.RenderStepped:Wait()
+  end
+  if not current() then copy:Destroy();if previous and previous.Parent then alpha(previous,0) end;return end
+  if previous then previous:Destroy() end
+  state.shown=copy;alpha(copy,0)
+ end)
+end
+local function bind(model:Model)
+ if states[model] then return end
+ local state:State={model=model,source=nil,shown=nil,generation=0,connection=nil};states[model]=state
+ state.connection=model.DescendantAdded:Connect(function(item)
+  local parent=item.Parent
+  if parent and (parent.Name=="HeroAppearance" or parent.Name=="PreviousHeroAppearance") and item:IsA("BasePart") then item.Transparency=1 end
+  if item:IsA("Folder") and item.Parent==model and item.Name=="HeroAppearance" then stage(state,item) end
+ end)
+ for _,child in model:GetChildren() do
+  if child.Name=="PreviousHeroAppearance" then hide(child) end
+  if child:IsA("Folder") and child.Name=="HeroAppearance" then stage(state,child) end
+ end
+ model.Destroying:Once(function()
+  state.generation+=1;if state.connection then state.connection:Disconnect() end
+  if state.shown then state.shown:Destroy() end;states[model]=nil
+ end)
+end
+function Controller.Start()
+ if started then return end;started=true
+ -- Warm every form's mesh/face IDs before the first transformation when possible.
+ task.spawn(function()
+  local cache=Instance.new("Folder")
+  local factory=require(Shared.CreatorVisualFactory)
+  local data=require(Shared.Config.CreatorVisualData)
+  local forms=require(Shared.Config.NarutoFormVisualData)
+  -- Typed Instances ensure mesh IDs are fetched as meshes, not as generic images.
+  local function add(specs:any) for _,s in specs do factory.Part(s).Parent=cache end end
+  add(data.appearance);for _,specs in forms do add(specs) end
+  for _,id in {"rbxassetid://9477576334","rbxassetid://9449064416"} do
+   local part=Instance.new("Part");part.Parent=cache;local decal=Instance.new("Decal");decal.Texture=id;decal.Parent=part
+  end
+  pcall(function() Content:PreloadAsync({cache}) end);cache:Destroy()
+ end)
+ workspace.DescendantAdded:Connect(function(item)
+  if item:IsA("Folder") and item.Name=="HeroAppearance" and item.Parent and item.Parent:IsA("Model") then bind(item.Parent) end
+ end)
+ for _,item in workspace:GetDescendants() do
+  if item:IsA("Folder") and item.Name=="HeroAppearance" and item.Parent and item.Parent:IsA("Model") then bind(item.Parent) end
+ end
+end
+return Controller
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="145">
+            <Properties>
               <string name="Name">HeroHUDController</string>
               <string name="Source"><![CDATA[--!strict
 local Players = game:GetService("Players")
@@ -11119,7 +11266,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="145">
+          <Item class="ModuleScript" referent="146">
             <Properties>
               <string name="Name">HeroMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11311,7 +11458,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="146">
+          <Item class="ModuleScript" referent="147">
             <Properties>
               <string name="Name">InputController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11406,7 +11553,7 @@ return InputController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="147">
+          <Item class="ModuleScript" referent="148">
             <Properties>
               <string name="Name">LearningController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11434,7 +11581,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="148">
+          <Item class="ModuleScript" referent="149">
             <Properties>
               <string name="Name">MinionMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11524,7 +11671,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="149">
+          <Item class="ModuleScript" referent="150">
             <Properties>
               <string name="Name">MobaHUDView</string>
               <string name="Source"><![CDATA[--!strict
@@ -11545,31 +11692,47 @@ end
 function View.border(parent: GuiObject, color: Color3)
 	local stroke = Instance.new("UIStroke"); stroke.Color = color; stroke.Transparency = .35; stroke.Parent = parent
 end
-export type Portrait = { viewport: ViewportFrame, source: Model?, copy: Model?, appearance: string }
+export type Portrait = { viewport: ViewportFrame, source: Model?, copy: Model?, appearance: string,
+ generation:number,pending:string?,pendingSource:Model? }
 function View.portrait(parent: Instance, size: UDim2, position: UDim2): Portrait
 	local viewport = Instance.new("ViewportFrame"); viewport.Name = "Portrait"; viewport.Size = size; viewport.Position = position
 	viewport.BackgroundColor3 = View.Card; viewport.BorderSizePixel = 0; viewport.LightDirection = Vector3.new(-1,-1,-2)
 	viewport.Ambient = Color3.fromRGB(180,180,180); viewport.Parent = parent
-	return { viewport = viewport, source = nil, copy = nil, appearance = "" }
+	return { viewport = viewport, source = nil, copy = nil, appearance = "",generation=0,pending=nil,pendingSource=nil }
 end
 function View.updatePortrait(portrait: Portrait, source: Model?)
 	local costume = if source then source:FindFirstChild("HeroAppearance") else nil
-local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVersion")) .. ":" .. #source:GetChildren() .. ":" .. (if costume then #costume:GetChildren() else 0) else ""
-	if portrait.source == source and portrait.appearance == appearance and (not source or portrait.copy) then return end
-	portrait.source = source; portrait.appearance = appearance; portrait.viewport:ClearAllChildren(); portrait.copy = nil
-	if not source then return end
+ local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVersion")) else ""
+	if portrait.source == source and portrait.appearance == appearance and (not source or portrait.copy) then
+  if portrait.pending then portrait.generation+=1;portrait.pending=nil;portrait.pendingSource=nil end
+  return
+ end
+	if not source then
+  portrait.generation+=1;portrait.pending=nil;portrait.pendingSource=nil
+  portrait.source=nil;portrait.appearance="";portrait.copy=nil;portrait.viewport:ClearAllChildren();return
+ end
+ -- Keep the current portrait through partial replication and texture loading.
+ if not costume or costume:GetAttribute("AppearanceVersion")~=appearance then return end
+ local count=costume:GetAttribute("AppearanceParts")
+ local descendants=costume:GetAttribute("AppearanceDescendants")
+ if typeof(count)~="number" or #costume:GetChildren()<count or typeof(descendants)~="number" or #costume:GetDescendants()<descendants then return end
+ if portrait.pendingSource==source and portrait.pending==appearance then return end
 	local head = source:FindFirstChild("Head"); if not head or not head:IsA("BasePart") then portrait.source = nil; return end
+ portrait.generation+=1;local generation=portrait.generation
+ portrait.pending=appearance;portrait.pendingSource=source
  -- A fixed cosmetic bust keeps combat poses, helper clones and live effects out of the portrait.
- local copy=Instance.new("Model");copy.Name="HeroPortrait";portrait.copy=copy
+ local copy=Instance.new("Model");copy.Name="HeroPortrait"
  local upper=source:FindFirstChild("UpperTorso")
  local torsoHeight=if upper and upper:IsA("BasePart") then upper.Size.Y else 1.6
  local headY=torsoHeight/2+head.Size.Y/2+.1
  local frames: {[string]: CFrame}={Head=CFrame.new(0,headY,0),UpperTorso=CFrame.identity,
   LowerTorso=CFrame.new(0,-1,0),LeftUpperArm=CFrame.new(-1.5,.1,0),RightUpperArm=CFrame.new(1.5,.1,0)}
- local kurama=source:GetAttribute("HeroVisualForm")=="Kurama"
+ local kurama=costume:GetAttribute("AppearanceForm")=="Kurama"
  if kurama then frames.HumanoidRootPart=CFrame.identity end
  local function visualClone(original: BasePart, frame: CFrame): BasePart
   local part=original:Clone()
+  local target=original:GetAttribute("AppearanceTransparency")
+  if typeof(target)=="number" then part.Transparency=target end
   for _,child in part:GetDescendants() do
    if not child:IsA("DataModelMesh") and not child:IsA("Decal") and not child:IsA("SurfaceAppearance") then child:Destroy() end
   end
@@ -11591,22 +11754,28 @@ local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVe
   local humanoid=sourceHumanoid:Clone();humanoid:ClearAllChildren();humanoid.AutomaticScalingEnabled=false
   humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None;humanoid.Parent=copy
  end
- local world=Instance.new("WorldModel");world.Parent=portrait.viewport;copy.Parent=world
+ local world=Instance.new("WorldModel");copy.Parent=world
  local camera=Instance.new("Camera");camera.FieldOfView=35
  camera.CFrame=CFrame.lookAt(Vector3.new(0,headY+.3,-4.8),Vector3.new(0,headY-.25,0))
  if kurama then
   -- Frame the fox's face, rather than the invisible humanoid head inside its body.
   camera.CFrame=CFrame.lookAt(Vector3.new(0,2,-12),Vector3.new(0,.8,-2))
  end
- camera.Parent=portrait.viewport;portrait.viewport.CurrentCamera=camera
- -- A face first displayed only in a ViewportFrame may not be fetched by the world renderer.
- task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync({copy}) end) end)
+ -- Build and preload a replacement off-screen, then swap in one non-yielding step.
+ task.spawn(function()
+  local ready=pcall(function() game:GetService("ContentProvider"):PreloadAsync({copy}) end)
+  if not ready or portrait.generation~=generation or not portrait.viewport.Parent or not source.Parent
+   or source:GetAttribute("HeroAppearanceVersion")~=appearance then world:Destroy();camera:Destroy();return end
+  portrait.viewport:ClearAllChildren()
+  world.Parent=portrait.viewport;camera.Parent=portrait.viewport;portrait.viewport.CurrentCamera=camera
+  portrait.copy=copy;portrait.source=source;portrait.appearance=appearance;portrait.pending=nil;portrait.pendingSource=nil
+ end)
 end
 return View
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="150">
+          <Item class="ModuleScript" referent="151">
             <Properties>
               <string name="Name">NarutoRangedVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11706,7 +11875,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="151">
+          <Item class="ModuleScript" referent="152">
             <Properties>
               <string name="Name">RasenganEvolutionHUD</string>
               <string name="Source"><![CDATA[--!strict
@@ -11846,7 +12015,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="152">
+          <Item class="ModuleScript" referent="153">
             <Properties>
               <string name="Name">RasenganVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -11991,7 +12160,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="153">
+          <Item class="ModuleScript" referent="154">
             <Properties>
               <string name="Name">RasenshurikenFlightVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12024,7 +12193,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="154">
+          <Item class="ModuleScript" referent="155">
             <Properties>
               <string name="Name">RoundController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12060,7 +12229,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="155">
+          <Item class="ModuleScript" referent="156">
             <Properties>
               <string name="Name">SurvivalHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12164,7 +12333,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="156">
+          <Item class="ModuleScript" referent="157">
             <Properties>
               <string name="Name">TowerVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12228,7 +12397,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="157">
+          <Item class="ModuleScript" referent="158">
             <Properties>
               <string name="Name">VFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12460,7 +12629,7 @@ return VFXController
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="158">
+        <Item class="LocalScript" referent="159">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -12472,6 +12641,7 @@ require(script.Parent.Controllers.CameraController).Start()
 CombatController.Start()
 InputController.Start()
 if not (game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatOnlyTest") == true) then
+	require(script.Parent.Controllers.HeroAppearanceTransition).Start()
 	task.spawn(function() require(script.Parent.Controllers.DeveloperConsoleController).Start() end)
 	require(script.Parent.Controllers.SurvivalHUDController).Start()
 	require(script.Parent.Controllers.HeroHUDController).Start()
@@ -12486,7 +12656,7 @@ print("[Anime Battlegrounds] Client ready; left mouse button attacks")
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="159">
+  <Item class="Workspace" referent="160">
     <Properties>
       <string name="Name">Workspace</string>
       <BinaryString name="AttributesSerialize">AQAAABEAAABEZXZlbG9wZXJTb2xvTW9kZQMB</BinaryString>

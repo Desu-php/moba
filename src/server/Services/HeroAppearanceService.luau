@@ -10,14 +10,15 @@ local function dress(model: Model)
  if not head or not head:IsA("BasePart") or not model:FindFirstChild("UpperTorso") then return end
  local form=if model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("KcmActive")==true then "KCM" elseif model:GetAttribute("SagePhase")=="Active" then "Sage" else "Normal"
  if form=="KCM" and model:GetAttribute("KcmRank")==3 then form="Rikudo" end
- local version="CreatorStore-v3:"..form
+ local version="CreatorStore-v4:"..form
  if model:GetAttribute("HeroAppearanceVersion")==version and model:FindFirstChild("HeroAppearance") then return end
  local sage=form=="Sage"
  local kcm=form=="KCM" or form=="Rikudo"
  -- Keep the physical head and its rig joints; the imported face supplies the visible head.
  head.Transparency=1
+ local previous=model:FindFirstChild("HeroAppearance")
  for _,item in model:GetChildren() do
-  if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item.Name=="HeroAppearance" then item:Destroy() end
+  if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end
  end
  for _,item in head:GetChildren() do if item:IsA("Decal") then item:Destroy() end end
  for _,item in model:GetChildren() do if item:IsA("BasePart") and item.Name~="HumanoidRootPart" then
@@ -26,7 +27,8 @@ local function dress(model: Model)
  end end
  local shirt=Instance.new("Shirt");shirt.ShirtTemplate=if form=="Rikudo" then "rbxassetid://6510073285" elseif kcm then "rbxassetid://7923921567" elseif sage then "rbxassetid://7472900840" else "rbxassetid://6764794671";shirt.Parent=model
  local pants=Instance.new("Pants");pants.PantsTemplate=if form=="Rikudo" then "rbxassetid://6510069460" elseif kcm then "rbxassetid://7923927930" elseif sage then "rbxassetid://7472928447" else "rbxassetid://3237352364";pants.Parent=model
- local folder=Instance.new("Folder");folder.Name="HeroAppearance";folder.Parent=model
+ -- Build off-tree so clients never observe a deliberately empty costume.
+ local folder=Instance.new("Folder");folder.Name="HeroAppearance"
  if sage or kcm then
   -- A classic head supports this store face decal. The avatar's dynamic head does not.
   local faceHead=Instance.new("Part");faceHead.Name=form.."FaceHead";faceHead.Size=Vector3.new(2,1,1)
@@ -59,8 +61,20 @@ local function dress(model: Model)
    local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=torso;weld.Part1=orb;weld.C0=offset;weld.Parent=orb
   end
  end
+ for _,part in folder:GetChildren() do
+  if part:IsA("BasePart") then part:SetAttribute("AppearanceTransparency",part.Transparency) end
+ end
+ folder:SetAttribute("AppearanceVersion",version)
+ folder:SetAttribute("AppearanceForm",form)
+ folder:SetAttribute("AppearanceParts",#folder:GetChildren())
+ folder:SetAttribute("AppearanceDescendants",#folder:GetDescendants())
+ if previous then previous.Name="PreviousHeroAppearance" end
+ folder.Parent=model
  model:SetAttribute("HeroVisualForm",form)
  model:SetAttribute("HeroAppearanceVersion",version)
+ -- Each client retains its own loaded visual until the next one is ready.
+ -- This grace window also covers replication of the new folder and its children.
+ if previous then game:GetService("Debris"):AddItem(previous,3) end
 end
 function Appearance.Apply(model: Model)
  dress(model)

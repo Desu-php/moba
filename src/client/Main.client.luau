@@ -7,6 +7,7 @@ require(script.Parent.Controllers.CameraController).Start()
 CombatController.Start()
 InputController.Start()
 if not (game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatOnlyTest") == true) then
+	require(script.Parent.Controllers.HeroAppearanceTransition).Start()
 	task.spawn(function() require(script.Parent.Controllers.DeveloperConsoleController).Start() end)
 	require(script.Parent.Controllers.SurvivalHUDController).Start()
 	require(script.Parent.Controllers.HeroHUDController).Start()
