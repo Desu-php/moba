@@ -199,7 +199,8 @@ function TeamService.Start(match: Rules.State, arena: Folder)
 	for _, name in { "SurvivalHeroes", "SurvivalMinions" } do
 		if not Physics:IsCollisionGroupRegistered(name) then Physics:RegisterCollisionGroup(name) end
 	end
-	Physics:CollisionGroupSetCollidable("SurvivalHeroes", "SurvivalMinions", false)
+	-- Lane units body-block heroes; summons keep their separate nonblocking group.
+	Physics:CollisionGroupSetCollidable("SurvivalHeroes", "SurvivalMinions", true)
 	for _, definition in Config.Teams do
 		local existing = Teams:FindFirstChild(definition.Id)
 		assert(not existing or existing:IsA("Team"), "Team name occupied")

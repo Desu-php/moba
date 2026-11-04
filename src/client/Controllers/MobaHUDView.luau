@@ -37,6 +37,8 @@ local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVe
  local headY=torsoHeight/2+head.Size.Y/2+.1
  local frames: {[string]: CFrame}={Head=CFrame.new(0,headY,0),UpperTorso=CFrame.identity,
   LowerTorso=CFrame.new(0,-1,0),LeftUpperArm=CFrame.new(-1.5,.1,0),RightUpperArm=CFrame.new(1.5,.1,0)}
+ local kurama=source:GetAttribute("HeroVisualForm")=="Kurama"
+ if kurama then frames.HumanoidRootPart=CFrame.identity end
  local function visualClone(original: BasePart, frame: CFrame): BasePart
   local part=original:Clone()
   for _,child in part:GetDescendants() do
@@ -63,6 +65,10 @@ local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVe
  local world=Instance.new("WorldModel");world.Parent=portrait.viewport;copy.Parent=world
  local camera=Instance.new("Camera");camera.FieldOfView=35
  camera.CFrame=CFrame.lookAt(Vector3.new(0,headY+.3,-4.8),Vector3.new(0,headY-.25,0))
+ if kurama then
+  -- Frame the fox's face, rather than the invisible humanoid head inside its body.
+  camera.CFrame=CFrame.lookAt(Vector3.new(0,2,-12),Vector3.new(0,.8,-2))
+ end
  camera.Parent=portrait.viewport;portrait.viewport.CurrentCamera=camera
  -- A face first displayed only in a ViewportFrame may not be fetched by the world renderer.
  task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync({copy}) end) end)

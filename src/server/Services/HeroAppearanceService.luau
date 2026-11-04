@@ -1,13 +1,19 @@
 --!strict
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Data=require(Shared.Config.CreatorVisualData)
+local Forms=require(Shared.Config.NarutoFormVisualData)
 local Factory=require(Shared.CreatorVisualFactory)
 local Appearance={}
-local bound: {[Model]: RBXScriptConnection}=setmetatable({}, {__mode="k"})
+local bound: {[Model]: {RBXScriptConnection}}=setmetatable({}, {__mode="k"})
 local function dress(model: Model)
  local head=model:FindFirstChild("Head")
  if not head or not head:IsA("BasePart") or not model:FindFirstChild("UpperTorso") then return end
- local sage=model:GetAttribute("SagePhase")=="Active"
+ local form=if model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("KcmActive")==true then "KCM" elseif model:GetAttribute("SagePhase")=="Active" then "Sage" else "Normal"
+ if form=="KCM" and model:GetAttribute("KcmRank")==3 then form="Rikudo" end
+ local version="CreatorStore-v3:"..form
+ if model:GetAttribute("HeroAppearanceVersion")==version and model:FindFirstChild("HeroAppearance") then return end
+ local sage=form=="Sage"
+ local kcm=form=="KCM" or form=="Rikudo"
  -- Keep the physical head and its rig joints; the imported face supplies the visible head.
  head.Transparency=1
  for _,item in model:GetChildren() do
@@ -15,37 +21,54 @@ local function dress(model: Model)
  end
  for _,item in head:GetChildren() do if item:IsA("Decal") then item:Destroy() end end
  for _,item in model:GetChildren() do if item:IsA("BasePart") and item.Name~="HumanoidRootPart" then
-  item.Color=Color3.fromRGB(255,204,153);item.Material=Enum.Material.SmoothPlastic
+  item.Transparency=if item.Name=="Head" or form=="Kurama" then 1 else 0
+  item.Color=if kcm then Color3.fromRGB(255,184,31) else Color3.fromRGB(255,204,153);item.Material=Enum.Material.SmoothPlastic
  end end
- local shirt=Instance.new("Shirt");shirt.ShirtTemplate=if sage then "rbxassetid://7472900840" else "rbxassetid://6764794671";shirt.Parent=model
- local pants=Instance.new("Pants");pants.PantsTemplate=if sage then "rbxassetid://7472928447" else "rbxassetid://3237352364";pants.Parent=model
+ local shirt=Instance.new("Shirt");shirt.ShirtTemplate=if form=="Rikudo" then "rbxassetid://6510073285" elseif kcm then "rbxassetid://7923921567" elseif sage then "rbxassetid://7472900840" else "rbxassetid://6764794671";shirt.Parent=model
+ local pants=Instance.new("Pants");pants.PantsTemplate=if form=="Rikudo" then "rbxassetid://6510069460" elseif kcm then "rbxassetid://7923927930" elseif sage then "rbxassetid://7472928447" else "rbxassetid://3237352364";pants.Parent=model
  local folder=Instance.new("Folder");folder.Name="HeroAppearance";folder.Parent=model
- if sage then
+ if sage or kcm then
   -- A classic head supports this store face decal. The avatar's dynamic head does not.
-  local faceHead=Instance.new("Part");faceHead.Name="SageFaceHead";faceHead.Size=Vector3.new(2,1,1)
-  faceHead.Color=Color3.fromRGB(255,204,153);faceHead.Material=Enum.Material.SmoothPlastic
+  local faceHead=Instance.new("Part");faceHead.Name=form.."FaceHead";faceHead.Size=Vector3.new(2,1,1)
+  faceHead.Color=if kcm then Color3.fromRGB(255,202,71) else Color3.fromRGB(255,204,153);faceHead.Material=Enum.Material.SmoothPlastic
   faceHead.CanCollide=false;faceHead.CanTouch=false;faceHead.CanQuery=false;faceHead.Massless=true
   faceHead:SetAttribute("HeroCosmetic",true);faceHead:SetAttribute("CosmeticBody","Head");faceHead:SetAttribute("CosmeticOffset",CFrame.identity)
   faceHead.CFrame=head.CFrame;faceHead.Parent=folder
   local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.Head;mesh.Scale=Vector3.one*1.25;mesh.Parent=faceHead
-  local face=Instance.new("Decal");face.Name="SageFace";face.Texture="rbxassetid://9449064416";face.Face=Enum.NormalId.Front;face.Parent=faceHead
+  local face=Instance.new("Decal");face.Name=form.."Face";face.Texture=if kcm then "rbxassetid://9477576334" else "rbxassetid://9449064416";face.Face=Enum.NormalId.Front;face.Parent=faceHead
   local weld=Instance.new("WeldConstraint");weld.Part0=head;weld.Part1=faceHead;weld.Parent=faceHead
  end
- for _,spec in Data.appearance do
-  if spec.form=="Sage" and not sage or spec.form=="Normal" and sage then continue end
+ for _,spec in Forms[form] or Data.appearance do
+  if spec.form~="All" and spec.form~=form then continue end
   local body=model:FindFirstChild(spec.body)
   if not body or not body:IsA("BasePart") then continue end
   local part=Factory.Part(spec);part:SetAttribute("HeroCosmetic",true)
   part:SetAttribute("CosmeticBody",spec.body);part:SetAttribute("CosmeticOffset",Factory.Frame(spec.cf))
   part.CFrame=body.CFrame*Factory.Frame(spec.cf);part.Parent=folder
-  local weld=Instance.new("WeldConstraint");weld.Part0=body;weld.Part1=part;weld.Parent=part
+  local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=body;weld.Part1=part;weld.C0=Factory.Frame(spec.cf);weld.Parent=part
  end
- model:SetAttribute("HeroAppearanceVersion","CreatorStore-v2:"..(if sage then "Sage" else "Normal"))
+ if form=="Rikudo" then
+  local torso=model:FindFirstChild("UpperTorso") :: BasePart
+  for i=1,9 do
+   local angle=(i-1)*math.pi*2/9
+   local offset=CFrame.new(math.cos(angle)*1.9,.2+math.sin(angle)*1.9,1.25)
+   local orb=Instance.new("Part");orb.Name="TruthSeekingOrb"..i;orb.Shape=Enum.PartType.Ball;orb.Size=Vector3.one*.42
+   orb.Color=Color3.fromRGB(12,10,17);orb.Material=Enum.Material.SmoothPlastic;orb.Massless=true
+   orb.CanCollide=false;orb.CanTouch=false;orb.CanQuery=false;orb:SetAttribute("HeroCosmetic",true)
+   orb:SetAttribute("CosmeticBody","UpperTorso");orb:SetAttribute("CosmeticOffset",offset);orb.CFrame=torso.CFrame*offset;orb.Parent=folder
+   local weld=Instance.new("Weld");weld.Name="FormVisualWeld";weld.Part0=torso;weld.Part1=orb;weld.C0=offset;weld.Parent=orb
+  end
+ end
+ model:SetAttribute("HeroVisualForm",form)
+ model:SetAttribute("HeroAppearanceVersion",version)
 end
 function Appearance.Apply(model: Model)
  dress(model)
  if bound[model] then return end
- bound[model]=model:GetAttributeChangedSignal("SagePhase"):Connect(function() dress(model) end)
- model.Destroying:Once(function() local connection=bound[model];if connection then connection:Disconnect();bound[model]=nil end end)
+ local connections={};bound[model]=connections
+ for _,attribute in {"SagePhase","KcmActive","KcmRank","KuramaActive"} do
+  table.insert(connections,model:GetAttributeChangedSignal(attribute):Connect(function() dress(model) end))
+ end
+ model.Destroying:Once(function() for _,connection in connections do connection:Disconnect() end;bound[model]=nil end)
 end
 return Appearance
