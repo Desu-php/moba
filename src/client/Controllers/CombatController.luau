@@ -23,7 +23,7 @@ local localStep = 0
 local queuedUntil = 0
 local currentProfile = Config.Profiles[Config.DefaultProfile]
 local seenStarted: { [Model]: number } = setmetatable({}, { __mode = "k" })
-local seenHits: { [Model]: number } = setmetatable({}, { __mode = "k" })
+local seenHits: { [Model]: {id:number,targets:{[Model]:boolean}} } = setmetatable({}, { __mode = "k" })
 local abilityConnection: RBXScriptConnection? = nil
 
 function CombatController.NextRequestId(): number
@@ -104,11 +104,15 @@ local function onEvent(message: Protocol.Event)
 		if Debug.LogCombat then print(string.format("[Combat] confirmed %s M1-%d", character.Name, attack.step)) end
 	elseif message.kind == "Hit" then
 		local attackId, step, hits = message.attackId, message.step, message.hits
-		if not attackId or not step or not hits or (seenHits[character] or 0) >= attackId then return end
-		seenHits[character] = attackId
+		if not attackId or not step or not hits then return end
+		local seen=seenHits[character]
+		if seen and seen.id>attackId then return end
+		if not seen or seen.id~=attackId then seen={id=attackId,targets={}};seenHits[character]=seen end
 		local heavy = character:GetAttribute("CombatProfileId")=="Kurama"
 		for _, hit in hits do
-			if hit.character.Parent then VFX.Hit(hit.character, hit.position, heavy) end
+			if not seen.targets[hit.character] and hit.character.Parent then
+				seen.targets[hit.character]=true;VFX.Hit(hit.character, hit.position, heavy)
+			end
 		end
 		if localCharacter and #hits > 0 then VFX.Shake(heavy) end
 		if message.hitboxCFrame and message.hitboxSize then VFX.DebugBox(message.hitboxCFrame, message.hitboxSize) end

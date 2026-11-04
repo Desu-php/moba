@@ -34,3 +34,7 @@ Visual loading was checked in the local Studio client, including normal/Sage tra
 The following alternatives were inspected but not used: Frog Character Animated Rigged Amphibian Pet Frogs (86902694722040) contained only a neck motor and standard Roblox character animation IDs, not an articulated combat-toad animation set; Gamabunta (436322571) and Gamabunta sculpt (130025922280157) were static too. No imported scripts run. No purchase or publication occurred.
 
 The integrated toad uses original procedural idle breathing, hopping, attack lunge, oil recoil and adult sword-channel motion. These are local authored animations, not ready-made animations supplied with the store asset. The mesh remains a rigid toad body, not a newly skinned limb rig. All visual parts are noncolliding/nonquerying and follow a separate authoritative navigation body. Adult and juvenile scale differ; feet align to the navigation floor. Animation/asset access is verified in local Studio only.
+
+
+### Gamakichi replacement — 2026-11-05
+The Appendance asset 2831683674 described above is historical and is no longer used by GamakichiAppearance. The current toad is locally authored articulated geometry (visual version 2), with separate head, jaw, arms and hindlegs. No third-party animation or executable script is included. The alternate Gamabunta assets 130025922280157 and 133034591 were reviewed and rejected, and their review copies removed. The new appearance is a stylized interpretation rather than a claim of production-anime asset fidelity.

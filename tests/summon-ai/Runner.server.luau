@@ -26,7 +26,7 @@ local ok,err=xpcall(function()
  assert(N.TryCast(p,"Gamakichi",1,workspace:GetServerTimeNow(),nil));local g=G.Get(p);assert(g)
  local over=OverlapParams.new();over.FilterType=Enum.RaycastFilterType.Include;over.FilterDescendantsInstances={wall,floor}
  check("spawn avoids wall and grass floor overlap",#workspace:GetPartBoundsInBox(g.root.CFrame,Vector3.new(7,4.2,7),over)==0)
- check("Creator Store visual instantiated",g.model:FindFirstChild("GamakichiSkin")~=nil and g.model:GetAttribute("GamakichiModelAsset")==2831683674)
+ check("articulated anime toad instantiated",g.model:FindFirstChild("GamakichiSkin")~=nil and g.model:GetAttribute("GamakichiVisualVersion")==2)
  wall:Destroy();local before=g.root.Position;c:PivotTo(c:GetPivot()+Vector3.new(22,0,0))
  waitFor(function() return (g.root.Position-before).Magnitude>3 end,5,"grass follow")
  check("toad moves on grass without a target",true)
@@ -77,7 +77,7 @@ local ok,err=xpcall(function()
  local counts={};local connection=D.Applied.Event:Connect(function(a,v,amount) if a==c and math.abs(amount-expected)<.01 then counts[v]=(counts[v] or 0)+1 end end)
  check("giant sweep starts",C.TryAttack(p,9001,c)=="Started")
  task.wait(1.5)
- local n=0;for m,count in counts do check("one hit per touched target "..m.Name,count==1);n+=1 end
+ local n=0;for m,count in counts do check("one hit per touched target "..m.Name,count==1);check("confirmed paw reaction "..m.Name,typeof(m:GetAttribute("PawHitAt"))=="number");n+=1 end
  workspace:SetAttribute("KuramaSweepVictims",n)
  check("one paw swing damages multiple enemies",n>=3)
  check("sweep excludes behind far allies and shields",not counts[behind] and not counts[far] and not counts[ally] and not counts[protected])

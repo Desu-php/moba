@@ -2418,6 +2418,32 @@ return Poses
         </Item>
         <Item class="ModuleScript" referent="42">
           <Properties>
+            <string name="Name">HitReaction</string>
+            <string name="Source"><![CDATA[--!strict
+-- Presentation only: no stun, displacement of the hurtbox, or extra damage.
+local Reaction={}
+function Reaction.Offset(model:Model,key:string,now:number):CFrame
+ local at=model:GetAttribute("PawHitAt")
+ if typeof(at)~="number" then return CFrame.identity end
+ local age=now-at
+ if age<0 or age>=.44 then return CFrame.identity end
+ local force=if age<.07 then math.sin(age/.07*math.pi/2) else (1-(age-.07)/.37)^2
+ local root=model:FindFirstChild("HumanoidRootPart")
+ local direction=model:GetAttribute("PawHitDirection")
+ local localDir=if root and root:IsA("BasePart") and typeof(direction)=="Vector3" then root.CFrame:VectorToObjectSpace(direction) else Vector3.new(0,0,1)
+ if key=="Root" or key=="RootJoint" then
+  return CFrame.new(localDir.X*.55*force,-.16*force,localDir.Z*.55*force)*CFrame.Angles(localDir.Z*.32*force,0,-localDir.X*.32*force)
+ elseif key=="Neck" then return CFrame.Angles(-localDir.Z*.18*force,0,localDir.X*.15*force)
+ elseif key=="LeftShoulder" or key=="Left Shoulder" then return CFrame.Angles(-.28*force,0,-.3*force)
+ elseif key=="RightShoulder" or key=="Right Shoulder" then return CFrame.Angles(-.28*force,0,.3*force) end
+ return CFrame.identity
+end
+return Reaction
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="43">
+          <Properties>
             <string name="Name">MinionPoses</string>
             <string name="Source"><![CDATA[--!strict
 -- Pure choreography, radians. Server hit timestamps are the only attack trigger.
@@ -2464,7 +2490,7 @@ return table.freeze(Poses)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="43">
+        <Item class="ModuleScript" referent="44">
           <Properties>
             <string name="Name">RigJoints</string>
             <string name="Source"><![CDATA[--!strict
@@ -2502,11 +2528,11 @@ return Rig
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="44">
+      <Item class="Folder" referent="45">
         <Properties>
           <string name="Name">Config</string>
         </Properties>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">AbilityConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2546,7 +2572,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">AnimationIds</string>
             <string name="Source"><![CDATA[--!strict
@@ -2562,7 +2588,7 @@ return table.freeze(sets)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="47">
+        <Item class="ModuleScript" referent="48">
           <Properties>
             <string name="Name">CameraConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2585,7 +2611,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="48">
+        <Item class="ModuleScript" referent="49">
           <Properties>
             <string name="Name">ChakraParticleData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2594,7 +2620,7 @@ return {{rotSpeed={-1000,-1000},color={{0,0.6431372761726379,1,0.960784316062927
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="49">
+        <Item class="ModuleScript" referent="50">
           <Properties>
             <string name="Name">CombatConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2661,7 +2687,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="50">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">CreatorVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2675,7 +2701,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="51">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">DebugConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2689,7 +2715,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">GameModeConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2706,7 +2732,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">HeroAppearanceConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2719,7 +2745,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">HeroConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2732,7 +2758,7 @@ return table.freeze({ DefaultHero = "OrangeNinja", Heroes = heroes, AppearanceVe
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="55">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">ItemConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2750,7 +2776,7 @@ return { Order = { "IronBlade", "GuardianArmor", "SwiftBoots", "HealingPotion" }
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="56">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">JungleConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2770,7 +2796,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="57">
+        <Item class="ModuleScript" referent="58">
           <Properties>
             <string name="Name">KuramaAvatarConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2783,12 +2809,12 @@ return table.freeze({
  AttackReach=150/16+6.5,
  CameraHeight=18,CameraDistance=76,
  HitPhase=.8/1.7,
- SwipeStart=.32,SwipeEnd=.8/1.7+.08,
+ SwipeStart=.28,SwipeEnd=.64,
 })
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="58">
+        <Item class="ModuleScript" referent="59">
           <Properties>
             <string name="Name">MapConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2811,7 +2837,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="59">
+        <Item class="ModuleScript" referent="60">
           <Properties>
             <string name="Name">MinionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2832,7 +2858,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="60">
+        <Item class="ModuleScript" referent="61">
           <Properties>
             <string name="Name">NarutoFormVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2843,7 +2869,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="61">
+        <Item class="ModuleScript" referent="62">
           <Properties>
             <string name="Name">ProgressionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2864,7 +2890,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="62">
+        <Item class="ModuleScript" referent="63">
           <Properties>
             <string name="Name">TowerConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2884,7 +2910,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="63">
+        <Item class="ModuleScript" referent="64">
           <Properties>
             <string name="Name">VFXConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2914,7 +2940,7 @@ return table.freeze({
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="64">
+      <Item class="ModuleScript" referent="65">
         <Properties>
           <string name="Name">CreatorVisualFactory</string>
           <string name="Source"><![CDATA[--!strict
@@ -2944,57 +2970,138 @@ return Factory
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="65">
+      <Item class="ModuleScript" referent="66">
         <Properties>
           <string name="Name">GamakichiAppearance</string>
           <string name="Source"><![CDATA[--!strict
--- Visual-only free Creator Store snapshot: Appendance / asset 2831683674.
--- The supplied mesh is static. Idle, hopping, attack and cast motion are authored locally.
+-- Locally authored articulated anime toad. No third-party scripts or static skin.
 local A={}
+local orange=Color3.fromRGB(219,104,35)
+local light=Color3.fromRGB(246,145,57)
+local purple=Color3.fromRGB(91,45,88)
+local cream=Color3.fromRGB(238,199,134)
+local dark=Color3.fromRGB(47,28,37)
+local vest=Color3.fromRGB(39,49,70)
+local function pivot(p:Vector3,rotation:CFrame):CFrame return CFrame.new(p)*rotation*CFrame.new(-p) end
 function A.Build(model:Model,root:BasePart,adult:boolean)
- local width=if adult then 7 else 5
- local p=Instance.new("Part");p.Name="GamakichiSkin";p.Size=Vector3.new(width,width*16.804346/29.069124,width*34.830093/29.069124)
- p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Color=Color3.fromRGB(163,162,165)
- p:SetAttribute("HeroCosmetic",true);p:SetAttribute("ToadVisual",true);p.CFrame=root.CFrame;p.Parent=model
- local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.FileMesh;mesh.MeshId="rbxassetid://37223966";mesh.TextureId="rbxassetid://73178159"
- mesh.Scale=Vector3.new(p.Size.X/1.09912002,p.Size.Y/.33434501,p.Size.Z/.88010699);mesh.Parent=p
- local offset=CFrame.new(0,p.Size.Y/2-math.max(4,root.Size.Y)/2-.05,0)
- p:SetAttribute("ToadOffset",offset)
- if adult then
-  local grip=offset*CFrame.new(2.6,-.65,-2.0)
-  local pieces:{{name:string,size:Vector3,z:number,color:Color3}}={
-   {name="Blade",size=Vector3.new(.16,.5,5.2),z=-2.6,color=Color3.fromRGB(201,209,217)},
-   {name="Guard",size=Vector3.new(.35,1.2,.22),z=0,color=Color3.fromRGB(91,65,32)},
-   {name="Grip",size=Vector3.new(.28,.28,1.15),z=.6,color=Color3.fromRGB(68,43,28)}}
-  for _,spec in pieces do
-   local blade=Instance.new("Part");blade.Name="GamakichiSword"..spec.name;blade.Size=spec.size;blade.Color=spec.color
-   blade.Anchored=true;blade.CanCollide=false;blade.CanTouch=false;blade.CanQuery=false;blade.Material=Enum.Material.Metal
-   blade:SetAttribute("HeroCosmetic",true);blade:SetAttribute("ToadSword",true);blade:SetAttribute("ToadGrip",grip);blade:SetAttribute("ToadOffset",CFrame.new(0,0,spec.z))
-   blade.CFrame=root.CFrame*grip*CFrame.new(0,0,spec.z);blade.Parent=model
-  end
+ local scale=(if adult then 7 else 5)/7
+ local floor=-math.max(4,root.Size.Y)/2
+ local lift=floor+2.1*scale
+ local function piece(name:string,size:Vector3,cf:CFrame,color:Color3,group:string,box:boolean?):Part
+  local p=Instance.new("Part");p.Name=name;p.Size=size*scale;p.Color=color;p.Material=Enum.Material.SmoothPlastic
+  p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=true
+  p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth
+  if not box then local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.Sphere;mesh.Parent=p end
+  local offset=CFrame.new(cf.Position*scale+Vector3.new(0,lift,0))*cf.Rotation
+  p:SetAttribute("HeroCosmetic",true);p:SetAttribute("ToadVisual",true);p:SetAttribute("ToadGroup",group);p:SetAttribute("ToadOffset",offset)
+  p.CFrame=root.CFrame*offset;p.Parent=model;return p
  end
- model:SetAttribute("GamakichiVisualWidth",width);model:SetAttribute("GamakichiModelAsset",2831683674)
+ local function ball(name:string,size:Vector3,pos:Vector3,color:Color3,group:string):Part return piece(name,size,CFrame.new(pos),color,group) end
+ local function link(name:string,a:Vector3,b:Vector3,width:number,color:Color3,group:string)
+  piece(name,Vector3.new(width,width,(b-a).Magnitude+width*.35),CFrame.lookAt((a+b)/2,b),color,group)
+ end
+ ball("GamakichiSkin",Vector3.new(4.8,3.5,4.2),Vector3.new(0,-.1,.65),orange,"Body")
+ ball("HaoriBack",Vector3.new(4.95,2.65,3.65),Vector3.new(0,.1,1.05),vest,"Body")
+ ball("Belly",Vector3.new(3.8,2.8,1.25),Vector3.new(0,-.15,-1.05),cream,"Body")
+ for _,side in {-1,1} do
+  piece("HaoriLapel",Vector3.new(.55,2.9,.4),CFrame.new(side*1.65,.2,-1.48)*CFrame.Angles(0,0,side*-.18),vest,"Body")
+  link("HaoriPiping",Vector3.new(side*1.28,1.45,-1.5),Vector3.new(side*1.75,-1.0,-1.52),.10,cream,"Body")
+ end
+ ball("BroadHead",Vector3.new(5.65,2.15,3.5),Vector3.new(0,1.25,-.65),orange,"Head")
+ ball("LowerJaw",Vector3.new(4.9,.85,2.35),Vector3.new(0,.53,-1.18),light,"Jaw")
+ ball("Chin",Vector3.new(3.65,.42,1.48),Vector3.new(0,.24,-1.22),cream,"Jaw")
+ -- Curved mouth seam and distinct purple lip follow the actual muzzle surface.
+ local previous:Vector3?=nil
+ for i=0,32 do
+  local a=-1.25+i/32*2.5
+  local point=Vector3.new(math.sin(a)*2.46,.68+math.abs(a)*.07,-1.05-math.cos(a)*1.48)
+  if previous then
+   link("PurpleLip",previous,point,.20,purple,"Jaw")
+   link("MouthSeam",previous+Vector3.new(0,.05,-.07),point+Vector3.new(0,.05,-.07),.055,dark,"Head")
+  end
+  previous=point
+ end
+ for _,side in {-1,1} do
+  local label=if side<0 then "Left" else "Right"
+  ball(label.."EyeMark",Vector3.new(1.65,1.25,1.55),Vector3.new(side*1.73,2.03,-1.07),purple,"Head")
+  ball(label.."Eye",Vector3.new(1.13,.73,.23),Vector3.new(side*1.78,2.07,-1.91),Color3.fromRGB(239,191,61),"Head")
+  ball(label.."Pupil",Vector3.new(.71,.21,.12),Vector3.new(side*1.78,2.05,-2.02),dark,"Head")
+  ball(label.."EyeGlint",Vector3.new(.13,.10,.04),Vector3.new(side*1.78-.23,2.2,-2.06),Color3.fromRGB(255,243,198),"Head")
+  piece(label.."Brow",Vector3.new(1.45,.40,.8),CFrame.new(side*1.72,2.32,-1.66)*CFrame.Angles(0,0,side*.12),orange,"Head")
+  ball(label.."Nostril",Vector3.new(.18,.09,.07),Vector3.new(side*.54,1.42,-2.34),dark,"Head")
+  for j=1,4 do
+   ball(label.."CheekMark",Vector3.new(.34+j*.06,.27,.14),Vector3.new(side*(1.65+j*.19),1.54-j*.19,-1.78+j*.12),purple,"Head")
+  end
+  local arm=label.."Arm";local leg=label.."Leg"
+  local shoulder=Vector3.new(side*2.18,.45,-.35);local elbow=Vector3.new(side*2.78,-.65,-1.02)
+  local wrist=Vector3.new(side*2.55,-1.53,-2.23)
+  ball(label.."Shoulder",Vector3.new(1.3,1.4,1.4),shoulder,orange,arm)
+  link(label.."UpperArm",shoulder,elbow,1.0,orange,arm)
+  ball(label.."Elbow",Vector3.new(.95,.9,.9),elbow,purple,arm)
+  link(label.."Forearm",elbow,wrist,.77,orange,arm)
+  ball(label.."Palm",Vector3.new(1.05,.40,.9),wrist,light,arm)
+  for toe=-1,1 do
+   local from=wrist+Vector3.new(toe*.23,-.05,-.22)
+   local tip=from+Vector3.new(toe*.22,-.05,-.74+math.abs(toe)*.10)
+   link(label.."Finger",from,tip,.20,light,arm)
+   ball(label.."FingerTip",Vector3.new(.28,.15,.28),tip,cream,arm)
+  end
+  ball(label.."Haunch",Vector3.new(2.4,1.9,2.65),Vector3.new(side*2.25,-.98,1.3),orange,leg)
+  piece(label.."ThighMark",Vector3.new(1.15,.20,1.8),CFrame.new(side*2.58,-.20,1.1)*CFrame.Angles(0,0,-side*.35),purple,leg)
+  link(label.."Shin",Vector3.new(side*2.85,-1.25,1.6),Vector3.new(side*3.0,-1.78,.15),.67,light,leg)
+  ball(label.."Foot",Vector3.new(1.05,.40,1.6),Vector3.new(side*2.9,-1.80,.15),orange,leg)
+  for toe=-1,1 do
+   local from=Vector3.new(side*2.9+toe*.24,-1.88,-.35)
+   local tip=from+Vector3.new(toe*.23,0,-.85+math.abs(toe)*.15)
+   link(label.."Toe",from,tip,.23,orange,leg)
+   ball(label.."ToeTip",Vector3.new(.32,.18,.34),tip,cream,leg)
+  end
+
+ end
+ if adult then
+  -- The blade and hilt share the right-arm pivot, including the chopping channel.
+  local grip=CFrame.new(2.55,-1.45,-2.25)*CFrame.Angles(0,-.15,-.15)
+  piece("SwordGrip",Vector3.new(.27,.27,1.0),grip*CFrame.new(0,0,.35),dark,"RightArm",true)
+  piece("SwordGuard",Vector3.new(.7,.13,.25),grip*CFrame.new(0,0,-.20),Color3.fromRGB(163,133,67),"RightArm",true)
+  piece("SwordBlade",Vector3.new(.12,.55,3.4),grip*CFrame.new(0,0,-1.98),Color3.fromRGB(199,212,221),"RightArm",true)
+  piece("SwordEdge",Vector3.new(.13,.10,3.3),grip*CFrame.new(0,-.27,-1.98),Color3.fromRGB(244,242,222),"RightArm",true)
+ end
+ model:SetAttribute("GamakichiVisualWidth",7*scale);model:SetAttribute("GamakichiVisualVersion",2)
+ model:SetAttribute("ToadScale",scale);model:SetAttribute("ToadLift",lift)
 end
 function A.Motion(now:number,moving:boolean,swingAt:number,spellAt:number,spell:string,channel:boolean):CFrame
  local hop=if moving then math.max(0,math.sin(now*9)) else 0
- local swing=math.clamp((now-swingAt)/.8,0,1)
- local strike=if swing<.625 then math.sin(swing/.625*math.pi/2) else 1-(swing-.625)/.375
- if now-swingAt<0 or now-swingAt>.8 then strike=0 end
- local age=now-spellAt
- local oil=if spell=="GamakichiOil" and age>=0 and age<.6 then math.sin(age/.6*math.pi) else 0
- local chop=if channel then math.sin(math.max(0,age-.05)*math.pi*2) else 0
- return CFrame.new(0,hop*.65+math.sin(now*2)*.035,-strike*.6+oil*.25)
-  *CFrame.Angles(-hop*.08-strike*.14+oil*.12,0,chop*.12)
+ local age=now-swingAt
+ local strike=if age>=0 and age<.65 then math.sin(age/.65*math.pi) else 0
+ local cast=now-spellAt
+ local oil=if spell=="GamakichiOil" and cast>=0 and cast<.6 then math.sin(cast/.6*math.pi) else 0
+ return CFrame.new(0,hop*.42+math.sin(now*2)*.035,-strike*.35+oil*.18)*CFrame.Angles(-hop*.055-strike*.10+oil*.10,0,if channel then math.sin(cast*math.pi*2)*.06 else 0)
+end
+function A.Limb(group:string,scale:number,lift:number,now:number,moving:boolean,swingAt:number,spellAt:number,spell:string,channel:boolean):CFrame
+ local hop=if moving then math.sin(now*9) else 0
+ local age=now-swingAt
+ local strike=if age>=0 and age<.65 then math.sin(age/.65*math.pi) else 0
+ local oilAge=now-spellAt
+ local oil=if spell=="GamakichiOil" and oilAge>=0 and oilAge<.65 then math.sin(oilAge/.65*math.pi) else 0
+ local function joint(x:number,y:number,z:number,cf:CFrame):CFrame return pivot(Vector3.new(x*scale,y*scale+lift,z*scale),cf) end
+ if group=="Head" then return joint(0,.5,-.3,CFrame.Angles(-oil*.16,0,0)) end
+ if group=="Jaw" then return joint(0,.6,-.4,CFrame.Angles(oil*.32,0,0)) end
+ local side=if string.find(group,"Left",1,true) then -1 else 1
+ if string.find(group,"Arm",1,true) then
+  local chop=if channel and side==1 then math.sin(oilAge*math.pi*2) else 0
+  return joint(side*2.18,.45,-.35,CFrame.Angles(hop*.18-strike*.55-chop*.75,side*strike*.15,side*chop*.3))
+ elseif string.find(group,"Leg",1,true) then return joint(side*1.7,-.6,1.1,CFrame.Angles(-hop*.25,0,side*hop*.08)) end
+ return CFrame.identity
 end
 return A
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="66">
+      <Item class="Folder" referent="67">
         <Properties>
           <string name="Name">Game</string>
         </Properties>
-        <Item class="ModuleScript" referent="67">
+        <Item class="ModuleScript" referent="68">
           <Properties>
             <string name="Name">DeveloperCommandRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3016,7 +3123,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="68">
+        <Item class="ModuleScript" referent="69">
           <Properties>
             <string name="Name">JungleRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3046,7 +3153,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="69">
+        <Item class="ModuleScript" referent="70">
           <Properties>
             <string name="Name">MapSceneryPlan</string>
             <string name="Source"><![CDATA[--!strict
@@ -3142,7 +3249,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="70">
+        <Item class="ModuleScript" referent="71">
           <Properties>
             <string name="Name">MatchRoster</string>
             <string name="Source"><![CDATA[--!strict
@@ -3230,7 +3337,7 @@ return Roster
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="71">
+        <Item class="ModuleScript" referent="72">
           <Properties>
             <string name="Name">MatchState</string>
             <string name="Source"><![CDATA[--!strict
@@ -3313,7 +3420,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="72">
+        <Item class="ModuleScript" referent="73">
           <Properties>
             <string name="Name">ProgressionRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3389,7 +3496,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="73">
+        <Item class="ModuleScript" referent="74">
           <Properties>
             <string name="Name">RewardLedger</string>
             <string name="Source"><![CDATA[--!strict
@@ -3425,7 +3532,7 @@ return Ledger
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="74">
+        <Item class="ModuleScript" referent="75">
           <Properties>
             <string name="Name">RewardRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3469,7 +3576,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="75">
+        <Item class="ModuleScript" referent="76">
           <Properties>
             <string name="Name">RoundProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -3485,7 +3592,7 @@ return Protocol
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="76">
+        <Item class="ModuleScript" referent="77">
           <Properties>
             <string name="Name">StructureRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3498,7 +3605,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="77">
+        <Item class="ModuleScript" referent="78">
           <Properties>
             <string name="Name">TowerRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3558,7 +3665,7 @@ return Rules
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="78">
+      <Item class="ModuleScript" referent="79">
         <Properties>
           <string name="Name">KuramaAvatar</string>
           <string name="Source"><![CDATA[--!strict
@@ -3577,15 +3684,16 @@ function Avatar.Style(part:BasePart,mesh:SpecialMesh)
  if string.find(part.Name,"eyes",1,true) then part.Color=Color3.fromRGB(255,70,12);part.Transparency=0 end
 end
 function Avatar.Motion(name:string,base:CFrame,now:number,moving:number,phase:number?,serial:number):CFrame
- local wind,hit,recover=0,0,0
+ local wind,hit,follow=0,0,0
  if phase then
-  if phase<.32 then wind=smooth(phase/.32)
-  elseif phase<Config.HitPhase then local f=smooth((phase-.32)/(Config.HitPhase-.32));wind=1-f;hit=f
-  else recover=1-smooth((phase-Config.HitPhase)/(1-Config.HitPhase));hit=recover end
+  if phase<Config.SwipeStart then wind=smooth(phase/Config.SwipeStart)
+  elseif phase<Config.SwipeEnd then
+   local f=smooth((phase-Config.SwipeStart)/(Config.SwipeEnd-Config.SwipeStart));wind=1-f;hit=f
+  else follow=1-smooth((phase-Config.SwipeEnd)/(1-Config.SwipeEnd));hit=follow end
  end
  local side=if serial%2==0 then -1 else 1
- local body=CFrame.new(0,math.sin(now*1.8)*.08-moving*.08-wind*.25,-hit*1.35)
-  *CFrame.Angles(wind*.035,-side*wind*.09,side*wind*.025)
+ local body=CFrame.new(side*hit*.35,math.sin(now*1.8)*.08-moving*.08-wind*.35,-hit*1.5)
+  *CFrame.Angles(wind*.055,-side*wind*.16+side*hit*.12,side*wind*.04)
  local tail=tonumber(string.match(name,"Tail(%d+)$"))
  if tail then
   local sway=math.sin(now*1.1+tail*.62)*.10+math.sin(now*2.2+tail)*.025
@@ -3601,7 +3709,9 @@ function Avatar.Motion(name:string,base:CFrame,now:number,moving:number,phase:nu
   local joint=if hind then point(limbSide*.8,0,1.7) else point(limbSide*1.1,-.15,-1.35)
   local pose=CFrame.Angles(stride*.18,0,0)
   if not hind and limbSide==side and phase then
-   pose=CFrame.Angles(wind*.95+hit*.20,-side*wind*.38+side*hit*.95,side*wind*.15)
+   -- Lift the paw outside the shoulder, sweep low across the front, then recover.
+   -- This exact motion also supplies the server contact volume.
+   pose=CFrame.Angles(wind*.72+hit*.08,-side*wind*.70+side*hit*1.10,side*wind*.24-side*hit*.08)
   elseif not hind and phase then pose=CFrame.Angles(-wind*.08,0,0) end
   return body*pivot(joint,pose)*base
  end
@@ -3631,15 +3741,15 @@ return Avatar
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="79">
+  <Item class="ServerScriptService" referent="80">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="80">
+    <Item class="Folder" referent="81">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="81">
+      <Item class="Script" referent="82">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -3658,11 +3768,11 @@ print("[Anime Battlegrounds] Server ready")
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="82">
+      <Item class="Folder" referent="83">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="83">
+        <Item class="ModuleScript" referent="84">
           <Properties>
             <string name="Name">AbilityDisplacementService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3713,7 +3823,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="84">
+        <Item class="ModuleScript" referent="85">
           <Properties>
             <string name="Name">AbilityLearningService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3763,7 +3873,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="85">
+        <Item class="ModuleScript" referent="86">
           <Properties>
             <string name="Name">AbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3856,7 +3966,7 @@ return Ability
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="86">
+        <Item class="ModuleScript" referent="87">
           <Properties>
             <string name="Name">AbilityTargetService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3906,7 +4016,7 @@ return Targets
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="87">
+        <Item class="ModuleScript" referent="88">
           <Properties>
             <string name="Name">BaseService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3985,7 +4095,7 @@ return BaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="88">
+        <Item class="ModuleScript" referent="89">
           <Properties>
             <string name="Name">CharacterStatsService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4089,7 +4199,7 @@ return Stats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="89">
+        <Item class="ModuleScript" referent="90">
           <Properties>
             <string name="Name">CloneNavigation</string>
             <string name="Source"><![CDATA[--!strict
@@ -4153,6 +4263,16 @@ local function parameters(agent: Agent, owner: Model, target: Model): RaycastPar
 	ray.CollisionGroup = "SurvivalSummons"
 	return ray
 end
+-- Wide summons meet a raised lane with their toes before their center ray does.
+-- Sweep a shallow foot plate; do not use the visual mesh or ignore world collision.
+local stepHeight = .65
+local function support(agent: Agent, point: Vector3, lift: number, drop: number, ray: RaycastParams): Vector3?
+	local feet = Vector3.new(math.max(2.2,agent.root.Size.X)-.04,.04,math.max(2.2,agent.root.Size.Z)-.04)
+	local from = point + Vector3.new(0,-agent.groundOffset+lift+.04,0)
+	local hit = workspace:Blockcast(CFrame.new(from),feet,Vector3.new(0,-(lift+drop+.04),0),ray)
+	if not hit or hit.Normal.Y < .7 then return nil end
+	return Vector3.new(point.X,hit.Position.Y+agent.groundOffset,point.Z)
+end
 -- Anchored navigation rigs need explicit gravity, including while holding/stunned.
 -- Sweep the feet to the floor; never teleport an airborne spawn to its destination.
 function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
@@ -4161,9 +4281,9 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	local fall = agent.fallSpeed * dt + workspace.Gravity * dt * dt / 2
 	local ray = parameters(agent, owner, owner)
 	local position = agent.root.Position
-	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
-	if hit then
-		local y = hit.Position.Y + agent.groundOffset
+	local floor = support(agent,position,.08,fall+.15,ray)
+	if floor then
+		local y = floor.Y
 		if math.abs(y - position.Y) > .001 then model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0)) end
 		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
 		return true
@@ -4174,9 +4294,7 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	return false
 end
 local function ground(agent: Agent, point: Vector3, ray: RaycastParams): Vector3?
-	local hit = workspace:Raycast(point + Vector3.new(0, 2, 0), Vector3.new(0, -10, 0), ray)
-	if not hit or hit.Normal.Y < 0.7 then return nil end
-	return Vector3.new(point.X, hit.Position.Y + agent.groundOffset, point.Z)
+	return support(agent,point,stepHeight,8,ray)
 end
 local function bodySize(agent: Agent): Vector3
 	return Vector3.new(math.max(2.2, agent.root.Size.X), math.max(4, agent.root.Size.Y), math.max(2.2, agent.root.Size.Z))
@@ -4210,6 +4328,15 @@ local function clear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastP
 	local delta = goal - origin
 	if delta.Magnitude < 0.001 then return true end
 	return workspace:Blockcast(CFrame.new(origin), bodySize(agent), delta, ray) == nil
+end
+local function stepClear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): boolean
+	if clear(agent,origin,goal,ray) then return true end
+	-- Raise / move / lower is a swept route over a small curb, never through a wall.
+	if math.abs(goal.Y-origin.Y)>stepHeight then return false end
+	local y=math.max(origin.Y,goal.Y)+stepHeight
+	local up=Vector3.new(origin.X,y,origin.Z);local across=Vector3.new(goal.X,y,goal.Z)
+	return clear(agent,origin,up,ray) and bodyClear(agent,up,ray)
+		and clear(agent,up,across,ray) and bodyClear(agent,across,ray) and clear(agent,across,goal,ray)
 end
 local function available(agent: Agent, target: Model, index: number): boolean
 	for _, other in agents do
@@ -4349,7 +4476,7 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		table.clear(agent.waypoints); agent.pathGoal = nil; agent.failures += 1; agent.progressAt = now
 	end
 	local aim = goal
-	if not clear(agent, position, goal, ray) then
+	if not stepClear(agent, position, goal, ray) then
 		while agent.waypoint <= #agent.waypoints and flat(agent.waypoints[agent.waypoint] - position).Magnitude < 0.5 do agent.waypoint += 1 end
 		local waypoint = agent.waypoints[agent.waypoint]
 		if waypoint then aim = waypoint else aim = position end
@@ -4411,7 +4538,7 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		local rotated = Vector3.new(forward.X * math.cos(angle) - forward.Z * math.sin(angle), 0,
 			forward.X * math.sin(angle) + forward.Z * math.cos(angle))
 		local point = ground(agent, position + rotated * length, ray)
-		if point and math.abs(point.Y - position.Y) <= length + 0.25 and clear(agent, position, point, ray)
+		if point and math.abs(point.Y - position.Y) <= math.max(stepHeight,length + 0.25) and stepClear(agent, position, point, ray)
 			and bodyClear(agent, point, ray) and peerClear(agent, point, destination) then
 			model:PivotTo(model:GetPivot() + (point - position)); return true
 		end
@@ -4422,7 +4549,7 @@ return Navigation
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="90">
+        <Item class="ModuleScript" referent="91">
           <Properties>
             <string name="Name">CloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4530,7 +4657,7 @@ return CloneService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="91">
+        <Item class="ModuleScript" referent="92">
           <Properties>
             <string name="Name">CombatLifeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4611,7 +4738,7 @@ return LifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="92">
+        <Item class="ModuleScript" referent="93">
           <Properties>
             <string name="Name">CombatService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4799,6 +4926,11 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack, swept
 		local dealt = Damage.ApplyAttack(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
 		-- Only confirmed server damage is a hit.
 		if dealt <= 0 then continue end
+		if fighter.profileId=="Kurama" and not isStructure then
+			local away=(character:GetPivot().Position-fighter.root.Position)*Vector3.new(1,0,1)
+			character:SetAttribute("PawHitDirection",if away.Magnitude>.01 then away.Unit else fighter.root.CFrame.LookVector)
+			character:SetAttribute("PawHitAt",Workspace:GetServerTimeNow())
+		end
 		local position = character:GetPivot().Position
 		table.insert(hits, { character = character, position = position })
 	end
@@ -4886,7 +5018,7 @@ return CombatService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="93">
+        <Item class="ModuleScript" referent="94">
           <Properties>
             <string name="Name">DamageService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4946,7 +5078,7 @@ return DamageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="94">
+        <Item class="ModuleScript" referent="95">
           <Properties>
             <string name="Name">DeveloperCommandService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5048,7 +5180,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="95">
+        <Item class="ModuleScript" referent="96">
           <Properties>
             <string name="Name">EconomyService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5093,7 +5225,7 @@ return Economy
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="96">
+        <Item class="ModuleScript" referent="97">
           <Properties>
             <string name="Name">FighterStateService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5413,7 +5545,7 @@ return FighterStateService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="97">
+        <Item class="ModuleScript" referent="98">
           <Properties>
             <string name="Name">GamakichiService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5636,7 +5768,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="98">
+        <Item class="ModuleScript" referent="99">
           <Properties>
             <string name="Name">GameModeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5662,7 +5794,7 @@ return GameModeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="99">
+        <Item class="ModuleScript" referent="100">
           <Properties>
             <string name="Name">HeroAppearanceService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5760,7 +5892,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="100">
+        <Item class="ModuleScript" referent="101">
           <Properties>
             <string name="Name">HeroProgressionService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5854,7 +5986,7 @@ return Progression
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="101">
+        <Item class="ModuleScript" referent="102">
           <Properties>
             <string name="Name">HeroService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5927,7 +6059,7 @@ return HeroService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="102">
+        <Item class="ModuleScript" referent="103">
           <Properties>
             <string name="Name">HitboxService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6048,7 +6180,7 @@ return HitboxService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="103">
+        <Item class="ModuleScript" referent="104">
           <Properties>
             <string name="Name">ItemShopService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6160,7 +6292,7 @@ return Shop
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="104">
+        <Item class="ModuleScript" referent="105">
           <Properties>
             <string name="Name">JungleService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6286,7 +6418,7 @@ return Jungle
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="105">
+        <Item class="ModuleScript" referent="106">
           <Properties>
             <string name="Name">KnockbackService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6336,7 +6468,7 @@ return KnockbackService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="106">
+        <Item class="ModuleScript" referent="107">
           <Properties>
             <string name="Name">KuramaSwipeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6392,7 +6524,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="107">
+        <Item class="ModuleScript" referent="108">
           <Properties>
             <string name="Name">MapBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -6515,7 +6647,7 @@ return MapBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="108">
+        <Item class="ModuleScript" referent="109">
           <Properties>
             <string name="Name">MapScenery</string>
             <string name="Source"><![CDATA[--!strict
@@ -6568,7 +6700,7 @@ return MapScenery
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="109">
+        <Item class="ModuleScript" referent="110">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6702,7 +6834,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="110">
+        <Item class="ModuleScript" referent="111">
           <Properties>
             <string name="Name">MeditationCloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6800,7 +6932,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="111">
+        <Item class="ModuleScript" referent="112">
           <Properties>
             <string name="Name">MinionAIService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7042,7 +7174,7 @@ return AI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="112">
+        <Item class="ModuleScript" referent="113">
           <Properties>
             <string name="Name">MinionAppearance</string>
             <string name="Source"><![CDATA[--!strict
@@ -7118,7 +7250,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="113">
+        <Item class="ModuleScript" referent="114">
           <Properties>
             <string name="Name">MinionFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -7177,7 +7309,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="114">
+        <Item class="ModuleScript" referent="115">
           <Properties>
             <string name="Name">MinionSpawnerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7238,7 +7370,7 @@ return Spawner
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="115">
+        <Item class="ModuleScript" referent="116">
           <Properties>
             <string name="Name">NarutoAbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7737,7 +7869,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="116">
+        <Item class="ModuleScript" referent="117">
           <Properties>
             <string name="Name">NarutoKcmService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8022,7 +8154,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="117">
+        <Item class="ModuleScript" referent="118">
           <Properties>
             <string name="Name">NarutoKuramaService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8241,7 +8373,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="118">
+        <Item class="ModuleScript" referent="119">
           <Properties>
             <string name="Name">NarutoRangedService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8429,7 +8561,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="119">
+        <Item class="ModuleScript" referent="120">
           <Properties>
             <string name="Name">NarutoSleepService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8496,7 +8628,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="120">
+        <Item class="ModuleScript" referent="121">
           <Properties>
             <string name="Name">NarutoSummonService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8729,7 +8861,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="121">
+        <Item class="ModuleScript" referent="122">
           <Properties>
             <string name="Name">OilStatusService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8785,7 +8917,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="122">
+        <Item class="ModuleScript" referent="123">
           <Properties>
             <string name="Name">RasenshurikenMeleeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8840,7 +8972,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="123">
+        <Item class="ModuleScript" referent="124">
           <Properties>
             <string name="Name">RasenshurikenThrowService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8923,7 +9055,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="124">
+        <Item class="ModuleScript" referent="125">
           <Properties>
             <string name="Name">RequestLimiter</string>
             <string name="Source"><![CDATA[--!strict
@@ -8958,7 +9090,7 @@ return RequestLimiter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="125">
+        <Item class="ModuleScript" referent="126">
           <Properties>
             <string name="Name">RewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9028,7 +9160,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="126">
+        <Item class="ModuleScript" referent="127">
           <Properties>
             <string name="Name">StructureReset</string>
             <string name="Source"><![CDATA[--!strict
@@ -9071,7 +9203,7 @@ return Reset
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="127">
+        <Item class="ModuleScript" referent="128">
           <Properties>
             <string name="Name">StructureService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9107,7 +9239,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="128">
+        <Item class="ModuleScript" referent="129">
           <Properties>
             <string name="Name">SummonCollision</string>
             <string name="Source"><![CDATA[--!strict
@@ -9138,7 +9270,7 @@ return Collision
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="129">
+        <Item class="ModuleScript" referent="130">
           <Properties>
             <string name="Name">TeamService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9390,7 +9522,7 @@ return TeamService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="130">
+        <Item class="ModuleScript" referent="131">
           <Properties>
             <string name="Name">TowerFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -9443,7 +9575,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="131">
+        <Item class="ModuleScript" referent="132">
           <Properties>
             <string name="Name">TowerRewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9480,7 +9612,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="132">
+        <Item class="ModuleScript" referent="133">
           <Properties>
             <string name="Name">TowerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9670,25 +9802,25 @@ return Service
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="133">
+  <Item class="StarterPlayer" referent="134">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <token name="GameSettingsAvatar">1</token>
       <bool name="LoadCharacterAppearance">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="134">
+    <Item class="StarterPlayerScripts" referent="135">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="135">
+      <Item class="Folder" referent="136">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="136">
+        <Item class="Folder" referent="137">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="137">
+          <Item class="ModuleScript" referent="138">
             <Properties>
               <string name="Name">AbilityController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10025,7 +10157,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="138">
+          <Item class="ModuleScript" referent="139">
             <Properties>
               <string name="Name">AbilityDescriptions</string>
               <string name="Source"><![CDATA[--!strict
@@ -10056,7 +10188,7 @@ return {
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="139">
+          <Item class="ModuleScript" referent="140">
             <Properties>
               <string name="Name">AbilityFamilyController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10250,7 +10382,7 @@ return Module
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="140">
+          <Item class="ModuleScript" referent="141">
             <Properties>
               <string name="Name">AbilityHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10364,7 +10496,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="141">
+          <Item class="ModuleScript" referent="142">
             <Properties>
               <string name="Name">AbilityTargeting</string>
               <string name="Source"><![CDATA[--!strict
@@ -10563,7 +10695,7 @@ return Targeting
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="142">
+          <Item class="ModuleScript" referent="143">
             <Properties>
               <string name="Name">AbilityVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10818,7 +10950,7 @@ return VFX
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="143">
+          <Item class="ModuleScript" referent="144">
             <Properties>
               <string name="Name">AnimationController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10987,7 +11119,7 @@ return AnimationController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="144">
+          <Item class="ModuleScript" referent="145">
             <Properties>
               <string name="Name">CameraController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11218,7 +11350,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="145">
+          <Item class="ModuleScript" referent="146">
             <Properties>
               <string name="Name">ChakraAuraVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -11282,7 +11414,7 @@ return Aura
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="146">
+          <Item class="ModuleScript" referent="147">
             <Properties>
               <string name="Name">ChakraParticleVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -11320,7 +11452,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="147">
+          <Item class="ModuleScript" referent="148">
             <Properties>
               <string name="Name">CombatController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11348,7 +11480,7 @@ local localStep = 0
 local queuedUntil = 0
 local currentProfile = Config.Profiles[Config.DefaultProfile]
 local seenStarted: { [Model]: number } = setmetatable({}, { __mode = "k" })
-local seenHits: { [Model]: number } = setmetatable({}, { __mode = "k" })
+local seenHits: { [Model]: {id:number,targets:{[Model]:boolean}} } = setmetatable({}, { __mode = "k" })
 local abilityConnection: RBXScriptConnection? = nil
 
 function CombatController.NextRequestId(): number
@@ -11429,11 +11561,15 @@ local function onEvent(message: Protocol.Event)
 		if Debug.LogCombat then print(string.format("[Combat] confirmed %s M1-%d", character.Name, attack.step)) end
 	elseif message.kind == "Hit" then
 		local attackId, step, hits = message.attackId, message.step, message.hits
-		if not attackId or not step or not hits or (seenHits[character] or 0) >= attackId then return end
-		seenHits[character] = attackId
+		if not attackId or not step or not hits then return end
+		local seen=seenHits[character]
+		if seen and seen.id>attackId then return end
+		if not seen or seen.id~=attackId then seen={id=attackId,targets={}};seenHits[character]=seen end
 		local heavy = character:GetAttribute("CombatProfileId")=="Kurama"
 		for _, hit in hits do
-			if hit.character.Parent then VFX.Hit(hit.character, hit.position, heavy) end
+			if not seen.targets[hit.character] and hit.character.Parent then
+				seen.targets[hit.character]=true;VFX.Hit(hit.character, hit.position, heavy)
+			end
 		end
 		if localCharacter and #hits > 0 then VFX.Shake(heavy) end
 		if message.hitboxCFrame and message.hitboxSize then VFX.DebugBox(message.hitboxCFrame, message.hitboxSize) end
@@ -11551,7 +11687,7 @@ return CombatController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="148">
+          <Item class="ModuleScript" referent="149">
             <Properties>
               <string name="Name">DeveloperConsoleController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11598,12 +11734,14 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="149">
+          <Item class="ModuleScript" referent="150">
             <Properties>
               <string name="Name">GamakichiVisualController</string>
               <string name="Source"><![CDATA[--!strict
 local Run=game:GetService("RunService")
-local Appearance=require(game.ReplicatedStorage.Shared.GamakichiAppearance)
+local Shared=game.ReplicatedStorage.Shared
+local Appearance=require(Shared.GamakichiAppearance)
+local Reaction=require(Shared.Combat.HitReaction)
 local M={};local started=false
 function M.Start()
  if started then return end;started=true
@@ -11612,17 +11750,18 @@ function M.Start()
   local now=workspace:GetServerTimeNow()
   for _,model in folder:GetChildren() do
    if not model:IsA("Model") or model:GetAttribute("NativeGamakichi")~=true then continue end
-   local root=model:FindFirstChild("HumanoidRootPart");local skin=model:FindFirstChild("GamakichiSkin")
-   if not root or not root:IsA("BasePart") or not skin or not skin:IsA("BasePart") then continue end
-   local pose=Appearance.Motion(now,model:GetAttribute("SummonMoving")==true,
-    (model:GetAttribute("SummonSwingAt") or -100) :: number,(model:GetAttribute("SummonSpellAt") or -100) :: number,
-    tostring(model:GetAttribute("SummonSpell")),model:GetAttribute("Channeling")==true)
-   skin.CFrame=root.CFrame*(skin:GetAttribute("ToadOffset") :: CFrame)*pose
-   for _,blade in model:GetChildren() do
-    if blade:IsA("BasePart") and blade:GetAttribute("ToadSword")==true then
-     local at=(model:GetAttribute("SummonSpellAt") or now) :: number
-     local angle=if model:GetAttribute("Channeling")==true then math.sin((now-at)*math.pi*2)*1.3 else .3
-     blade.CFrame=root.CFrame*pose*(blade:GetAttribute("ToadGrip") :: CFrame)*CFrame.Angles(0,angle,0)*(blade:GetAttribute("ToadOffset") :: CFrame)
+   local root=model:FindFirstChild("HumanoidRootPart")
+   if not root or not root:IsA("BasePart") then continue end
+   local moving=model:GetAttribute("SummonMoving")==true
+   local swing=(model:GetAttribute("SummonSwingAt") or -100) :: number
+   local at=(model:GetAttribute("SummonSpellAt") or -100) :: number
+   local spell=tostring(model:GetAttribute("SummonSpell"));local channel=model:GetAttribute("Channeling")==true
+   local pose=Appearance.Motion(now,moving,swing,at,spell,channel)*Reaction.Offset(model,"Root",now)
+   local scale=(model:GetAttribute("ToadScale") or 1) :: number;local lift=(model:GetAttribute("ToadLift") or 0) :: number
+   for _,part in model:GetChildren() do
+    if part:IsA("BasePart") and part:GetAttribute("ToadVisual")==true then
+     local limb=Appearance.Limb(tostring(part:GetAttribute("ToadGroup")),scale,lift,now,moving,swing,at,spell,channel)
+     part.CFrame=root.CFrame*pose*limb*(part:GetAttribute("ToadOffset") :: CFrame)
     end
    end
   end
@@ -11632,7 +11771,7 @@ return M
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="150">
+          <Item class="ModuleScript" referent="151">
             <Properties>
               <string name="Name">HUDIcons</string>
               <string name="Source"><![CDATA[--!strict
@@ -11727,7 +11866,7 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="151">
+          <Item class="ModuleScript" referent="152">
             <Properties>
               <string name="Name">HUDLayout</string>
               <string name="Source"><![CDATA[--!strict
@@ -11747,7 +11886,7 @@ return table.freeze(Layout)
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="152">
+          <Item class="ModuleScript" referent="153">
             <Properties>
               <string name="Name">HeroAppearanceTransition</string>
               <string name="Source"><![CDATA[--!strict
@@ -11880,7 +12019,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="153">
+          <Item class="ModuleScript" referent="154">
             <Properties>
               <string name="Name">HeroHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12037,7 +12176,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="154">
+          <Item class="ModuleScript" referent="155">
             <Properties>
               <string name="Name">HeroMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12049,6 +12188,7 @@ local Config = require(Shared.Config.AbilityConfig)
 local Combat = require(Shared.Config.CombatConfig)
 local Ids = require(Shared.Config.AnimationIds)
 local RigJoints = require(Shared.Combat.RigJoints)
+local Reaction = require(Shared.Combat.HitReaction)
 type Prediction = { id: number, key: string, at: number, duration: number }
 type Rig = { model: Model, humanoid: Humanoid, root: BasePart, joints: { RigJoints.Entry }, poses: { [Instance]: CFrame },
 	tracks: { [string]: AnimationTrack }, animations: { Animation }, animate: LocalScript?, animateEnabled: boolean,
@@ -12201,9 +12341,12 @@ function Motion.Start()
 			local holding = model:GetAttribute("RasenganVisible")==true and (key=="Idle" or key=="Run")
 			local published = not holding and hasPublished(rig, key, at, duration)
 			rig.key = key
-			if published then table.clear(rig.poses); continue end
+			if published then
+				for _,entry in rig.joints do entry.joint.Transform*=Reaction.Offset(model,entry.key,now) end
+				table.clear(rig.poses); continue
+			end
 			if not model:GetAttribute("HeroId") and (key == "Idle" or key == "Run") then
-				for _, entry in rig.joints do if entry.joint.Parent then entry.joint.Transform = CFrame.identity end end
+				for _, entry in rig.joints do if entry.joint.Parent then entry.joint.Transform = Reaction.Offset(model,entry.key,now) end end
 				table.clear(rig.poses); continue
 			end
 			local pose = Poses.sample(key, now, math.clamp((now - at) / math.max(0.001, duration), 0, 1))
@@ -12220,7 +12363,7 @@ function Motion.Start()
 				local angle = pose[entry.key]
 				local target = if angle then CFrame.Angles(angle[1], angle[2], angle[3]) else CFrame.identity
 				local current = (rig.poses[motor] or CFrame.identity):Lerp(target, alpha)
-				motor.Transform = current; rig.poses[motor] = current
+				motor.Transform = current*Reaction.Offset(model,entry.key,now); rig.poses[motor] = current
 			end
 		end
 	end)
@@ -12229,7 +12372,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="155">
+          <Item class="ModuleScript" referent="156">
             <Properties>
               <string name="Name">InputController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12330,7 +12473,7 @@ return InputController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="156">
+          <Item class="ModuleScript" referent="157">
             <Properties>
               <string name="Name">KuramaVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12345,12 +12488,12 @@ local function claws(part:BasePart,enabled:boolean)
  if not part:GetAttribute("KuramaTrailsReady") then
   part:SetAttribute("KuramaTrailsReady",true)
   for i=-1,1 do
-   local a=Instance.new("Attachment");a.Position=Vector3.new(i*.8,0,-1.6);a.Parent=part
-   local b=Instance.new("Attachment");b.Position=a.Position+Vector3.new(.12,.1,0);b.Parent=part
+   local a=Instance.new("Attachment");a.Position=Vector3.new(i*part.Size.X*.32,0,-part.Size.Z*.46);a.Parent=part
+   local b=Instance.new("Attachment");b.Position=a.Position+Vector3.new(.24,.08,.15);b.Parent=part
    local trail=Instance.new("Trail");trail.Name="KuramaClawTrail";trail.Attachment0=a;trail.Attachment1=b
    trail.Color=ColorSequence.new(Color3.fromRGB(255,239,142),Color3.fromRGB(255,147,18))
    trail.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.1),NumberSequenceKeypoint.new(1,1)})
-   trail.Lifetime=.16;trail.LightEmission=1;trail.FaceCamera=true;trail.MinLength=.04;trail.Enabled=false;trail.Parent=part
+   trail.Lifetime=.22;trail.LightEmission=1;trail.FaceCamera=true;trail.MinLength=.04;trail.Enabled=false;trail.Parent=part
   end
  end
  for _,child in part:GetChildren() do if child:IsA("Trail") then child.Enabled=enabled end end
@@ -12422,7 +12565,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="157">
+          <Item class="ModuleScript" referent="158">
             <Properties>
               <string name="Name">LearningController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12450,13 +12593,14 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="158">
+          <Item class="ModuleScript" referent="159">
             <Properties>
               <string name="Name">MinionMotionController</string>
               <string name="Source"><![CDATA[--!strict
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Poses = require(Shared.Combat.MinionPoses)
+local Reaction = require(Shared.Combat.HitReaction)
 type Rig = { root: BasePart, humanoid: Humanoid, joints: { Motor6D }, nextAt: number, deathAt: number?, neutral: boolean }
 local Motion = {}
 local rigs: { [Model]: Rig } = {}
@@ -12530,7 +12674,7 @@ function Motion.Start()
 			local angles = Poses.Sample(state, now, phase, model:GetAttribute("MinionType") == "Ranged", model:GetAttribute("MinionVisual") == "WhiteZetsu")
 			for _, joint in rig.joints do
 				local rotation = angles[joint.Name]
-				if joint.Parent and rotation then joint.Transform = CFrame.Angles(rotation[1], rotation[2], rotation[3]) end
+				if joint.Parent and rotation then joint.Transform = CFrame.Angles(rotation[1], rotation[2], rotation[3])*Reaction.Offset(model,joint.Name,now) end
 			end
 			rig.neutral = false
 		end
@@ -12540,7 +12684,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="159">
+          <Item class="ModuleScript" referent="160">
             <Properties>
               <string name="Name">MobaHUDView</string>
               <string name="Source"><![CDATA[--!strict
@@ -12646,7 +12790,7 @@ return View
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="160">
+          <Item class="ModuleScript" referent="161">
             <Properties>
               <string name="Name">NarutoRangedVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12746,7 +12890,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="161">
+          <Item class="ModuleScript" referent="162">
             <Properties>
               <string name="Name">RasenganEvolutionHUD</string>
               <string name="Source"><![CDATA[--!strict
@@ -12886,7 +13030,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="162">
+          <Item class="ModuleScript" referent="163">
             <Properties>
               <string name="Name">RasenganVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -13031,7 +13175,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="163">
+          <Item class="ModuleScript" referent="164">
             <Properties>
               <string name="Name">RasenshurikenFlightVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -13064,7 +13208,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="164">
+          <Item class="ModuleScript" referent="165">
             <Properties>
               <string name="Name">RoundController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13100,7 +13244,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="165">
+          <Item class="ModuleScript" referent="166">
             <Properties>
               <string name="Name">SurvivalHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13204,7 +13348,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="166">
+          <Item class="ModuleScript" referent="167">
             <Properties>
               <string name="Name">TowerVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13268,7 +13412,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="167">
+          <Item class="ModuleScript" referent="168">
             <Properties>
               <string name="Name">VFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13501,7 +13645,7 @@ return VFXController
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="168">
+        <Item class="LocalScript" referent="169">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -13529,7 +13673,7 @@ print("[Anime Battlegrounds] Client ready; left mouse button attacks")
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="169">
+  <Item class="Workspace" referent="170">
     <Properties>
       <string name="Name">Workspace</string>
       <BinaryString name="AttributesSerialize">AQAAABEAAABEZXZlbG9wZXJTb2xvTW9kZQMB</BinaryString>

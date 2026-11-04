@@ -2,6 +2,7 @@
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Poses = require(Shared.Combat.MinionPoses)
+local Reaction = require(Shared.Combat.HitReaction)
 type Rig = { root: BasePart, humanoid: Humanoid, joints: { Motor6D }, nextAt: number, deathAt: number?, neutral: boolean }
 local Motion = {}
 local rigs: { [Model]: Rig } = {}
@@ -75,7 +76,7 @@ function Motion.Start()
 			local angles = Poses.Sample(state, now, phase, model:GetAttribute("MinionType") == "Ranged", model:GetAttribute("MinionVisual") == "WhiteZetsu")
 			for _, joint in rig.joints do
 				local rotation = angles[joint.Name]
-				if joint.Parent and rotation then joint.Transform = CFrame.Angles(rotation[1], rotation[2], rotation[3]) end
+				if joint.Parent and rotation then joint.Transform = CFrame.Angles(rotation[1], rotation[2], rotation[3])*Reaction.Offset(model,joint.Name,now) end
 			end
 			rig.neutral = false
 		end

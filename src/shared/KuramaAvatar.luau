@@ -14,15 +14,16 @@ function Avatar.Style(part:BasePart,mesh:SpecialMesh)
  if string.find(part.Name,"eyes",1,true) then part.Color=Color3.fromRGB(255,70,12);part.Transparency=0 end
 end
 function Avatar.Motion(name:string,base:CFrame,now:number,moving:number,phase:number?,serial:number):CFrame
- local wind,hit,recover=0,0,0
+ local wind,hit,follow=0,0,0
  if phase then
-  if phase<.32 then wind=smooth(phase/.32)
-  elseif phase<Config.HitPhase then local f=smooth((phase-.32)/(Config.HitPhase-.32));wind=1-f;hit=f
-  else recover=1-smooth((phase-Config.HitPhase)/(1-Config.HitPhase));hit=recover end
+  if phase<Config.SwipeStart then wind=smooth(phase/Config.SwipeStart)
+  elseif phase<Config.SwipeEnd then
+   local f=smooth((phase-Config.SwipeStart)/(Config.SwipeEnd-Config.SwipeStart));wind=1-f;hit=f
+  else follow=1-smooth((phase-Config.SwipeEnd)/(1-Config.SwipeEnd));hit=follow end
  end
  local side=if serial%2==0 then -1 else 1
- local body=CFrame.new(0,math.sin(now*1.8)*.08-moving*.08-wind*.25,-hit*1.35)
-  *CFrame.Angles(wind*.035,-side*wind*.09,side*wind*.025)
+ local body=CFrame.new(side*hit*.35,math.sin(now*1.8)*.08-moving*.08-wind*.35,-hit*1.5)
+  *CFrame.Angles(wind*.055,-side*wind*.16+side*hit*.12,side*wind*.04)
  local tail=tonumber(string.match(name,"Tail(%d+)$"))
  if tail then
   local sway=math.sin(now*1.1+tail*.62)*.10+math.sin(now*2.2+tail)*.025
@@ -38,7 +39,9 @@ function Avatar.Motion(name:string,base:CFrame,now:number,moving:number,phase:nu
   local joint=if hind then point(limbSide*.8,0,1.7) else point(limbSide*1.1,-.15,-1.35)
   local pose=CFrame.Angles(stride*.18,0,0)
   if not hind and limbSide==side and phase then
-   pose=CFrame.Angles(wind*.95+hit*.20,-side*wind*.38+side*hit*.95,side*wind*.15)
+   -- Lift the paw outside the shoulder, sweep low across the front, then recover.
+   -- This exact motion also supplies the server contact volume.
+   pose=CFrame.Angles(wind*.72+hit*.08,-side*wind*.70+side*hit*1.10,side*wind*.24-side*hit*.08)
   elseif not hind and phase then pose=CFrame.Angles(-wind*.08,0,0) end
   return body*pivot(joint,pose)*base
  end

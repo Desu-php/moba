@@ -10,12 +10,12 @@ local function claws(part:BasePart,enabled:boolean)
  if not part:GetAttribute("KuramaTrailsReady") then
   part:SetAttribute("KuramaTrailsReady",true)
   for i=-1,1 do
-   local a=Instance.new("Attachment");a.Position=Vector3.new(i*.8,0,-1.6);a.Parent=part
-   local b=Instance.new("Attachment");b.Position=a.Position+Vector3.new(.12,.1,0);b.Parent=part
+   local a=Instance.new("Attachment");a.Position=Vector3.new(i*part.Size.X*.32,0,-part.Size.Z*.46);a.Parent=part
+   local b=Instance.new("Attachment");b.Position=a.Position+Vector3.new(.24,.08,.15);b.Parent=part
    local trail=Instance.new("Trail");trail.Name="KuramaClawTrail";trail.Attachment0=a;trail.Attachment1=b
    trail.Color=ColorSequence.new(Color3.fromRGB(255,239,142),Color3.fromRGB(255,147,18))
    trail.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.1),NumberSequenceKeypoint.new(1,1)})
-   trail.Lifetime=.16;trail.LightEmission=1;trail.FaceCamera=true;trail.MinLength=.04;trail.Enabled=false;trail.Parent=part
+   trail.Lifetime=.22;trail.LightEmission=1;trail.FaceCamera=true;trail.MinLength=.04;trail.Enabled=false;trail.Parent=part
   end
  end
  for _,child in part:GetChildren() do if child:IsA("Trail") then child.Enabled=enabled end end

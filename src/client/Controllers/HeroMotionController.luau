@@ -7,6 +7,7 @@ local Config = require(Shared.Config.AbilityConfig)
 local Combat = require(Shared.Config.CombatConfig)
 local Ids = require(Shared.Config.AnimationIds)
 local RigJoints = require(Shared.Combat.RigJoints)
+local Reaction = require(Shared.Combat.HitReaction)
 type Prediction = { id: number, key: string, at: number, duration: number }
 type Rig = { model: Model, humanoid: Humanoid, root: BasePart, joints: { RigJoints.Entry }, poses: { [Instance]: CFrame },
 	tracks: { [string]: AnimationTrack }, animations: { Animation }, animate: LocalScript?, animateEnabled: boolean,
@@ -159,9 +160,12 @@ function Motion.Start()
 			local holding = model:GetAttribute("RasenganVisible")==true and (key=="Idle" or key=="Run")
 			local published = not holding and hasPublished(rig, key, at, duration)
 			rig.key = key
-			if published then table.clear(rig.poses); continue end
+			if published then
+				for _,entry in rig.joints do entry.joint.Transform*=Reaction.Offset(model,entry.key,now) end
+				table.clear(rig.poses); continue
+			end
 			if not model:GetAttribute("HeroId") and (key == "Idle" or key == "Run") then
-				for _, entry in rig.joints do if entry.joint.Parent then entry.joint.Transform = CFrame.identity end end
+				for _, entry in rig.joints do if entry.joint.Parent then entry.joint.Transform = Reaction.Offset(model,entry.key,now) end end
 				table.clear(rig.poses); continue
 			end
 			local pose = Poses.sample(key, now, math.clamp((now - at) / math.max(0.001, duration), 0, 1))
@@ -178,7 +182,7 @@ function Motion.Start()
 				local angle = pose[entry.key]
 				local target = if angle then CFrame.Angles(angle[1], angle[2], angle[3]) else CFrame.identity
 				local current = (rig.poses[motor] or CFrame.identity):Lerp(target, alpha)
-				motor.Transform = current; rig.poses[motor] = current
+				motor.Transform = current*Reaction.Offset(model,entry.key,now); rig.poses[motor] = current
 			end
 		end
 	end)

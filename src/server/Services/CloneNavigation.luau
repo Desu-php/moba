@@ -59,6 +59,16 @@ local function parameters(agent: Agent, owner: Model, target: Model): RaycastPar
 	ray.CollisionGroup = "SurvivalSummons"
 	return ray
 end
+-- Wide summons meet a raised lane with their toes before their center ray does.
+-- Sweep a shallow foot plate; do not use the visual mesh or ignore world collision.
+local stepHeight = .65
+local function support(agent: Agent, point: Vector3, lift: number, drop: number, ray: RaycastParams): Vector3?
+	local feet = Vector3.new(math.max(2.2,agent.root.Size.X)-.04,.04,math.max(2.2,agent.root.Size.Z)-.04)
+	local from = point + Vector3.new(0,-agent.groundOffset+lift+.04,0)
+	local hit = workspace:Blockcast(CFrame.new(from),feet,Vector3.new(0,-(lift+drop+.04),0),ray)
+	if not hit or hit.Normal.Y < .7 then return nil end
+	return Vector3.new(point.X,hit.Position.Y+agent.groundOffset,point.Z)
+end
 -- Anchored navigation rigs need explicit gravity, including while holding/stunned.
 -- Sweep the feet to the floor; never teleport an airborne spawn to its destination.
 function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
@@ -67,9 +77,9 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	local fall = agent.fallSpeed * dt + workspace.Gravity * dt * dt / 2
 	local ray = parameters(agent, owner, owner)
 	local position = agent.root.Position
-	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
-	if hit then
-		local y = hit.Position.Y + agent.groundOffset
+	local floor = support(agent,position,.08,fall+.15,ray)
+	if floor then
+		local y = floor.Y
 		if math.abs(y - position.Y) > .001 then model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0)) end
 		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
 		return true
@@ -80,9 +90,7 @@ function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
 	return false
 end
 local function ground(agent: Agent, point: Vector3, ray: RaycastParams): Vector3?
-	local hit = workspace:Raycast(point + Vector3.new(0, 2, 0), Vector3.new(0, -10, 0), ray)
-	if not hit or hit.Normal.Y < 0.7 then return nil end
-	return Vector3.new(point.X, hit.Position.Y + agent.groundOffset, point.Z)
+	return support(agent,point,stepHeight,8,ray)
 end
 local function bodySize(agent: Agent): Vector3
 	return Vector3.new(math.max(2.2, agent.root.Size.X), math.max(4, agent.root.Size.Y), math.max(2.2, agent.root.Size.Z))
@@ -116,6 +124,15 @@ local function clear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastP
 	local delta = goal - origin
 	if delta.Magnitude < 0.001 then return true end
 	return workspace:Blockcast(CFrame.new(origin), bodySize(agent), delta, ray) == nil
+end
+local function stepClear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): boolean
+	if clear(agent,origin,goal,ray) then return true end
+	-- Raise / move / lower is a swept route over a small curb, never through a wall.
+	if math.abs(goal.Y-origin.Y)>stepHeight then return false end
+	local y=math.max(origin.Y,goal.Y)+stepHeight
+	local up=Vector3.new(origin.X,y,origin.Z);local across=Vector3.new(goal.X,y,goal.Z)
+	return clear(agent,origin,up,ray) and bodyClear(agent,up,ray)
+		and clear(agent,up,across,ray) and bodyClear(agent,across,ray) and clear(agent,across,goal,ray)
 end
 local function available(agent: Agent, target: Model, index: number): boolean
 	for _, other in agents do
@@ -255,7 +272,7 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		table.clear(agent.waypoints); agent.pathGoal = nil; agent.failures += 1; agent.progressAt = now
 	end
 	local aim = goal
-	if not clear(agent, position, goal, ray) then
+	if not stepClear(agent, position, goal, ray) then
 		while agent.waypoint <= #agent.waypoints and flat(agent.waypoints[agent.waypoint] - position).Magnitude < 0.5 do agent.waypoint += 1 end
 		local waypoint = agent.waypoints[agent.waypoint]
 		if waypoint then aim = waypoint else aim = position end
@@ -317,7 +334,7 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		local rotated = Vector3.new(forward.X * math.cos(angle) - forward.Z * math.sin(angle), 0,
 			forward.X * math.sin(angle) + forward.Z * math.cos(angle))
 		local point = ground(agent, position + rotated * length, ray)
-		if point and math.abs(point.Y - position.Y) <= length + 0.25 and clear(agent, position, point, ray)
+		if point and math.abs(point.Y - position.Y) <= math.max(stepHeight,length + 0.25) and stepClear(agent, position, point, ray)
 			and bodyClear(agent, point, ray) and peerClear(agent, point, destination) then
 			model:PivotTo(model:GetPivot() + (point - position)); return true
 		end

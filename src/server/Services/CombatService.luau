@@ -183,6 +183,11 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack, swept
 		local dealt = Damage.ApplyAttack(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
 		-- Only confirmed server damage is a hit.
 		if dealt <= 0 then continue end
+		if fighter.profileId=="Kurama" and not isStructure then
+			local away=(character:GetPivot().Position-fighter.root.Position)*Vector3.new(1,0,1)
+			character:SetAttribute("PawHitDirection",if away.Magnitude>.01 then away.Unit else fighter.root.CFrame.LookVector)
+			character:SetAttribute("PawHitAt",Workspace:GetServerTimeNow())
+		end
 		local position = character:GetPivot().Position
 		table.insert(hits, { character = character, position = position })
 	end
