@@ -15,8 +15,10 @@ local Push = require(script.Parent.AbilityDisplacementService)
 local Oil=require(script.Parent.OilStatusService)
 local Navigation = require(script.Parent.CloneNavigation)
 local Collision = require(script.Parent.SummonCollision)
+local Autonomy = require(Shared.Abilities.CloneAutonomyPolicy)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
-	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number }
+	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number,
+	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean }
 local Service = { Spawned = Instance.new("BindableEvent") }
 local records: { [Model]: Record } = {}
 local targetSerial = 0
@@ -77,6 +79,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
+		autoTarget = nil, nextScan = 0, lastOrder = commands.lastRequest, recallUntil = 0, returning = false,
 		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.CloneDamage * stats.AttackDamageMultiplier + stats.AttackDamageBonus }
 	Navigation.Register(model, root, humanoid)
 	Fighters.GetOrCreate(model); Service.Spawned:Fire(model)
@@ -86,20 +89,61 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 	for model, record in records do
 		local clone, owner = record.clone, record.owner
 		if not model.Parent or record.humanoid.Health <= 0 or owner.Parent ~= Players or now >= clone.expiresAt
+			or record.root.Position.Y < workspace.FallenPartsDestroyHeight
 			or record.state.clones[clone.id] ~= clone then Service.Remove(model); continue end
 		model:SetAttribute("RasenganHeld", clone.hasPayload); model:SetAttribute("RasenganVisible", clone.hasPayload)
+		local character = owner.Character
+		-- Gravity runs before orders/control locks, so Hold and owner death cannot freeze a falling clone.
+		if not Navigation.Settle(model, character or model, delta) then
+			model:SetAttribute("SummonBehavior", "Landing"); Navigation.Stop(model); continue
+		end
 		local fighter = Fighters.Get(model)
 		if fighter and (fighter.logic.mode == "Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(model); continue end
 		local intent = Commands.resolve(record.commands)
-		local character = owner.Character
-		if not character or not Damage.CanAct(character) or intent.mode == "Idle" or intent.mode == "Hold" then Navigation.Stop(model); continue end
+		if record.lastOrder ~= record.commands.lastRequest then
+			record.lastOrder = record.commands.lastRequest; record.autoTarget = nil; record.nextScan = 0
+			record.returning = intent.mode == "Follow"
+			record.recallUntil = if record.returning then now + Autonomy.RecallGrace else 0
+		end
+		if not character or not Damage.CanAct(character) or intent.mode == "Idle" or intent.mode == "Hold" then
+			record.autoTarget = nil; model:SetAttribute("SummonBehavior", intent.mode); Navigation.Stop(model); continue
+		end
+		local ownerRoot = character:FindFirstChild("HumanoidRootPart")
+		if not ownerRoot or not ownerRoot:IsA("BasePart") then Navigation.Stop(model); continue end
+		local ownerDistance = (ownerRoot.Position - record.root.Position).Magnitude
+		if ownerDistance > Autonomy.OwnerLeash then record.returning = true end
+		if record.returning and ownerDistance < Autonomy.ReturnRadius and now >= record.recallUntil then record.returning = false end
 		local target: Model? = nil
-		if intent.targetId then
+		if intent.targetId and (intent.mode == "Command" or not record.returning) then
 			for candidate in Fighters.GetAll() do
 				if candidate:GetAttribute("AbilityEntityId") == intent.targetId then target = candidate; break end
 			end
 			if not target or not Damage.CanDamage(model, target) then Commands.invalidateTarget(record.commands, intent.targetId); target = nil end
 		end
+		if not target and not record.returning then
+			local current = record.autoTarget
+			local currentRoot = if current then current:FindFirstChild("HumanoidRootPart") else nil
+			if not current or not currentRoot or not currentRoot:IsA("BasePart") or not Damage.CanDamage(model, current)
+				or (currentRoot.Position - record.root.Position).Magnitude > Autonomy.PursueRadius
+				or (currentRoot.Position - ownerRoot.Position).Magnitude > Autonomy.OwnerLeash then record.autoTarget = nil end
+			if now >= record.nextScan then
+				record.nextScan = now + Autonomy.ScanInterval
+				-- Keep a valid target through the swing; reacquire immediately after it dies.
+				if not record.autoTarget then
+					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 8) do
+						local candidate = enemy.Parent
+						local candidateRoot = if candidate then candidate:FindFirstChild("HumanoidRootPart") else nil
+						if candidate and candidate:IsA("Model") and candidateRoot and candidateRoot:IsA("BasePart")
+							and (candidateRoot.Position - ownerRoot.Position).Magnitude <= Autonomy.OwnerLeash then
+							record.autoTarget = candidate; break
+						end
+					end
+				end
+			end
+			target = record.autoTarget
+		else record.autoTarget = nil end
+		model:SetAttribute("SummonBehavior", if target then "Attack" elseif record.returning then "Return" else "Follow")
+		model:SetAttribute("SummonTarget", if target then target.Name else "")
 		local destination = if target then target:FindFirstChild("HumanoidRootPart") else character:FindFirstChild("HumanoidRootPart")
 		if not destination or not destination:IsA("BasePart") then Navigation.Stop(model); continue end
 		local distance = destination.Position - record.root.Position

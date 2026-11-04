@@ -60,6 +60,22 @@ return table.freeze(P)
         </Item>
         <Item class="ModuleScript" referent="5">
           <Properties>
+            <string name="Name">CloneAutonomyPolicy</string>
+            <string name="Source"><![CDATA[--!strict
+-- Roblox companion behavior; damage, counts and lifetime remain in NarutoDefinitions.
+return table.freeze({
+	AcquireRadius = 28,
+	PursueRadius = 40,
+	OwnerLeash = 48,
+	ReturnRadius = 10,
+	ScanInterval = .4,
+	RecallGrace = 2,
+})
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="6">
+          <Properties>
             <string name="Name">CloneCastPlan</string>
             <string name="Source"><![CDATA[--!strict
 -- Explicit Roblox policy: mass eligibility reads mana AFTER base 200 debit.
@@ -74,7 +90,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="6">
+        <Item class="ModuleScript" referent="7">
           <Properties>
             <string name="Name">CloneCommands</string>
             <string name="Source"><![CDATA[--!strict
@@ -137,7 +153,7 @@ return Commands
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="7">
+        <Item class="ModuleScript" referent="8">
           <Properties>
             <string name="Name">CloneNavigationPolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -200,7 +216,7 @@ return table.freeze(Policy)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="9">
           <Properties>
             <string name="Name">CloneState</string>
             <string name="Source"><![CDATA[--!strict
@@ -297,7 +313,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">GamakichiSpells</string>
             <string name="Source"><![CDATA[--!strict
@@ -362,7 +378,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">GamakichiState</string>
             <string name="Source"><![CDATA[--!strict
@@ -404,7 +420,7 @@ return G
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="11">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">MeditationState</string>
             <string name="Source"><![CDATA[--!strict
@@ -466,7 +482,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="13">
           <Properties>
             <string name="Name">NarutoAdvancedCatalog</string>
             <string name="Source"><![CDATA[--!strict
@@ -493,7 +509,7 @@ return table.freeze(Catalog)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
+        <Item class="ModuleScript" referent="14">
           <Properties>
             <string name="Name">NarutoDefinitions</string>
             <string name="Source"><![CDATA[--!strict
@@ -544,7 +560,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="14">
+        <Item class="ModuleScript" referent="15">
           <Properties>
             <string name="Name">NarutoKcmAdapter</string>
             <string name="Source"><![CDATA[--!strict
@@ -798,7 +814,7 @@ return Adapter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="15">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">NarutoKcmConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -831,7 +847,7 @@ return table.freeze(C)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="16">
+        <Item class="ModuleScript" referent="17">
           <Properties>
             <string name="Name">NarutoKcmGameplay</string>
             <string name="Source"><![CDATA[--!strict
@@ -879,7 +895,7 @@ return G
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="17">
+        <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">NarutoKcmState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1039,7 +1055,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="19">
           <Properties>
             <string name="Name">NarutoKuramaState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1137,7 +1153,7 @@ return F
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="19">
+        <Item class="ModuleScript" referent="20">
           <Properties>
             <string name="Name">NarutoRangedState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1321,7 +1337,7 @@ return table.freeze(R)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="21">
           <Properties>
             <string name="Name">NarutoRankPolicy</string>
             <string name="Source"><![CDATA[--!strict
@@ -1396,7 +1412,7 @@ return table.freeze(Policy)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="22">
           <Properties>
             <string name="Name">NarutoResources</string>
             <string name="Source"><![CDATA[--!strict
@@ -1442,7 +1458,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">NarutoRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -1498,7 +1514,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">NarutoSharingState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1605,7 +1621,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="25">
           <Properties>
             <string name="Name">RasenganState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1700,7 +1716,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">RasenganUpgradeQueue</string>
             <string name="Source"><![CDATA[--!strict
@@ -1751,7 +1767,7 @@ return Queue
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">RasenganVariants</string>
             <string name="Source"><![CDATA[--!strict
@@ -1794,7 +1810,7 @@ return table.freeze(V)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">RasenshurikenThrowRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -1815,7 +1831,7 @@ return table.freeze(R)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="28">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">SageState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1868,7 +1884,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="29">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">SkillLearning</string>
             <string name="Source"><![CDATA[--!strict
@@ -1908,7 +1924,7 @@ return Learning
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="30">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">SleepState</string>
             <string name="Source"><![CDATA[--!strict
@@ -1932,7 +1948,7 @@ return table.freeze(Sleep)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">StatLayers</string>
             <string name="Source"><![CDATA[--!strict
@@ -1955,7 +1971,7 @@ return L
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">WorldUnits</string>
             <string name="Source"><![CDATA[--!strict
@@ -1967,11 +1983,11 @@ return table.freeze(Scale)
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="33">
+      <Item class="Folder" referent="34">
         <Properties>
           <string name="Name">Combat</string>
         </Properties>
-        <Item class="ModuleScript" referent="34">
+        <Item class="ModuleScript" referent="35">
           <Properties>
             <string name="Name">AbilityState</string>
             <string name="Source"><![CDATA[--!strict
@@ -2017,7 +2033,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">BasicAttackRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2032,7 +2048,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">CombatCameraRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2062,7 +2078,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="38">
           <Properties>
             <string name="Name">CombatProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -2089,7 +2105,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">CombatState</string>
             <string name="Source"><![CDATA[--!strict
@@ -2206,7 +2222,7 @@ return CombatState
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="40">
           <Properties>
             <string name="Name">HeroPoses</string>
             <string name="Source"><![CDATA[--!strict
@@ -2343,7 +2359,7 @@ return Poses
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="41">
           <Properties>
             <string name="Name">MinionPoses</string>
             <string name="Source"><![CDATA[--!strict
@@ -2391,7 +2407,7 @@ return table.freeze(Poses)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">RigJoints</string>
             <string name="Source"><![CDATA[--!strict
@@ -2429,11 +2445,11 @@ return Rig
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="42">
+      <Item class="Folder" referent="43">
         <Properties>
           <string name="Name">Config</string>
         </Properties>
-        <Item class="ModuleScript" referent="43">
+        <Item class="ModuleScript" referent="44">
           <Properties>
             <string name="Name">AbilityConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2472,7 +2488,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="44">
+        <Item class="ModuleScript" referent="45">
           <Properties>
             <string name="Name">AnimationIds</string>
             <string name="Source"><![CDATA[--!strict
@@ -2488,7 +2504,7 @@ return table.freeze(sets)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">CameraConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2511,7 +2527,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">ChakraParticleData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2520,7 +2536,7 @@ return {{rotSpeed={-1000,-1000},color={{0,0.6431372761726379,1,0.960784316062927
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="47">
+        <Item class="ModuleScript" referent="48">
           <Properties>
             <string name="Name">CombatConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2572,7 +2588,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="48">
+        <Item class="ModuleScript" referent="49">
           <Properties>
             <string name="Name">CreatorVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2586,7 +2602,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="49">
+        <Item class="ModuleScript" referent="50">
           <Properties>
             <string name="Name">DebugConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2600,7 +2616,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="50">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">GameModeConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2617,7 +2633,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="51">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">HeroAppearanceConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2630,7 +2646,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">HeroConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2643,7 +2659,7 @@ return table.freeze({ DefaultHero = "OrangeNinja", Heroes = heroes, AppearanceVe
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">ItemConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2661,7 +2677,7 @@ return { Order = { "IronBlade", "GuardianArmor", "SwiftBoots", "HealingPotion" }
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">JungleConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2681,7 +2697,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="55">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">MapConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2704,7 +2720,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="56">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">MinionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2725,7 +2741,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="57">
+        <Item class="ModuleScript" referent="58">
           <Properties>
             <string name="Name">NarutoFormVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2736,7 +2752,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="58">
+        <Item class="ModuleScript" referent="59">
           <Properties>
             <string name="Name">ProgressionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2757,7 +2773,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="59">
+        <Item class="ModuleScript" referent="60">
           <Properties>
             <string name="Name">TowerConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2777,7 +2793,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="60">
+        <Item class="ModuleScript" referent="61">
           <Properties>
             <string name="Name">VFXConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2807,7 +2823,7 @@ return table.freeze({
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="61">
+      <Item class="ModuleScript" referent="62">
         <Properties>
           <string name="Name">CreatorVisualFactory</string>
           <string name="Source"><![CDATA[--!strict
@@ -2837,11 +2853,11 @@ return Factory
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="62">
+      <Item class="Folder" referent="63">
         <Properties>
           <string name="Name">Game</string>
         </Properties>
-        <Item class="ModuleScript" referent="63">
+        <Item class="ModuleScript" referent="64">
           <Properties>
             <string name="Name">DeveloperCommandRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2863,7 +2879,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="64">
+        <Item class="ModuleScript" referent="65">
           <Properties>
             <string name="Name">JungleRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -2893,7 +2909,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="65">
+        <Item class="ModuleScript" referent="66">
           <Properties>
             <string name="Name">MapSceneryPlan</string>
             <string name="Source"><![CDATA[--!strict
@@ -2989,7 +3005,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="66">
+        <Item class="ModuleScript" referent="67">
           <Properties>
             <string name="Name">MatchRoster</string>
             <string name="Source"><![CDATA[--!strict
@@ -3077,7 +3093,7 @@ return Roster
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="67">
+        <Item class="ModuleScript" referent="68">
           <Properties>
             <string name="Name">MatchState</string>
             <string name="Source"><![CDATA[--!strict
@@ -3160,7 +3176,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="68">
+        <Item class="ModuleScript" referent="69">
           <Properties>
             <string name="Name">ProgressionRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3236,7 +3252,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="69">
+        <Item class="ModuleScript" referent="70">
           <Properties>
             <string name="Name">RewardLedger</string>
             <string name="Source"><![CDATA[--!strict
@@ -3272,7 +3288,7 @@ return Ledger
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="70">
+        <Item class="ModuleScript" referent="71">
           <Properties>
             <string name="Name">RewardRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3316,7 +3332,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="71">
+        <Item class="ModuleScript" referent="72">
           <Properties>
             <string name="Name">RoundProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -3332,7 +3348,7 @@ return Protocol
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="72">
+        <Item class="ModuleScript" referent="73">
           <Properties>
             <string name="Name">StructureRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3345,7 +3361,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="73">
+        <Item class="ModuleScript" referent="74">
           <Properties>
             <string name="Name">TowerRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -3407,15 +3423,15 @@ return Rules
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="74">
+  <Item class="ServerScriptService" referent="75">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="75">
+    <Item class="Folder" referent="76">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="76">
+      <Item class="Script" referent="77">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -3434,11 +3450,11 @@ print("[Anime Battlegrounds] Server ready")
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="77">
+      <Item class="Folder" referent="78">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="78">
+        <Item class="ModuleScript" referent="79">
           <Properties>
             <string name="Name">AbilityDisplacementService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3489,7 +3505,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="79">
+        <Item class="ModuleScript" referent="80">
           <Properties>
             <string name="Name">AbilityLearningService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3539,7 +3555,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="80">
+        <Item class="ModuleScript" referent="81">
           <Properties>
             <string name="Name">AbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3632,7 +3648,7 @@ return Ability
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="81">
+        <Item class="ModuleScript" referent="82">
           <Properties>
             <string name="Name">AbilityTargetService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3682,7 +3698,7 @@ return Targets
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="82">
+        <Item class="ModuleScript" referent="83">
           <Properties>
             <string name="Name">BaseService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3761,7 +3777,7 @@ return BaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="83">
+        <Item class="ModuleScript" referent="84">
           <Properties>
             <string name="Name">CharacterStatsService</string>
             <string name="Source"><![CDATA[--!strict
@@ -3865,7 +3881,7 @@ return Stats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="84">
+        <Item class="ModuleScript" referent="85">
           <Properties>
             <string name="Name">CloneNavigation</string>
             <string name="Source"><![CDATA[--!strict
@@ -3874,7 +3890,7 @@ local Policy = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 export type Agent = {
 	model: Model, root: BasePart, clock: Policy.Clock, target: Model?, slot: number?, goal: Vector3?,
 	waypoints: { Vector3 }, waypoint: number, pathGoal: Vector3?, nextSlot: number,
-	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean,
+	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean, fallSpeed: number,
 }
 local Navigation = {}
 local agents: { [Model]: Agent } = {}
@@ -3889,7 +3905,7 @@ function Navigation.Register(model: Model, root: BasePart, humanoid: Humanoid)
 	serial += 1
 	agents[model] = { model = model, root = root, clock = Policy.new(), target = nil, slot = nil, goal = nil,
 		waypoints = {}, waypoint = 1, pathGoal = nil, nextSlot = 0, progressAt = 0,
-		progressPosition = root.Position, failures = 0, serial = serial,
+		progressPosition = root.Position, failures = 0, serial = serial, fallSpeed = 0,
 		groundOffset = math.max(humanoid.HipHeight + root.Size.Y / 2, math.max(4, root.Size.Y) / 2 + 0.05), queued = false }
 end
 function Navigation.Remove(model: Model)
@@ -3910,7 +3926,28 @@ local function parameters(agent: Agent, owner: Model, target: Model): RaycastPar
 	for model in agents do table.insert(excluded, model) end
 	local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude
 	ray.FilterDescendantsInstances = excluded; ray.RespectCanCollide = true
+	ray.CollisionGroup = "SurvivalSummons"
 	return ray
+end
+-- Anchored navigation rigs need explicit gravity, including while holding/stunned.
+-- Sweep the feet to the floor; never teleport an airborne spawn to its destination.
+function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
+	local agent = agents[model]; if not agent then return false end
+	local dt = math.clamp(delta, 0, .1)
+	local fall = agent.fallSpeed * dt + workspace.Gravity * dt * dt / 2
+	local ray = parameters(agent, owner, owner)
+	local position = agent.root.Position
+	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
+	if hit then
+		local y = hit.Position.Y + agent.groundOffset
+		model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0))
+		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
+		return true
+	end
+	agent.fallSpeed += workspace.Gravity * dt
+	model:PivotTo(model:GetPivot() - Vector3.new(0, fall, 0))
+	model:SetAttribute("SummonGrounded", false)
+	return false
 end
 local function ground(agent: Agent, point: Vector3, ray: RaycastParams): Vector3?
 	local hit = workspace:Raycast(point + Vector3.new(0, 2, 0), Vector3.new(0, -10, 0), ray)
@@ -3923,6 +3960,7 @@ end
 local function bodyClear(agent: Agent, point: Vector3, ray: RaycastParams): boolean
 	local overlap = OverlapParams.new(); overlap.FilterType = Enum.RaycastFilterType.Exclude
 	overlap.FilterDescendantsInstances = ray.FilterDescendantsInstances; overlap.RespectCanCollide = true
+	overlap.CollisionGroup = ray.CollisionGroup
 	return #workspace:GetPartBoundsInBox(CFrame.new(point), bodySize(agent), overlap) == 0
 end
 local function clear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): boolean
@@ -4122,7 +4160,7 @@ return Navigation
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="85">
+        <Item class="ModuleScript" referent="86">
           <Properties>
             <string name="Name">CloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4230,7 +4268,7 @@ return CloneService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="86">
+        <Item class="ModuleScript" referent="87">
           <Properties>
             <string name="Name">CombatLifeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4311,7 +4349,7 @@ return LifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="87">
+        <Item class="ModuleScript" referent="88">
           <Properties>
             <string name="Name">CombatService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4562,7 +4600,7 @@ return CombatService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="88">
+        <Item class="ModuleScript" referent="89">
           <Properties>
             <string name="Name">DamageService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4622,7 +4660,7 @@ return DamageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="89">
+        <Item class="ModuleScript" referent="90">
           <Properties>
             <string name="Name">DeveloperCommandService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4724,7 +4762,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="90">
+        <Item class="ModuleScript" referent="91">
           <Properties>
             <string name="Name">EconomyService</string>
             <string name="Source"><![CDATA[--!strict
@@ -4769,7 +4807,7 @@ return Economy
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="91">
+        <Item class="ModuleScript" referent="92">
           <Properties>
             <string name="Name">FighterStateService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5072,7 +5110,7 @@ return FighterStateService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="92">
+        <Item class="ModuleScript" referent="93">
           <Properties>
             <string name="Name">GamakichiService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5257,7 +5295,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="93">
+        <Item class="ModuleScript" referent="94">
           <Properties>
             <string name="Name">GameModeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5283,7 +5321,7 @@ return GameModeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="94">
+        <Item class="ModuleScript" referent="95">
           <Properties>
             <string name="Name">HeroAppearanceService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5377,7 +5415,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="95">
+        <Item class="ModuleScript" referent="96">
           <Properties>
             <string name="Name">HeroProgressionService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5471,7 +5509,7 @@ return Progression
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="96">
+        <Item class="ModuleScript" referent="97">
           <Properties>
             <string name="Name">HeroService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5544,7 +5582,7 @@ return HeroService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="97">
+        <Item class="ModuleScript" referent="98">
           <Properties>
             <string name="Name">HitboxService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5657,7 +5695,7 @@ return HitboxService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="98">
+        <Item class="ModuleScript" referent="99">
           <Properties>
             <string name="Name">ItemShopService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5769,7 +5807,7 @@ return Shop
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="99">
+        <Item class="ModuleScript" referent="100">
           <Properties>
             <string name="Name">JungleService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5895,7 +5933,7 @@ return Jungle
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="100">
+        <Item class="ModuleScript" referent="101">
           <Properties>
             <string name="Name">KnockbackService</string>
             <string name="Source"><![CDATA[--!strict
@@ -5945,7 +5983,7 @@ return KnockbackService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="101">
+        <Item class="ModuleScript" referent="102">
           <Properties>
             <string name="Name">MapBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -6068,7 +6106,7 @@ return MapBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="102">
+        <Item class="ModuleScript" referent="103">
           <Properties>
             <string name="Name">MapScenery</string>
             <string name="Source"><![CDATA[--!strict
@@ -6121,7 +6159,7 @@ return MapScenery
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="103">
+        <Item class="ModuleScript" referent="104">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6255,7 +6293,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="104">
+        <Item class="ModuleScript" referent="105">
           <Properties>
             <string name="Name">MeditationCloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6353,7 +6391,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="105">
+        <Item class="ModuleScript" referent="106">
           <Properties>
             <string name="Name">MinionAIService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6595,7 +6633,7 @@ return AI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="106">
+        <Item class="ModuleScript" referent="107">
           <Properties>
             <string name="Name">MinionAppearance</string>
             <string name="Source"><![CDATA[--!strict
@@ -6671,7 +6709,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="107">
+        <Item class="ModuleScript" referent="108">
           <Properties>
             <string name="Name">MinionFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -6730,7 +6768,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="108">
+        <Item class="ModuleScript" referent="109">
           <Properties>
             <string name="Name">MinionSpawnerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6791,7 +6829,7 @@ return Spawner
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="109">
+        <Item class="ModuleScript" referent="110">
           <Properties>
             <string name="Name">NarutoAbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7280,7 +7318,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="110">
+        <Item class="ModuleScript" referent="111">
           <Properties>
             <string name="Name">NarutoKcmService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7559,7 +7597,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="111">
+        <Item class="ModuleScript" referent="112">
           <Properties>
             <string name="Name">NarutoKuramaService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7739,7 +7777,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="112">
+        <Item class="ModuleScript" referent="113">
           <Properties>
             <string name="Name">NarutoRangedService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7927,7 +7965,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="113">
+        <Item class="ModuleScript" referent="114">
           <Properties>
             <string name="Name">NarutoSleepService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7994,7 +8032,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="114">
+        <Item class="ModuleScript" referent="115">
           <Properties>
             <string name="Name">NarutoSummonService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8014,8 +8052,10 @@ local Push = require(script.Parent.AbilityDisplacementService)
 local Oil=require(script.Parent.OilStatusService)
 local Navigation = require(script.Parent.CloneNavigation)
 local Collision = require(script.Parent.SummonCollision)
+local Autonomy = require(Shared.Abilities.CloneAutonomyPolicy)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
-	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number }
+	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number,
+	autoTarget: Model?, nextScan: number, lastOrder: number, recallUntil: number, returning: boolean }
 local Service = { Spawned = Instance.new("BindableEvent") }
 local records: { [Model]: Record } = {}
 local targetSerial = 0
@@ -8076,6 +8116,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
+		autoTarget = nil, nextScan = 0, lastOrder = commands.lastRequest, recallUntil = 0, returning = false,
 		commands = commands, nextHit = 0, attackDamage = Combat.Profiles.OrangeNinja.CloneDamage * stats.AttackDamageMultiplier + stats.AttackDamageBonus }
 	Navigation.Register(model, root, humanoid)
 	Fighters.GetOrCreate(model); Service.Spawned:Fire(model)
@@ -8085,20 +8126,61 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 	for model, record in records do
 		local clone, owner = record.clone, record.owner
 		if not model.Parent or record.humanoid.Health <= 0 or owner.Parent ~= Players or now >= clone.expiresAt
+			or record.root.Position.Y < workspace.FallenPartsDestroyHeight
 			or record.state.clones[clone.id] ~= clone then Service.Remove(model); continue end
 		model:SetAttribute("RasenganHeld", clone.hasPayload); model:SetAttribute("RasenganVisible", clone.hasPayload)
+		local character = owner.Character
+		-- Gravity runs before orders/control locks, so Hold and owner death cannot freeze a falling clone.
+		if not Navigation.Settle(model, character or model, delta) then
+			model:SetAttribute("SummonBehavior", "Landing"); Navigation.Stop(model); continue
+		end
 		local fighter = Fighters.Get(model)
 		if fighter and (fighter.logic.mode == "Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(model); continue end
 		local intent = Commands.resolve(record.commands)
-		local character = owner.Character
-		if not character or not Damage.CanAct(character) or intent.mode == "Idle" or intent.mode == "Hold" then Navigation.Stop(model); continue end
+		if record.lastOrder ~= record.commands.lastRequest then
+			record.lastOrder = record.commands.lastRequest; record.autoTarget = nil; record.nextScan = 0
+			record.returning = intent.mode == "Follow"
+			record.recallUntil = if record.returning then now + Autonomy.RecallGrace else 0
+		end
+		if not character or not Damage.CanAct(character) or intent.mode == "Idle" or intent.mode == "Hold" then
+			record.autoTarget = nil; model:SetAttribute("SummonBehavior", intent.mode); Navigation.Stop(model); continue
+		end
+		local ownerRoot = character:FindFirstChild("HumanoidRootPart")
+		if not ownerRoot or not ownerRoot:IsA("BasePart") then Navigation.Stop(model); continue end
+		local ownerDistance = (ownerRoot.Position - record.root.Position).Magnitude
+		if ownerDistance > Autonomy.OwnerLeash then record.returning = true end
+		if record.returning and ownerDistance < Autonomy.ReturnRadius and now >= record.recallUntil then record.returning = false end
 		local target: Model? = nil
-		if intent.targetId then
+		if intent.targetId and (intent.mode == "Command" or not record.returning) then
 			for candidate in Fighters.GetAll() do
 				if candidate:GetAttribute("AbilityEntityId") == intent.targetId then target = candidate; break end
 			end
 			if not target or not Damage.CanDamage(model, target) then Commands.invalidateTarget(record.commands, intent.targetId); target = nil end
 		end
+		if not target and not record.returning then
+			local current = record.autoTarget
+			local currentRoot = if current then current:FindFirstChild("HumanoidRootPart") else nil
+			if not current or not currentRoot or not currentRoot:IsA("BasePart") or not Damage.CanDamage(model, current)
+				or (currentRoot.Position - record.root.Position).Magnitude > Autonomy.PursueRadius
+				or (currentRoot.Position - ownerRoot.Position).Magnitude > Autonomy.OwnerLeash then record.autoTarget = nil end
+			if now >= record.nextScan then
+				record.nextScan = now + Autonomy.ScanInterval
+				-- Keep a valid target through the swing; reacquire immediately after it dies.
+				if not record.autoTarget then
+					for _, enemy in Targets.InCone(model, record.root.CFrame, Autonomy.AcquireRadius, -1, false, 8) do
+						local candidate = enemy.Parent
+						local candidateRoot = if candidate then candidate:FindFirstChild("HumanoidRootPart") else nil
+						if candidate and candidate:IsA("Model") and candidateRoot and candidateRoot:IsA("BasePart")
+							and (candidateRoot.Position - ownerRoot.Position).Magnitude <= Autonomy.OwnerLeash then
+							record.autoTarget = candidate; break
+						end
+					end
+				end
+			end
+			target = record.autoTarget
+		else record.autoTarget = nil end
+		model:SetAttribute("SummonBehavior", if target then "Attack" elseif record.returning then "Return" else "Follow")
+		model:SetAttribute("SummonTarget", if target then target.Name else "")
 		local destination = if target then target:FindFirstChild("HumanoidRootPart") else character:FindFirstChild("HumanoidRootPart")
 		if not destination or not destination:IsA("BasePart") then Navigation.Stop(model); continue end
 		local distance = destination.Position - record.root.Position
@@ -8132,7 +8214,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="115">
+        <Item class="ModuleScript" referent="116">
           <Properties>
             <string name="Name">OilStatusService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8188,7 +8270,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="116">
+        <Item class="ModuleScript" referent="117">
           <Properties>
             <string name="Name">RasenshurikenMeleeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8243,7 +8325,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="117">
+        <Item class="ModuleScript" referent="118">
           <Properties>
             <string name="Name">RasenshurikenThrowService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8326,7 +8408,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="118">
+        <Item class="ModuleScript" referent="119">
           <Properties>
             <string name="Name">RequestLimiter</string>
             <string name="Source"><![CDATA[--!strict
@@ -8361,7 +8443,7 @@ return RequestLimiter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="119">
+        <Item class="ModuleScript" referent="120">
           <Properties>
             <string name="Name">RewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8431,7 +8513,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="120">
+        <Item class="ModuleScript" referent="121">
           <Properties>
             <string name="Name">StructureReset</string>
             <string name="Source"><![CDATA[--!strict
@@ -8474,7 +8556,7 @@ return Reset
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="121">
+        <Item class="ModuleScript" referent="122">
           <Properties>
             <string name="Name">StructureService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8510,7 +8592,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="122">
+        <Item class="ModuleScript" referent="123">
           <Properties>
             <string name="Name">SummonCollision</string>
             <string name="Source"><![CDATA[--!strict
@@ -8541,7 +8623,7 @@ return Collision
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="123">
+        <Item class="ModuleScript" referent="124">
           <Properties>
             <string name="Name">TeamService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8793,7 +8875,7 @@ return TeamService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="124">
+        <Item class="ModuleScript" referent="125">
           <Properties>
             <string name="Name">TowerFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -8846,7 +8928,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="125">
+        <Item class="ModuleScript" referent="126">
           <Properties>
             <string name="Name">TowerRewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8883,7 +8965,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="126">
+        <Item class="ModuleScript" referent="127">
           <Properties>
             <string name="Name">TowerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9073,25 +9155,25 @@ return Service
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="127">
+  <Item class="StarterPlayer" referent="128">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <token name="GameSettingsAvatar">1</token>
       <bool name="LoadCharacterAppearance">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="128">
+    <Item class="StarterPlayerScripts" referent="129">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="129">
+      <Item class="Folder" referent="130">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="130">
+        <Item class="Folder" referent="131">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="131">
+          <Item class="ModuleScript" referent="132">
             <Properties>
               <string name="Name">AbilityController</string>
               <string name="Source"><![CDATA[--!strict
@@ -9454,7 +9536,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="132">
+          <Item class="ModuleScript" referent="133">
             <Properties>
               <string name="Name">AbilityDescriptions</string>
               <string name="Source"><![CDATA[--!strict
@@ -9463,7 +9545,7 @@ return {
  Rasengan="Собирает вращающуюся чакру в ладони. После формирования подойдите к врагу и ударьте ЛКМ. Промах сохраняет заряд.\nПосле Q выберите Z — Одама или X — Расенсюрикен напрямую. Доступные варианты заменяют значок Q до выбора или окончания заряда. Без выбора остаётся обычный Расенган.",
  Odama="Увеличивает обычный Расенган до огромной сферы. Наруто поддерживает её второй рукой и наносит мощный удар вблизи.\nТребуется II ранг Расенгана. Q → Z. Доплата 200 чакры; всего 300. Урон: 250 + 3 × сила. ЛКМ по врагу — применить.",
  Rasenshuriken="Добавляет стихию ветра: над ладонью вращаются четыре острые лопасти. Попадание создаёт расширяющуюся сферу режущих потоков вокруг врага.\nТребуется III ранг. Q → X, Одама не требуется. Доплата 200 чакры; всего 300. В обычной форме — удар ЛКМ вблизи с уроном владельцу. В режиме мудреца — ЛКМ бросает по прицелу на расстояние до 110 studs. При попадании раскрывается синий купол; бросок не ранит владельца.",
- ShadowClones="Создаёт теневых клонов, которые следуют за Наруто и помогают атаковать. Количество, длительность и восстановление зависят от ранга.\nF — атаковать цель под прицелом; R — следовать; Y — удерживать позицию. Со II ранга T открывает технику сна против врага.",
+ ShadowClones="Создаёт теневых клонов. Они сами атакуют ближайшего видимого врага в радиусе 28 студов, переключаются после его гибели и возвращаются, если удалились от Наруто дальше 48 студов. Без врагов следуют за владельцем. Призванные в воздухе клоны приземляются.\nF — приоритетная цель; R — отозвать к себе; Y — стоять и не атаковать. После возврата клоны снова ищут врагов. Количество и длительность зависят от ранга. Со II ранга T открывает технику сна.",
  Gamakichi="Призывает Гамакичи. Ранг определяет силу и возраст жабы. Она помогает в бою и выполняет общие команды F / R / Y.\nG — выбрать точку для масла. Взрослая жаба получает H — серию ударов мечом по области. ЛКМ подтверждает цель, ПКМ отменяет.",
  SageMode="Наруто неподвижно собирает природную энергию, затем входит в режим мудреца. Оранжевая аура отмечает действующий режим.\nПодготовка требует времени: учитывайте опасность рядом. Стрелка вправо — медитация; J — вернуть чакру из медитирующих клонов. Параметры зависят от изученного ранга.",
  KCM="Использует отдельный запас чакры Курамы и окружает Наруто золотой энергией. Доступность формы зависит от ранга и условий прогрессии.\nE — удерживать для прицеливания рывка, отпустить для применения. X — выйти из формы. Стрелка влево — преобразование чакры.",
@@ -9476,7 +9558,7 @@ return {
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="133">
+          <Item class="ModuleScript" referent="134">
             <Properties>
               <string name="Name">AbilityHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -9701,7 +9783,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="134">
+          <Item class="ModuleScript" referent="135">
             <Properties>
               <string name="Name">AbilityTargeting</string>
               <string name="Source"><![CDATA[--!strict
@@ -9900,7 +9982,7 @@ return Targeting
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="135">
+          <Item class="ModuleScript" referent="136">
             <Properties>
               <string name="Name">AbilityVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10151,7 +10233,7 @@ return VFX
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="136">
+          <Item class="ModuleScript" referent="137">
             <Properties>
               <string name="Name">AnimationController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10320,7 +10402,7 @@ return AnimationController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="137">
+          <Item class="ModuleScript" referent="138">
             <Properties>
               <string name="Name">CameraController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10550,7 +10632,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="138">
+          <Item class="ModuleScript" referent="139">
             <Properties>
               <string name="Name">ChakraAuraVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -10617,7 +10699,7 @@ return Aura
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="139">
+          <Item class="ModuleScript" referent="140">
             <Properties>
               <string name="Name">ChakraParticleVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -10655,7 +10737,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="140">
+          <Item class="ModuleScript" referent="141">
             <Properties>
               <string name="Name">CombatController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10882,7 +10964,7 @@ return CombatController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="141">
+          <Item class="ModuleScript" referent="142">
             <Properties>
               <string name="Name">DeveloperConsoleController</string>
               <string name="Source"><![CDATA[--!strict
@@ -10929,7 +11011,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="142">
+          <Item class="ModuleScript" referent="143">
             <Properties>
               <string name="Name">HUDIcons</string>
               <string name="Source"><![CDATA[--!strict
@@ -11005,7 +11087,7 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="143">
+          <Item class="ModuleScript" referent="144">
             <Properties>
               <string name="Name">HUDLayout</string>
               <string name="Source"><![CDATA[--!strict
@@ -11026,7 +11108,7 @@ return table.freeze(Layout)
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="144">
+          <Item class="ModuleScript" referent="145">
             <Properties>
               <string name="Name">HeroAppearanceTransition</string>
               <string name="Source"><![CDATA[--!strict
@@ -11159,7 +11241,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="145">
+          <Item class="ModuleScript" referent="146">
             <Properties>
               <string name="Name">HeroHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11316,7 +11398,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="146">
+          <Item class="ModuleScript" referent="147">
             <Properties>
               <string name="Name">HeroMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11508,7 +11590,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="147">
+          <Item class="ModuleScript" referent="148">
             <Properties>
               <string name="Name">InputController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11612,7 +11694,7 @@ return InputController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="148">
+          <Item class="ModuleScript" referent="149">
             <Properties>
               <string name="Name">LearningController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11640,7 +11722,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="149">
+          <Item class="ModuleScript" referent="150">
             <Properties>
               <string name="Name">MinionMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11730,7 +11812,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="150">
+          <Item class="ModuleScript" referent="151">
             <Properties>
               <string name="Name">MobaHUDView</string>
               <string name="Source"><![CDATA[--!strict
@@ -11834,7 +11916,7 @@ return View
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="151">
+          <Item class="ModuleScript" referent="152">
             <Properties>
               <string name="Name">NarutoRangedVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -11934,7 +12016,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="152">
+          <Item class="ModuleScript" referent="153">
             <Properties>
               <string name="Name">RasenganEvolutionHUD</string>
               <string name="Source"><![CDATA[--!strict
@@ -12074,7 +12156,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="153">
+          <Item class="ModuleScript" referent="154">
             <Properties>
               <string name="Name">RasenganVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12219,7 +12301,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="154">
+          <Item class="ModuleScript" referent="155">
             <Properties>
               <string name="Name">RasenshurikenFlightVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -12252,7 +12334,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="155">
+          <Item class="ModuleScript" referent="156">
             <Properties>
               <string name="Name">RoundController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12288,7 +12370,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="156">
+          <Item class="ModuleScript" referent="157">
             <Properties>
               <string name="Name">SurvivalHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12392,7 +12474,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="157">
+          <Item class="ModuleScript" referent="158">
             <Properties>
               <string name="Name">TowerVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12456,7 +12538,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="158">
+          <Item class="ModuleScript" referent="159">
             <Properties>
               <string name="Name">VFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -12688,7 +12770,7 @@ return VFXController
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="159">
+        <Item class="LocalScript" referent="160">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -12715,7 +12797,7 @@ print("[Anime Battlegrounds] Client ready; left mouse button attacks")
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="160">
+  <Item class="Workspace" referent="161">
     <Properties>
       <string name="Name">Workspace</string>
       <BinaryString name="AttributesSerialize">AQAAABEAAABEZXZlbG9wZXJTb2xvTW9kZQMB</BinaryString>

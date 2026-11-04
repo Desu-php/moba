@@ -4,7 +4,7 @@ local Policy = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared
 export type Agent = {
 	model: Model, root: BasePart, clock: Policy.Clock, target: Model?, slot: number?, goal: Vector3?,
 	waypoints: { Vector3 }, waypoint: number, pathGoal: Vector3?, nextSlot: number,
-	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean,
+	progressAt: number, progressPosition: Vector3, failures: number, serial: number, groundOffset: number, queued: boolean, fallSpeed: number,
 }
 local Navigation = {}
 local agents: { [Model]: Agent } = {}
@@ -19,7 +19,7 @@ function Navigation.Register(model: Model, root: BasePart, humanoid: Humanoid)
 	serial += 1
 	agents[model] = { model = model, root = root, clock = Policy.new(), target = nil, slot = nil, goal = nil,
 		waypoints = {}, waypoint = 1, pathGoal = nil, nextSlot = 0, progressAt = 0,
-		progressPosition = root.Position, failures = 0, serial = serial,
+		progressPosition = root.Position, failures = 0, serial = serial, fallSpeed = 0,
 		groundOffset = math.max(humanoid.HipHeight + root.Size.Y / 2, math.max(4, root.Size.Y) / 2 + 0.05), queued = false }
 end
 function Navigation.Remove(model: Model)
@@ -40,7 +40,28 @@ local function parameters(agent: Agent, owner: Model, target: Model): RaycastPar
 	for model in agents do table.insert(excluded, model) end
 	local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude
 	ray.FilterDescendantsInstances = excluded; ray.RespectCanCollide = true
+	ray.CollisionGroup = "SurvivalSummons"
 	return ray
+end
+-- Anchored navigation rigs need explicit gravity, including while holding/stunned.
+-- Sweep the feet to the floor; never teleport an airborne spawn to its destination.
+function Navigation.Settle(model: Model, owner: Model, delta: number): boolean
+	local agent = agents[model]; if not agent then return false end
+	local dt = math.clamp(delta, 0, .1)
+	local fall = agent.fallSpeed * dt + workspace.Gravity * dt * dt / 2
+	local ray = parameters(agent, owner, owner)
+	local position = agent.root.Position
+	local hit = workspace:Raycast(position, Vector3.new(0, -(agent.groundOffset + fall + .15), 0), ray)
+	if hit then
+		local y = hit.Position.Y + agent.groundOffset
+		model:PivotTo(model:GetPivot() + Vector3.new(0, y - position.Y, 0))
+		agent.fallSpeed = 0; model:SetAttribute("SummonGrounded", true)
+		return true
+	end
+	agent.fallSpeed += workspace.Gravity * dt
+	model:PivotTo(model:GetPivot() - Vector3.new(0, fall, 0))
+	model:SetAttribute("SummonGrounded", false)
+	return false
 end
 local function ground(agent: Agent, point: Vector3, ray: RaycastParams): Vector3?
 	local hit = workspace:Raycast(point + Vector3.new(0, 2, 0), Vector3.new(0, -10, 0), ray)
@@ -53,6 +74,7 @@ end
 local function bodyClear(agent: Agent, point: Vector3, ray: RaycastParams): boolean
 	local overlap = OverlapParams.new(); overlap.FilterType = Enum.RaycastFilterType.Exclude
 	overlap.FilterDescendantsInstances = ray.FilterDescendantsInstances; overlap.RespectCanCollide = true
+	overlap.CollisionGroup = ray.CollisionGroup
 	return #workspace:GetPartBoundsInBox(CFrame.new(point), bodySize(agent), overlap) == 0
 end
 local function clear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): boolean
