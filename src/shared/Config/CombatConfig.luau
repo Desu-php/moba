@@ -43,6 +43,7 @@ kurama.HitboxSize = table.freeze({ X = 18, Y = 9, Z = 16 })
 kurama.HitboxOffset = table.freeze({ X = 0, Y = 0, Z = -8 })
 kurama.MaxTargetDistance = KuramaAvatar.AttackReach
 kurama.MinimumForwardDot = 0.25
+kurama.MaxTargets = math.huge -- Every distinct enemy actually touched by the paw sweep.
 kurama.AnimationSet = "Kurama"
 kurama.AnimationKey = "ClawSwipe"
 profiles.Kurama = table.freeze(kurama)

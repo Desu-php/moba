@@ -43,7 +43,7 @@ function Visual.Avatar(model:Model,root:BasePart,now:number)
   end
   if string.find(part.Name,"Hand",1,true) then
    local side=if string.find(part.Name,"Left",1,true) then -1 else 1
-   claws(part,phase~=nil and phase>.30 and phase<Config.HitPhase+.08 and side==(if serial%2==0 then -1 else 1))
+   claws(part,phase~=nil and phase>=Config.SwipeStart and phase<=Config.SwipeEnd and side==(if serial%2==0 then -1 else 1))
   end
  end
 end

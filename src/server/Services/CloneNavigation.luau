@@ -93,6 +93,25 @@ local function bodyClear(agent: Agent, point: Vector3, ray: RaycastParams): bool
 	overlap.CollisionGroup = ray.CollisionGroup
 	return #workspace:GetPartBoundsInBox(CFrame.new(point), bodySize(agent), overlap) == 0
 end
+-- Spawn searches nearby clear ground instead of clamping into a wall/floor overlap.
+-- RespectCanCollide ignores visual grass and foliage, while retaining actual terrain.
+function Navigation.Place(model:Model,owner:Model,origin:CFrame,distance:number):boolean
+ local agent=agents[model];if not agent then return false end
+ local ray=parameters(agent,owner,owner)
+ for _,radius in {distance,distance+4,math.max(2,distance-3),distance+8} do
+  for index=0,11 do
+   local angle=index*math.pi/6
+   local raw=(origin*CFrame.new(math.cos(angle)*radius,0,math.sin(angle)*radius)).Position
+   local hit=workspace:Raycast(raw+Vector3.new(0,6,0),Vector3.new(0,-18,0),ray)
+   local point=if hit and hit.Normal.Y>=.7 then Vector3.new(raw.X,hit.Position.Y+agent.groundOffset,raw.Z) else nil
+   if point and bodyClear(agent,point,ray) and not workspace:Raycast(origin.Position,point-origin.Position,ray) then
+    model:PivotTo(CFrame.new(point)*origin.Rotation);return true
+   end
+  end
+ end
+ -- Airborne/fully enclosed spawn: gravity settles it as soon as clear ground exists.
+ model:PivotTo(origin+CFrame.new(0,agent.groundOffset,0).Position);return false
+end
 local function clear(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): boolean
 	local delta = goal - origin
 	if delta.Magnitude < 0.001 then return true end

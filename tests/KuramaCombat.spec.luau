@@ -11,7 +11,9 @@ local profile=Config.Profiles.Kurama
 check("source Ewar cooldown retained",profile.AttackCooldown==Form.RawEwar.attackCooldown)
 check("source range plus avatar body",near(profile.MaxTargetDistance,Form.RawEwar.range/16+Avatar.BodyRadius))
 check("no double form damage",profile.Damage==Config.Profiles.OrangeNinja.Damage and Form.modifier().attack==90)
-check("swipe remains one target",profile.MaxTargets==1)
+check("paw sweep has no arbitrary victim cap",profile.MaxTargets==math.huge)
+check("normal M1 stays single target",Config.Profiles.OrangeNinja.MaxTargets==1)
+check("sweep contains contact phase",Avatar.SwipeStart<Avatar.HitPhase and Avatar.SwipeEnd>Avatar.HitPhase)
 check("collider bottom remains above humanoid floor",Avatar.BodyOffset.Y-Avatar.BodySize.Y/2>=0)
 for _,agility in {0,60,300,10000} do
  local speed=Rate.speed(profile,agility)

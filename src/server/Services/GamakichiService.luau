@@ -13,7 +13,9 @@ local Oil=require(script.Parent.OilStatusService)
 local Hitboxes=require(script.Parent.HitboxService)
 local Navigation=require(script.Parent.CloneNavigation)
 local Collision=require(script.Parent.SummonCollision)
-type Record={owner: Player, character: Model, model: Model, root: BasePart, humanoid: Humanoid,
+local Autonomy=require(Shared.Abilities.CloneAutonomyPolicy)
+local Appearance=require(Shared.GamakichiAppearance)
+type Record={autoTarget: Model?,nextScan:number,returning:boolean,recallUntil:number,manualRequest:number,owner: Player, character: Model, model: Model, root: BasePart, humanoid: Humanoid,
  state: Domain.State, cast: Domain.Cast, commands: Commands.State, commandRequest: number, nextHit: number, hitAt: number?, target: Model?, spells: Spells.State, oilTarget: Model?, oilLife: any, center: Vector3?}
 local records: {[Player]: Record}={}
 local Service={Visual=Instance.new("BindableEvent")}
@@ -39,11 +41,10 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, ca
  end
  local size=if cast.profile.adult then 1.4 else 1
  local root=part("HumanoidRootPart",Vector3.new(5,3,5)*size,Vector3.zero,Color3.fromRGB(176,78,40))
- local head=part("Head",Vector3.new(4,2,3)*size,Vector3.new(0,1.5,-1)*size,Color3.fromRGB(200,109,57))
- part("LeftEye",Vector3.new(.7,.7,.7)*size,Vector3.new(-1.3,2.4,-2.2)*size,Color3.fromRGB(234,211,90))
- part("RightEye",Vector3.new(.7,.7,.7)*size,Vector3.new(1.3,2.4,-2.2)*size,Color3.fromRGB(234,211,90))
- head.CanQuery=false
+ root.Transparency=1
+ Appearance.Build(model,root,cast.profile.adult)
  local hp=Instance.new("Humanoid"); hp.RequiresNeck=false; hp.BreakJointsOnDeath=false
+ hp.HipHeight=0
  hp.EvaluateStateMachine=false -- Navigation owns movement; no automatic collision changes.
  hp.MaxHealth=cast.profile.health; hp.Health=cast.profile.health; hp.DisplayName=if cast.profile.adult then "Гамакичи · взрослый" else "Гамакичи"
  hp.Parent=model; model.PrimaryPart=root
@@ -52,21 +53,11 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, ca
  model:SetAttribute("SummonArmor",cast.profile.armor); model:SetAttribute("SummonRank",cast.rank)
  model:SetAttribute("Mana",cast.profile.mana); model:SetAttribute("MaxMana",cast.profile.mana)
  model:SetAttribute("OilImplemented",true); model:SetAttribute("ChoppingImplemented",cast.profile.adult)
- local offset=source.CFrame.RightVector*Domain.Policy.SpawnOffset
- local ray=RaycastParams.new(); ray.FilterType=Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances={character}; ray.RespectCanCollide=true
- local wall=workspace:Blockcast(source.CFrame,root.Size,offset,ray)
- if wall then offset=offset.Unit*math.max(0,wall.Distance-.05) end
- model:PivotTo(source.CFrame+offset)
- -- Start on the same clearance plane used by Navigation. A small toad starts
- -- lower than its owner's root; otherwise the first step is rejected as a drop.
- local floor=workspace:Raycast(root.Position+Vector3.new(0,2,0),Vector3.new(0,-12,0),ray)
- if floor and floor.Normal.Y>=.7 then
-  local height=math.max(hp.HipHeight+root.Size.Y/2,math.max(4,root.Size.Y)/2+.05)
-  model:PivotTo(model:GetPivot()+Vector3.new(0,floor.Position.Y+height-root.Position.Y,0))
- end
- Collision.Apply(model); model.Parent=folder
- records[player]={owner=player,character=character,model=model,root=root,humanoid=hp,state=state,cast=cast,commands=commands,commandRequest=commands.lastRequest,nextHit=0,hitAt=nil,target=nil,spells=Spells.new(),oilTarget=nil,oilLife=nil,center=nil}
+ Collision.Apply(model); model.PrimaryPart=root
  Navigation.Register(model,root,hp)
+ Navigation.Place(model,character,source.CFrame,Domain.Policy.SpawnOffset)
+ model.Parent=folder
+ records[player]={autoTarget=nil,nextScan=0,returning=false,recallUntil=0,manualRequest=0,owner=player,character=character,model=model,root=root,humanoid=hp,state=state,cast=cast,commands=commands,commandRequest=commands.lastRequest,nextHit=0,hitAt=nil,target=nil,spells=Spells.new(),oilTarget=nil,oilLife=nil,center=nil}
  Fighters.GetOrCreate(model); character:SetAttribute("GamakichiCount",1); character:SetAttribute("GamakichiAdult",cast.profile.adult); character:SetAttribute("Ready_GamakichiOil",0); character:SetAttribute("Ready_GamakichiChop",0)
 end
 local function publish(r: Record)
@@ -85,9 +76,14 @@ local function affected(r: Record,center: Vector3,radius: number): {Model}
  end
  return result
 end
-function Service.TrySpell(player: Player,id: string,request: number,now: number,target: any): (boolean,string)
+function Service.TrySpell(player: Player,id: string,request: number,now: number,target: any,automatic: boolean?): (boolean,string)
  local r=records[player]
  if not r or r.character~=player.Character or not Domain.live(r.state,r.cast,now) or not Damage.CanAct(r.character) or not Damage.CanAct(r.model) then return false,"Unavailable" end
+ if not automatic then
+  if request~=request or request%1~=0 or request<1 or request==math.huge then return false,"Malformed" end
+  if request<=r.manualRequest then return false,"Replay" end
+  r.manualRequest=request
+ end
  local fighter=Fighters.Get(r.model); if not fighter or (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then return false,"Busy" end
  if not Hitboxes.IsFiniteCFrame(r.root.CFrame) then return false,"Unavailable" end
  local point: Vector3
@@ -106,9 +102,12 @@ function Service.TrySpell(player: Player,id: string,request: number,now: number,
  local distance=(point-r.root.Position).Magnitude
  local range=if id=="GamakichiOil" then Spells.Oil.Range else Spells.Chopping.Range
  if distance>Units.toStuds(range) or not Targets.Visible(r.model,r.model,r.root.Position,point+Vector3.new(0,.1,0)) then return false,"Target" end
- local accepted,reason=Spells.request(r.spells,id,now,request,r.cast.profile.adult,distance/Units.toStuds(Spells.Oil.ProjectileSpeed))
+ local accepted,reason=Spells.request(r.spells,id,now,r.spells.lastRequest+1,r.cast.profile.adult,distance/Units.toStuds(Spells.Oil.ProjectileSpeed))
  if not accepted then return false,reason end
+ local facing=(point-r.root.Position)*Vector3.new(1,0,1)
+ if facing.Magnitude>.01 then r.model:PivotTo(CFrame.lookAt(r.root.Position,r.root.Position+facing)) end
  r.hitAt=nil; r.target=nil
+ r.model:SetAttribute("SummonSpell",id);r.model:SetAttribute("SummonSpellAt",now)
  if selected then
   r.oilTarget=selected; r.oilLife=selected:GetAttribute("LifeId")
   Service.Visual:Fire({source=r.model,kind="GamakichiOil",position=r.root.Position,destination=point,duration=distance/Units.toStuds(Spells.Oil.ProjectileSpeed)})
@@ -120,6 +119,13 @@ function Service.Update(now: number,delta: number)
  for player,r in records do
   if player.Parent~=Players or player.Character~=r.character or not Damage.CanAct(r.character)
    or not r.model.Parent or r.humanoid.Health<=0 or not Domain.live(r.state,r.cast,now) then Service.Remove(player); continue end
+  if not Navigation.Settle(r.model,r.character,delta) then Navigation.Stop(r.model);r.model:SetAttribute("SummonBehavior","Landing");continue end
+  local intent=Commands.resolve(r.commands)
+  if r.commandRequest~=r.commands.lastRequest then
+   r.commandRequest=r.commands.lastRequest;r.hitAt=nil;r.target=nil;r.autoTarget=nil;r.nextScan=0
+   r.returning=intent.mode=="Follow";r.recallUntil=now+Autonomy.RecallGrace
+   if intent.mode=="Hold" or intent.mode=="Follow" then Spells.cancel(r.spells);r.oilTarget=nil;r.center=nil end
+  end
   local fighter=Fighters.Get(r.model)
   if fighter and (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(r.model); r.hitAt=nil; r.target=nil; Spells.cancel(r.spells); r.oilTarget=nil; r.center=nil; publish(r); continue end
   r.humanoid.Health=math.min(r.humanoid.MaxHealth,r.humanoid.Health+r.cast.profile.regen*delta)
@@ -143,13 +149,45 @@ function Service.Update(now: number,delta: number)
   end
   publish(r)
   if r.spells.channel or r.spells.flight then Navigation.Stop(r.model); continue end
-  local intent=Commands.resolve(r.commands)
-  if r.commandRequest~=r.commands.lastRequest then r.commandRequest=r.commands.lastRequest; r.hitAt=nil; r.target=nil end
-  if intent.mode=="Idle" or intent.mode=="Hold" then r.hitAt=nil; r.target=nil; Navigation.Stop(r.model); continue end
-  local target: Model?=nil
-  if intent.targetId then
-   for candidate in Fighters.GetAll() do if candidate:GetAttribute("AbilityEntityId")==intent.targetId then target=candidate; break end end
-   if not target or not Damage.CanDamage(r.model,target) then Commands.invalidateTarget(r.commands,intent.targetId); target=nil end
+  if intent.mode=="Idle" or intent.mode=="Hold" then r.hitAt=nil;r.target=nil;r.autoTarget=nil;r.model:SetAttribute("SummonBehavior",intent.mode);Navigation.Stop(r.model);continue end
+  local ownerRoot=r.character:FindFirstChild("HumanoidRootPart")
+  if not ownerRoot or not ownerRoot:IsA("BasePart") then continue end
+  local ownerDistance=(ownerRoot.Position-r.root.Position).Magnitude
+  if ownerDistance>Autonomy.OwnerLeash then r.returning=true end
+  if r.returning and ownerDistance<Domain.Policy.FollowDistance+1 and now>=r.recallUntil then r.returning=false end
+  local function valid(candidate:Model?,range:number):boolean
+   if not candidate or not candidate.Parent or not Damage.CanDamage(r.model,candidate) or candidate:FindFirstChildOfClass("ForceField") then return false end
+   local cr=candidate:FindFirstChild("HumanoidRootPart")
+   return cr~=nil and cr:IsA("BasePart") and (cr.Position-r.root.Position).Magnitude<=range
+    and (cr.Position-ownerRoot.Position).Magnitude<=Autonomy.OwnerLeash
+    and Targets.Visible(r.model,candidate,r.root.Position,cr.Position)
+  end
+  local target:Model?=nil
+  if not r.returning and intent.targetId then
+   for candidate in Fighters.GetAll() do if candidate:GetAttribute("AbilityEntityId")==intent.targetId and valid(candidate,Autonomy.PursueRadius) then target=candidate;break end end
+  end
+  if not target and not r.returning then
+   if not valid(r.autoTarget,Autonomy.PursueRadius) then r.autoTarget=nil end
+   if not r.autoTarget and now>=r.nextScan then
+    r.nextScan=now+Autonomy.ScanInterval
+    for _,enemy in Targets.InCone(r.model,r.root.CFrame,Autonomy.AcquireRadius,-1,false,16) do
+     local candidate=enemy.Parent
+     if candidate and candidate:IsA("Model") and valid(candidate,Autonomy.AcquireRadius) then r.autoTarget=candidate;break end
+    end
+   end
+   target=r.autoTarget
+  end
+  r.model:SetAttribute("SummonBehavior",if target then "Attack" elseif r.returning then "Return" else "Follow")
+  r.model:SetAttribute("SummonTarget",if target then target.Name else "")
+  if target and not r.hitAt then
+   local tr=target:FindFirstChild("HumanoidRootPart") :: BasePart
+   local distance=(tr.Position-r.root.Position).Magnitude
+   local oilUntil=(target:GetAttribute("OilUntil") or 0) :: number
+   if now>=r.spells.oilReady and oilUntil<=now and distance<=Units.toStuds(Spells.Oil.Range) then
+    if Service.TrySpell(player,"GamakichiOil",0,now,target,true) then Navigation.Stop(r.model);continue end
+   elseif r.cast.profile.adult and now>=r.spells.chopReady and distance<=Units.toStuds(Spells.Chopping.Range) then
+    if Service.TrySpell(player,"GamakichiChop",0,now,tr.Position,true) then Navigation.Stop(r.model);continue end
+   end
   end
   if r.hitAt and now>=r.hitAt then
    local victim=r.target; r.hitAt=nil; r.target=nil

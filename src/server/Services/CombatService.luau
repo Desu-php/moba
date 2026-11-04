@@ -21,6 +21,10 @@ local Teams = require(script.Parent.TeamService)
 local RoundProtocol = require(Shared.Game.RoundProtocol)
 
 type Session = { bucket: RequestLimiter.Bucket, lastRequestId: number, lastRejectAt: number }
+local KuramaSwipe=require(script.Parent.KuramaSwipeService)
+local KuramaShape=require(Shared.Config.KuramaAvatarConfig)
+type Sweep={id:number,phase:number,origin:CFrame,seen:{[Humanoid]:boolean}}
+local sweeps:{[Model]:Sweep}=setmetatable({}, {__mode="k"})
 local CombatService = { AttackStarted = Instance.new("BindableEvent") }
 -- A prepared melee technique may replace the ordinary strike after the server
 -- has verified contact. It must never consume itself merely on attack intent.
@@ -151,7 +155,7 @@ function CombatService.TryAttack(player: Player, ...: any): string
 	return result
 end
 
-local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
+local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack, swept: {Humanoid}?, seen: {[Humanoid]:boolean}?)
 	-- This committed swing already woke its one ally at attack-start. It must not
 	-- retarget an enemy at impact or consume a held Rasengan/offensive proc.
 	if fighter.wakeOnlyAttackId==attack.id then return end
@@ -162,10 +166,13 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 		or not canAttack(fighter) then return end
 	local profile = fighter.profile
 	local targets, box, size = Hitboxes.GetTargets(fighter.character, fighter.root, profile)
+ if swept then targets=swept end
 	local hits = {}
 	local stats = Stats.GetForModel(fighter.character)
 	local multiplier = if stats then stats.AttackDamageMultiplier else 1
 	for _, humanoid in targets do
+  if seen and seen[humanoid] then continue end
+  if seen then seen[humanoid]=true end
 		local character = humanoid.Parent
 		if not character or not character:IsA("Model") then continue end
 		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
@@ -199,7 +206,19 @@ local function heartbeat()
 		end
 		Fighters.Update(fighter, now)
 		local attack = State.ClaimHit(fighter.logic, now)
-		if attack then resolveHit(fighter, attack) end
+		if fighter.profileId=="Kurama" then
+   local current=fighter.logic.active
+   if current and fighter.logic.mode=="Attacking" then
+    local sweep=sweeps[character]
+    if not sweep or sweep.id~=current.id then sweep={id=current.id,phase=0,origin=fighter.root.CFrame,seen={}};sweeps[character]=sweep end
+    local phase=math.clamp((now-current.startedAt)/(current.endsAt-current.startedAt),0,1)
+    if phase>=KuramaShape.SwipeStart and sweep.phase<=KuramaShape.SwipeEnd then
+     local targets=KuramaSwipe.Targets(character,fighter.root.CFrame,sweep.origin,sweep.phase,phase,current.id,now)
+     if #targets>0 then resolveHit(fighter,current,targets,sweep.seen) end
+    end
+    sweep.phase=phase;sweep.origin=fighter.root.CFrame
+   else sweeps[character]=nil end
+  elseif attack then sweeps[character]=nil;resolveHit(fighter, attack) end
 		local requestId, valid = State.TakeBuffer(fighter.logic, now)
 		if requestId then
 			if valid and canAttack(fighter) then

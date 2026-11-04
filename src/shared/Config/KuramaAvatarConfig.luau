@@ -8,4 +8,5 @@ return table.freeze({
  AttackReach=150/16+6.5,
  CameraHeight=18,CameraDistance=76,
  HitPhase=.8/1.7,
+ SwipeStart=.32,SwipeEnd=.8/1.7+.08,
 })

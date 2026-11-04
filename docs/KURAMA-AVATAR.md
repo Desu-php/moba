@@ -1,3 +1,5 @@
+> Updated melee behavior: [swept multi-target paw contact](SUMMON-AI-AND-PAW-SWEEP.md), 2026-11-05. Earlier single-target observations below describe the previous release.
+
 # Full Kurama overhaul — 2026-11-05
 
 Full Kurama previously rendered as a small fox over the human fighter and retained the human half-second M1 cadence. It now has a large articulated chakra avatar, a solid torso, a dedicated heavy claw attack and a bounded visual for the existing map shockwave.

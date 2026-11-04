@@ -154,6 +154,7 @@ function Module.Start(panel:Frame)
     local remaining=Controller.Remaining("Rasengan")
     status.Text=if held and c then (if now<((c:GetAttribute("RasenganReadyAt") or 0) :: number) then "…" else "ГОТОВ") elseif remaining>0 then tostring(math.ceil(remaining)) else ""
     status.TextColor3=if held then Color3.fromRGB(150,240,255) else View.Text
+   elseif key=="R" and c and ((c:GetAttribute("GamakichiCount") or 0) :: number)>0 then status.Text=if c:GetAttribute("SummonOrder")=="Hold" then "СТОИТ" else "АВТО";status.TextSize=11
    elseif key=="C" and c then status.Text=if c:GetAttribute("KuramaActive")==true then "КУРАМА" elseif c:GetAttribute("KcmActive")==true then (if c:GetAttribute("KcmRank")==3 then "РИКУДО" else "KCM") elseif c:GetAttribute("SagePhase")=="Active" then "МУДРЕЦ" else "";status.TextSize=10 end
   end
   if opened then

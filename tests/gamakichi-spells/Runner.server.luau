@@ -35,6 +35,7 @@ local ok,err=xpcall(function()
  check("adult summon admitted",Ability.HandleRequest(a,1,actor,"Gamakichi",state.roundId))
  check("early summon admitted",Ability.HandleRequest(b,1,other,"Gamakichi",state.roundId))
  local r,early=Gama.Get(a),Gama.Get(b); assert(r and early)
+ r.commands.holding=true;early.commands.holding=true -- Isolate manual spell boundaries from autonomous casts.
  local function dummy(name: string,team: string,position: Vector3): (Model,Humanoid)
   local m=Instance.new("Model"); m.Name=name; local p=Instance.new("Part"); p.Name="HumanoidRootPart"; p.Anchored=true; p.Size=Vector3.new(2,4,2); p.Position=position; p.Parent=m
   local h=Instance.new("Humanoid"); h.MaxHealth=10000; h.Health=10000; h.Parent=m; m.PrimaryPart=p
