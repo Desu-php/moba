@@ -14,6 +14,7 @@ local Learning=require(script.Parent.LearningController)
 local View=require(script.Parent.MobaHUDView)
 local Layout=require(script.Parent.HUDLayout)
 local Icons=require(script.Parent.HUDIcons)
+local Descriptions=require(script.Parent.AbilityDescriptions)
 local HUD={}
 local started=false
 function HUD.Start()
@@ -37,11 +38,11 @@ function HUD.Start()
  local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="C  Характеристики"; statsToggle.Size=UDim2.fromOffset(116,23); statsToggle.Position=UDim2.fromOffset(119,137); statsToggle.TextSize=10; statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=panel
  local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(300,300),UDim2.fromOffset(0,-310)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
  local statsText=View.label(statsPanel,"Values",UDim2.new(1,-24,1,-24),UDim2.fromOffset(12,12),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
- local function toggle() statsPanel.Visible=not statsPanel.Visible end
+ local function toggle() statsPanel.Visible=not statsPanel.Visible; player:SetAttribute("StatsOpen",statsPanel.Visible) end
  statsToggle.Activated:Connect(toggle)
  UserInput.InputBegan:Connect(function(input,processed) if not processed and not UserInput:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.C then toggle() end end)
- local tooltip=View.frame(panel,"Tooltip",UDim2.fromOffset(330,136),UDim2.fromOffset(240,-146)); tooltip.Visible=false; View.border(tooltip,View.Gold)
- local tooltipText=View.label(tooltip,"Text",UDim2.new(1,-20,1,-16),UDim2.fromOffset(10,8),14); tooltipText.TextWrapped=true; tooltipText.TextXAlignment=Enum.TextXAlignment.Left; tooltipText.TextYAlignment=Enum.TextYAlignment.Top
+ local tooltip=View.frame(panel,"Tooltip",UDim2.fromOffset(410,300),UDim2.fromOffset(240,-310)); tooltip.Visible=false; tooltip.ZIndex=8; View.border(tooltip,View.Gold)
+ local tooltipText=View.label(tooltip,"Text",UDim2.new(1,-20,1,-16),UDim2.fromOffset(10,8),14); tooltipText.TextSize=16; tooltipText.TextWrapped=true; tooltipText.TextXAlignment=Enum.TextXAlignment.Left; tooltipText.TextYAlignment=Enum.TextYAlignment.Top
  local hovered: string?=nil
  local buttons: {[string]: TextButton}={}
  local learnButtons: {[string]: TextButton}={}
@@ -54,6 +55,7 @@ function HUD.Start()
   local shade=View.frame(button,"Cooldown",UDim2.fromScale(1,1),UDim2.new()); shade.BackgroundColor3=Color3.new(); shade.BackgroundTransparency=.35; shade.ZIndex=2
   local key=View.label(button,"Key",UDim2.fromOffset(if main then 45 else 30,16),UDim2.fromOffset(0,-16),if main then 12 else 11); key.Text=Config.Abilities[id].KeyLabel; key.TextXAlignment=Enum.TextXAlignment.Left; key.TextColor3=View.Gold
   local status=View.label(button,"Status",UDim2.fromScale(1,1),UDim2.new(),if main then 17 else 12); status.ZIndex=3; status.TextStrokeTransparency=.2
+  local cost=View.label(button,"Chakra",UDim2.new(1,-4,0,12),UDim2.new(0,2,1,-13),10); cost.TextXAlignment=Enum.TextXAlignment.Right; cost.TextColor3=Color3.fromRGB(128,203,255); cost.ZIndex=3
   local rank=View.label(button,"Rank",UDim2.fromOffset(size,14),UDim2.fromOffset(0,size+2),11); rank.TextColor3=View.Gold; rank.Visible=main
   button.MouseEnter:Connect(function() hovered=id; tooltip.Visible=true end)
   button.MouseLeave:Connect(function() if hovered==id then hovered=nil; tooltip.Visible=false end end)
@@ -72,7 +74,7 @@ function HUD.Start()
   local b=Instance.new("TextButton");b.Name=id;b.Size=UDim2.fromOffset(180,45);b.Position=UDim2.fromOffset((i-1)*190,0);b.BackgroundColor3=View.Card;b.TextColor3=View.Text;b.TextSize=12;b.Parent=rikudoPanel;View.border(b,View.Gold)
   b.Activated:Connect(function() Controller.BeginTarget(id) end);rangedButtons[id]=b
   b.MouseEnter:Connect(function() hovered=id;tooltip.Position=UDim2.fromOffset(520,Layout.RikudoTooltipY);tooltip.Visible=true;tooltipText.Text=Config.Abilities[id].Name.." ["..Config.Abilities[id].KeyLabel.."]\n1800 маны • 60 с\nВыбери точку. Клавиша или кнопка → клик.\nEsc / ПКМ — отмена." end)
-  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-146) end end)
+  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false;tooltip.Position=UDim2.fromOffset(240,-310) end end)
  end
  local function bar(name: string,y: number,color: Color3): (Frame,TextLabel)
   local track=View.frame(panel,name,UDim2.fromOffset(450,17),UDim2.fromOffset(240,y)); track.BackgroundColor3=View.Card
@@ -90,15 +92,31 @@ function HUD.Start()
  end
  local itemTitle=View.label(panel,"Inventory",UDim2.fromOffset(186,22),UDim2.fromOffset(704,0),11); itemTitle.Text="ПРЕДМЕТЫ"
  local message=View.label(gui,"AbilityMessage",UDim2.fromOffset(620,28),UDim2.new(.5,0,1,-180),14); message.AnchorPoint=Vector2.new(.5,1); message.TextColor3=View.Gold; message.TextStrokeTransparency=.3
+ local commands=View.label(gui,"SummonCommands",UDim2.fromOffset(620,24),UDim2.new(.5,0,1,-220),13); commands.AnchorPoint=Vector2.new(.5,1); commands.TextColor3=View.Gold; commands.TextStrokeTransparency=.3
+ local choices: {[string]: TextButton}={}
+ for _,id in {"Odama","Rasenshuriken"} do
+  local b=Instance.new("TextButton");b.Name="Choose"..id;b.Text="";b.BackgroundColor3=View.Card;b.BorderSizePixel=0;b.Parent=panel;b.Visible=false;View.border(b,View.Gold)
+  local symbol=View.frame(b,"Symbol",UDim2.new(1,0,0,30),UDim2.new());Icons.draw(symbol,id)
+  local key=View.label(b,"ChoiceKey",UDim2.new(1,0,0,16),UDim2.fromOffset(0,31),13);key.Text=Config.Abilities[id].KeyLabel;key.TextColor3=View.Gold
+  local cost=View.label(b,"Cost",UDim2.new(1,0,0,12),UDim2.fromOffset(0,47),9);cost.Text="200";cost.TextColor3=Color3.fromRGB(128,203,255)
+  b.Activated:Connect(function() Controller.TryCast(id) end)
+  b.MouseEnter:Connect(function() hovered=id;tooltip.Visible=true end)
+  b.MouseLeave:Connect(function() if hovered==id then hovered=nil;tooltip.Visible=false end end)
+  choices[id]=b
+ end
  local nextUpdate=0
  RunService.Heartbeat:Connect(function()
   local now=workspace:GetServerTimeNow(); if now<nextUpdate then return end; nextUpdate=now+.1
   local camera=workspace.CurrentCamera
   if camera then
    scale.Scale=Layout.scale(camera.ViewportSize.X,camera.ViewportSize.Y)
-   message.Position=UDim2.new(.5,0,1,-(Layout.ConsoleHeight*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(620,camera.ViewportSize.X-24),28)
+   message.Position=UDim2.new(.5,0,1,-(Layout.ConsoleHeight*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
   end
   local model=player.Character; View.updatePortrait(portrait,model)
+  commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
+  commands.Position=message.Position-UDim2.fromOffset(0,40)
+  local order=tostring(if model then model:GetAttribute("SummonOrder") or "Follow" else "Follow")
+  commands.Text="F — атаковать · R — за мной · Y — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
   rikudoPanel.Visible=model~=nil and model:GetAttribute("RikudoRangedGranted")==true
   for id,b in rangedButtons do
    local left=Controller.Remaining(id);local reason=Controller.AbilityUnavailable(id)
@@ -134,13 +152,38 @@ function HUD.Start()
   end
   local notice=if Learning.GetMessage()~="" then Learning.GetMessage() else Controller.GetMessage()
   local formStatus=Controller.GetFormStatus()
+  message.Visible=hovered==nil
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
   points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
+  local choosing=model~=nil and model:GetAttribute("RasenganVariant")=="Rasengan" and model:GetAttribute("RasenganPhase")~="Consumed"
+   and ((model:GetAttribute("RasenganVariantUntil") or 0) :: number)>now and number("Rank_Rasengan")>=2 and (model:GetAttribute("SagePhase")~="Active" or number("Rank_Rasengan")>=3)
+   and model:GetAttribute("KcmActive")~=true and model:GetAttribute("KuramaActive")~=true and (model:GetAttribute("SagePhase")==nil or model:GetAttribute("SagePhase")=="" or model:GetAttribute("SagePhase")=="Active")
+  buttons.Rasengan.Visible=not choosing
+  local sx,sy,ss=Layout.skill(1)
+  for i,id in {"Odama","Rasenshuriken"} do
+   local b=choices[id];b.Visible=choosing and number("Rank_Rasengan")>=i+1 and (id=="Rasenshuriken" or not model or model:GetAttribute("SagePhase")~="Active")
+   local sage=model~=nil and model:GetAttribute("SagePhase")=="Active"
+   local width=if number("Rank_Rasengan")>=3 and not sage then (ss-3)/2 else ss
+   b.Position=UDim2.fromOffset(sx+(if sage then 0 else (i-1)*(width+3)),sy);b.Size=UDim2.fromOffset(width,ss)
+   local reason=Controller.AbilityUnavailable(id);b.BackgroundColor3=if reason or Controller.Remaining(id)>0 then View.Card else Color3.fromRGB(24,88,113)
+  end
   for id,plus in learnButtons do plus.Visible=state~=nil and state:GetAttribute("LearnReason_"..id)=="Ready" end
   for id,button in buttons do
+   local shownId=id
+   if id=="Rasengan" and model then
+    local variant=model:GetAttribute("RasenganVariant")
+    if variant=="Odama" or variant=="Rasenshuriken" then shownId=variant end
+   end
+   if button:GetAttribute("ShownTechnique")~=shownId then
+    local old=button:FindFirstChild("Icon");if old then old:Destroy() end
+    local icon=Icons.draw(button,shownId);icon.ZIndex=1
+    button:SetAttribute("ShownTechnique",shownId)
+   end
+   local costLabel=button:FindFirstChild("Chakra") :: TextLabel; local cost=Controller.Cost(id); costLabel.Text=if cost>0 then tostring(cost) else ""
    local remaining=Controller.Remaining(id); local reason=Controller.AbilityUnavailable(id); local rank=number("Rank_"..id)
    local enabled=(Config.PrototypeEnabled :: {[string]: boolean})[id]==true
-   button.Active=reason==nil and remaining<=0; button.AutoButtonColor=button.Active
+   button.Active=true; button.AutoButtonColor=reason==nil and remaining<=0
+   button.BackgroundColor3=if Controller.SelectedAbility()==id then Color3.fromRGB(33,107,108) elseif reason=="Недостаточно маны" then Color3.fromRGB(30,48,88) else View.Card
    local shade=button:FindFirstChild("Cooldown") :: Frame
    shade.Visible=remaining>0 or reason~=nil or not enabled
    local cooldown=Config.Abilities[id].Cooldown
@@ -148,19 +191,27 @@ function HUD.Start()
    elseif id=="Gamakichi" then local _,cd=Gamakichi.rank(rank);if cd then cooldown=cd end end
    shade.Size=UDim2.fromScale(1,if remaining>0 then math.clamp(remaining/math.max(1,cooldown),0,1) else 1)
    local status=button:FindFirstChild("Status") :: TextLabel
-   status.Text=if not enabled then "LOCK" elseif remaining>0 then tostring(math.ceil(remaining)) elseif reason then (if rank==0 and learnButtons[id] then "0" else "×") else ""
+   status.Text=if not enabled then "LOCK" elseif remaining>0 then tostring(math.ceil(remaining)) elseif reason then (if reason=="Недостаточно маны" then "ЧАКРА" elseif rank==0 and learnButtons[id] then "0" else "×") else ""
    local rankLabel=button:FindFirstChild("Rank") :: TextLabel; rankLabel.Text=if rank>0 then string.rep("●",math.min(rank,5)) else "○"
+   if id=="Rasengan" and model and model:GetAttribute("RasenganHeld")==true then
+    shade.Visible=false;status.Text="";button.BackgroundColor3=Color3.fromRGB(24,90,120)
+   end
    if id=="SageMode" and model then
     local phase=model:GetAttribute("SagePhase"); local deadline=model:GetAttribute(if phase=="Preparing" then "SageReadyAt" else "SageExpiresAt")
     if (phase=="Preparing" or phase=="Active") and typeof(deadline)=="number" then
      status.Text=(if phase=="Preparing" then "P " else "S ")..tostring(math.max(0,math.ceil(deadline-now))); shade.Visible=true; shade.Size=UDim2.fromScale(1,1); shade.BackgroundColor3=Color3.fromRGB(89,51,19)
     else shade.BackgroundColor3=Color3.new() end
    end
-   if hovered==id then
-    local name=Config.Abilities[id].Name
-    if id=="ShadowClones" then name="Теневые клоны "..({"I","II","III","IV"})[math.clamp(rank,1,4)] end
-    if id=="ShadowClones" then name..=" | T: Sleep" elseif id=="Rasengan" then name="Rasengan "..({"I","II","III"})[math.clamp(rank,1,3)].." | Z / X" end
-    tooltipText.Text=name.."  ["..Config.Abilities[id].KeyLabel.."]\nРанг: "..rank.."\n"..(if not enabled then "Ветка закрыта" elseif remaining>0 then string.format("Перезарядка: %.1f с",remaining) elseif reason then tostring(reason) else "Готово").."\n"..tostring(if state then state:GetAttribute("LearnReason_"..id) or "" else "")
+
+  end
+  if hovered then
+   local id=if hovered=="Rasengan" then tostring(buttons.Rasengan:GetAttribute("ShownTechnique") or hovered) else hovered;local definition=Config.Abilities[id]
+   if definition then
+    local rank=number("Rank_"..(if id=="Odama" or id=="Rasenshuriken" then "Rasengan" else id))
+    local cd=definition.Cooldown
+    if id=="ShadowClones" then local plan=CloneRanks.cloneRank(rank);if plan then cd=plan.cooldown end end
+    if id=="Gamakichi" then local _,value=Gamakichi.rank(rank);if value then cd=value end end
+    tooltipText.Text=(if id=="ShadowClones" then "Теневые клоны" elseif id=="Rasengan" then "Расенган" else definition.Name)..(if rank>0 then " • ранг "..rank else "").."  ["..definition.KeyLabel.."]\n"..tostring(Controller.Cost(id)).." чакры  •  восстановление "..tostring(cd).." с\n\n"..((Descriptions :: {[string]:string})[id] or "").."\n\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then string.format("Перезарядка: %.1f с",Controller.Remaining(id)) else "Готово")).."\nAlt — свободный курсор • Ctrl + 1–5 — изучение"
    end
   end
  end)

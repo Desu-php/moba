@@ -1,0 +1,10 @@
+{
+ "name":"DeveloperCommandQA",
+ "tree":{
+  "$className":"DataModel",
+  "ReplicatedStorage":{"Shared":{"$path":"../src/shared"}},
+  "ServerScriptService":{"Server":{"$path":"../src/server"},"DeveloperTests":{"$path":"developer"}},
+  "StarterPlayer":{"$properties":{"GameSettingsAvatar":"R15","LoadCharacterAppearance":false},"StarterPlayerScripts":{"Client":{"$path":"../src/client"}}},
+  "Workspace":{"$attributes":{"DeveloperSoloMode":true}}
+ }
+}

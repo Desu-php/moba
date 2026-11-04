@@ -6,6 +6,7 @@ local Damage = require(script.Parent.DamageService)
 local Stats = require(script.Parent.CharacterStatsService)
 local Targets = require(script.Parent.AbilityTargetService)
 local Hitboxes = require(script.Parent.HitboxService)
+local Collision = require(script.Parent.SummonCollision)
 export type Clone = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, character: Model,
 	expires: number, nextHit: number, hits: number }
 local CloneService = { Spawned = Instance.new("BindableEvent") }
@@ -54,6 +55,7 @@ function CloneService.Spawn(player: Player, character: Model): number
 		local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances = { character, folder :: Instance }; ray.RespectCanCollide = true
 		local wall = workspace:Blockcast(root.CFrame, Vector3.new(2, 4, 2), offset, ray)
 		if wall then offset = offset.Unit * math.max(0, wall.Distance - 0.3) end
+		Collision.Apply(model)
 		model:PivotTo(root.CFrame + offset); model.Parent = folder
 		local now = workspace:GetServerTimeNow()
 		records[model] = { model = model, root = cloneRoot, humanoid = humanoid, owner = player, character = character,

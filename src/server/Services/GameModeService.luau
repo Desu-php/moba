@@ -8,11 +8,11 @@ function GameModeService.MinimumPerTeam(): number
 	return Config.TeamCapacity
 end
 function GameModeService.MinimumPlayers(): number
-	if Config.DebugSoloMode and game:GetService("RunService"):IsStudio() then return 1 end
+	if GameModeService.IsSoloTest() then return 1 end
 	return #Config.Teams * GameModeService.MinimumPerTeam()
 end
 function GameModeService.IsSoloTest(): boolean
-	return Config.DebugSoloMode and game:GetService("RunService"):IsStudio()
+	return game:GetService("RunService"):IsStudio() and (Config.DebugSoloMode or workspace:GetAttribute("DeveloperSoloMode")==true)
 end
 function GameModeService.TeamIds(): { string }
 	local ids = {}; for _, team in Config.Teams do table.insert(ids, team.Id) end; return ids

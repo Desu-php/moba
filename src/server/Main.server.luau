@@ -8,4 +8,5 @@ if not combatOnly then
 end
 CombatService.Start()
 if not combatOnly then require(script.Parent.Services.AbilityService).Start() end
+if not combatOnly and game:GetService("RunService"):IsStudio() then require(script.Parent.Services.DeveloperCommandService).Start() end
 print("[Anime Battlegrounds] Server ready")

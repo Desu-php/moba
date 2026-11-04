@@ -22,6 +22,12 @@ local RoundProtocol = require(Shared.Game.RoundProtocol)
 
 type Session = { bucket: RequestLimiter.Bucket, lastRequestId: number, lastRejectAt: number }
 local CombatService = { AttackStarted = Instance.new("BindableEvent") }
+-- A prepared melee technique may replace the ordinary strike after the server
+-- has verified contact. It must never consume itself merely on attack intent.
+local contactHandler: ((Fighters.Fighter, Model) -> boolean)? = nil
+function CombatService.SetContactHandler(handler: (Fighters.Fighter, Model) -> boolean)
+	contactHandler = handler
+end
 local sessions: { [Player]: Session } = {}
 local eventRemote: RemoteEvent? = nil
 local started = false
@@ -160,6 +166,8 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack)
 		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
 		local victim = if isStructure then nil else Fighters.GetOrCreate(character)
 		if not isStructure and not victim then continue end
+		local handler = contactHandler
+		if handler and handler(fighter, character) then continue end
 		local dealt = Damage.ApplyAttack(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
 		-- Only confirmed server damage is a hit.
 		if dealt <= 0 then continue end

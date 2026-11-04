@@ -20,7 +20,7 @@ try {
     if ($Mode -ne 'Full') {
         if (-not $LuauDirectory) { throw 'Fast/Targeted requires -LuauDirectory.' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        $pure = @('tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau','tests/NarutoKurama.spec.luau','tests/NarutoSharing.spec.luau','tests/NarutoRanged.spec.luau','tests/NarutoRangedInput.spec.luau')
+        $pure = @('tests/DeveloperCommands.spec.luau','tests/RasenshurikenThrow.spec.luau', 'tests/RasenganUpgradeQueue.spec.luau','tests/CombatCamera.spec.luau','tests/CombatState.spec.luau','tests/AbilityState.spec.luau','tests/NarutoLegend.spec.luau','tests/NarutoResources.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau','tests/NarutoKurama.spec.luau','tests/NarutoSharing.spec.luau','tests/NarutoRanged.spec.luau','tests/NarutoRangedInput.spec.luau')
         $domain = @(Get-ChildItem src/shared/Abilities -Filter '*.luau' -File | ForEach-Object FullName)
         & (Join-Path $LuauDirectory 'luau-analyze.exe') @domain src/shared/Combat/HeroPoses.luau src/shared/Game/JungleRules.luau @pure
         if ($LASTEXITCODE -ne 0) { throw 'Targeted domain type check failed' }
@@ -51,6 +51,10 @@ try {
     }
     & $RojoPath build default.project.json -o build/anime-battlegrounds.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Production Rojo build failed' }
+    & $RojoPath build tests/combat-ux.project.json -o build/combat-ux-tests.rbxlx
+    if ($LASTEXITCODE -ne 0) { throw 'Combat UX fixture build failed' }
+    & $RojoPath sourcemap tests/combat-ux.project.json -o build/combat-ux-sourcemap.json
+    if ($LASTEXITCODE -ne 0) { throw 'Combat UX fixture sourcemap failed' }
     & $RojoPath build tests/minions.project.json -o build/minion-visual-tests.rbxlx
     if ($LASTEXITCODE -ne 0) { throw 'Minion visual fixture build failed' }
     & $RojoPath build tests/sleep-wake.project.json -o build/sleep-wake-tests.rbxlx
@@ -154,7 +158,7 @@ try {
         throw 'Unexpected scripts in production build (possible test or starter script leak)'
     }
     Write-Output 'PASS Rojo build, source mapping, entrypoint classes and scene separation'
-    if (Select-String -Path build/anime-battlegrounds.rbxlx -Pattern 'RoundTestDriver|TowerTestDriver|HeroTestDriver|ProgressionTestDriver|SurvivalTestDriver|M1TestDriver' -Quiet) {
+    if (Select-String -Path build/anime-battlegrounds.rbxlx -Pattern 'CombatUXSetup|CombatUXTests|RoundTestDriver|TowerTestDriver|HeroTestDriver|ProgressionTestDriver|SurvivalTestDriver|M1TestDriver' -Quiet) {
         throw 'Test driver leaked into production build'
     }
     Write-Output 'PASS production contains no test remotes'
@@ -189,7 +193,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Combined Naruto integration domain types failed' }
         & $analyzer src/shared/Abilities/NarutoKuramaState.luau src/shared/Abilities/NarutoSharingState.luau src/shared/Abilities/NarutoRangedState.luau src/shared/Abilities/ChakraKnifeInstancePolicy.luau tests/NarutoKurama.spec.luau tests/NarutoSharing.spec.luau tests/NarutoRanged.spec.luau tests/NarutoRangedInput.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Kurama/ranged domain type check failed' }
-        foreach ($suite in @('tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau','tests/NarutoKurama.spec.luau','tests/NarutoSharing.spec.luau','tests/NarutoRanged.spec.luau','tests/NarutoRangedInput.spec.luau')) {
+        foreach ($suite in @('tests/DeveloperCommands.spec.luau','tests/MatchRoster.spec.luau', 'tests/Rounds.spec.luau', 'tests/RequestLimiter.spec.luau', 'tests/RasenshurikenThrow.spec.luau', 'tests/RasenganUpgradeQueue.spec.luau','tests/CombatCamera.spec.luau','tests/CombatState.spec.luau', 'tests/MatchState.spec.luau', 'tests/Progression.spec.luau', 'tests/Rewards.spec.luau', 'tests/AbilityState.spec.luau', 'tests/NarutoLegend.spec.luau', 'tests/NarutoResources.spec.luau', 'tests/TowerRules.spec.luau','tests/Jungle.spec.luau','tests/SkillLearning.spec.luau','tests/Gamakichi.spec.luau','tests/GamakichiSpells.spec.luau','tests/Sage.spec.luau','tests/NarutoRankPolicy.spec.luau','tests/NarutoCloneRanks.spec.luau','tests/NarutoKcm.spec.luau','tests/CloneNavigation.spec.luau','tests/HUDLayout.spec.luau','tests/MinionPoses.spec.luau','tests/MapScenery.spec.luau','tests/Meditation.spec.luau','tests/NarutoAdvanced.spec.luau','tests/AbilityInputRules.spec.luau','tests/NarutoKcmAdapter.spec.luau','tests/NarutoKcmGameplay.spec.luau','tests/NarutoKurama.spec.luau','tests/NarutoSharing.spec.luau','tests/NarutoRanged.spec.luau','tests/NarutoRangedInput.spec.luau')) {
             & $runner $suite
             if ($LASTEXITCODE -ne 0) { throw "Unit tests failed: $suite" }
         }
@@ -243,6 +247,8 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Basic attack manual fixture types failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/clone-ranks-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') clone-ranks
             if ($LASTEXITCODE -ne 0) { throw 'Clone rank fixture types failed' }
+            & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/combat-ux-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') combat-ux
+            if ($LASTEXITCODE -ne 0) { throw 'Combat UX fixture type check failed' }
             & (Join-Path $LuauLspDirectory 'luau-lsp.exe') analyze --flag:LuauSolverV2=true --platform roblox --sourcemap ../build/round-sourcemap.json --definitions (Join-Path $LuauLspDirectory 'globalTypes.d.luau') rounds
             if ($LASTEXITCODE -ne 0) { throw 'Round test type check failed' }
         }
@@ -255,6 +261,7 @@ try {
     Write-Output 'Engine tests: build/combat-regression-stage3.rbxlx and build/survival-tests.rbxlx, Server & Clients, 2 clients.'
     Write-Output 'Stage 4: build/progression-tests.rbxlx, Server & Clients, 3 clients.'
     Write-Output 'Stage 5: build/hero-tests.rbxlx, Server & Clients, 2 clients.'
+    Write-Output 'Combat UX: build/combat-ux-tests.rbxlx, Play, 1 player; leave input idle and inspect CombatUXRegressionReport.'
     Write-Output 'Towers: build/tower-tests.rbxlx, Server & Clients, 2 clients.'
     Write-Output 'Rounds: build/round-tests.rbxlx, Server & Clients, 2 clients, terminal victory with no restart.'
 }

@@ -38,7 +38,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	end
 	if not allowed then return result(false,"RateLimited") end
 	local arity=select("#",...)
-	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="RikudoHY" and abilityId~="RikudoHZ" and abilityId~="KcmDash" and abilityId~="ShadowSleep" and abilityId~="CloneCommand" and abilityId~="ShadowClones" and abilityId~="GamakichiOil" and abilityId~="GamakichiChop")
+	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="RasenshurikenThrow" and abilityId~="RikudoHY" and abilityId~="RikudoHZ" and abilityId~="KcmDash" and abilityId~="ShadowSleep" and abilityId~="CloneCommand" and abilityId~="ShadowClones" and abilityId~="GamakichiOil" and abilityId~="GamakichiChop")
 		or typeof(character)~="Instance"
 		or typeof(abilityId)~="string" or #abilityId>32 or not Config.Abilities[abilityId] then return result(false,"Malformed") end
 	local instance=character :: Instance
@@ -54,7 +54,7 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	Fighters.Update(fighter,now)
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
  local profile=require(script.Parent.HeroProgressionService).Get(player)
- local line=if abilityId=="RikudoHY" or abilityId=="RikudoHZ" then "KCM" elseif abilityId=="KcmDash" or abilityId=="KcmCancel" then "KCM" elseif abilityId=="Odama" or abilityId=="Rasenshuriken" then "Rasengan" elseif abilityId=="ShadowSleep" then "ShadowClones" elseif abilityId=="MeditationToggle" or abilityId=="MeditationRecall" then "SageMode" elseif abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
+ local line=if abilityId=="RikudoHY" or abilityId=="RikudoHZ" then "KCM" elseif abilityId=="KcmDash" or abilityId=="KcmCancel" then "KCM" elseif abilityId=="RasenshurikenThrow" or abilityId=="Odama" or abilityId=="Rasenshuriken" then "Rasengan" elseif abilityId=="ShadowSleep" then "ShadowClones" elseif abilityId=="MeditationToggle" or abilityId=="MeditationRecall" then "SageMode" elseif abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
  if not profile or (abilityId~="KuramaConvert" and abilityId~="KuramaForm" and (if abilityId=="CloneCommand" then math.max(profile.Learned.ShadowClones or 0,profile.Learned.Gamakichi or 0) else profile.Learned[line] or 0)<1) then return result(false,"Unlearned") end
 	return result(Naruto.TryCast(player,abilityId,id,now,target))
 end
@@ -69,6 +69,17 @@ function Ability.Start()
 	Naruto.Start(); Naruto.Visual.Event:Connect(sendAll)
 	require(script.Parent.NarutoSummonService).Spawned.Event:Connect(function(model: Model) sendAll({kind="Smoke",position=model:GetPivot().Position}) end)
 	local event=Instance.new("RemoteEvent"); event.Name="HeroAbility"; event.Parent=Storage; remote=event
+	-- Confirmed damage only, private to its owning player. Summons report to their
+	-- owner as well; one message per damage application avoids 5v5 broadcast spam.
+	Damage.Applied.Event:Connect(function(source: Model, target: Model, amount: number, round: number?)
+		local owner = Players:GetPlayerFromCharacter(source)
+		local ownerId = source:GetAttribute("SummonOwner")
+		if not owner and typeof(ownerId) == "number" then owner = Players:GetPlayerByUserId(ownerId) end
+		local match = Teams.GetState()
+		if not owner or owner.Parent ~= Players or not target.Parent or not match or match.phase ~= "InProgress" or round ~= match.roundId then return end
+		event:FireClient(owner, { kind="DamageFeedback", source=source, target=target,
+			position=target:GetPivot().Position, amount=amount, roundId=round })
+	end)
 	event.OnServerEvent:Connect(function(player,...: any) Ability.HandleRequest(player,...) end)
 	Players.PlayerRemoving:Connect(function(player) sessions[player]=nil end)
 	game:GetService("RunService").Heartbeat:Connect(function() Naruto.Update(workspace:GetServerTimeNow()) end)

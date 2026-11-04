@@ -11,8 +11,10 @@ local Targets=require(script.Parent.AbilityTargetService)
 local Spells=require(Shared.Abilities.GamakichiSpells)
 local Oil=require(script.Parent.OilStatusService)
 local Hitboxes=require(script.Parent.HitboxService)
+local Navigation=require(script.Parent.CloneNavigation)
+local Collision=require(script.Parent.SummonCollision)
 type Record={owner: Player, character: Model, model: Model, root: BasePart, humanoid: Humanoid,
- state: Domain.State, cast: Domain.Cast, commands: Commands.State, nextHit: number, hitAt: number?, target: Model?, spells: Spells.State, oilTarget: Model?, oilLife: any, center: Vector3?}
+ state: Domain.State, cast: Domain.Cast, commands: Commands.State, commandRequest: number, nextHit: number, hitAt: number?, target: Model?, spells: Spells.State, oilTarget: Model?, oilLife: any, center: Vector3?}
 local records: {[Player]: Record}={}
 local Service={Visual=Instance.new("BindableEvent")}
 function Service.Get(player: Player): Record? return records[player] end
@@ -21,7 +23,7 @@ function Service.Remove(player: Player)
  records[player]=nil
  Oil.ClearSource(tostring(player.UserId)..":"..tostring(r.cast.id)); Spells.cancel(r.spells)
  if r.state.active==r.cast then Domain.cancel(r.state) end
- Fighters.Remove(r.model); r.model:Destroy()
+ Navigation.Remove(r.model); Fighters.Remove(r.model); r.model:Destroy()
  if r.character.Parent then r.character:SetAttribute("GamakichiCount",0); r.character:SetAttribute("GamakichiAdult",false) end
 end
 function Service.Reset() for player in records do Service.Remove(player) end; Oil.Reset() end
@@ -42,6 +44,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, ca
  part("RightEye",Vector3.new(.7,.7,.7)*size,Vector3.new(1.3,2.4,-2.2)*size,Color3.fromRGB(234,211,90))
  head.CanQuery=false
  local hp=Instance.new("Humanoid"); hp.RequiresNeck=false; hp.BreakJointsOnDeath=false
+ hp.EvaluateStateMachine=false -- Navigation owns movement; no automatic collision changes.
  hp.MaxHealth=cast.profile.health; hp.Health=cast.profile.health; hp.DisplayName=if cast.profile.adult then "Гамакичи · взрослый" else "Гамакичи"
  hp.Parent=model; model.PrimaryPart=root
  model:SetAttribute("EntityKind","Summon"); model:SetAttribute("NativeGamakichi",true); model:SetAttribute("SummonOwner",player.UserId)
@@ -53,8 +56,17 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, ca
  local ray=RaycastParams.new(); ray.FilterType=Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances={character}; ray.RespectCanCollide=true
  local wall=workspace:Blockcast(source.CFrame,root.Size,offset,ray)
  if wall then offset=offset.Unit*math.max(0,wall.Distance-.05) end
- model:PivotTo(source.CFrame+offset); model.Parent=folder
- records[player]={owner=player,character=character,model=model,root=root,humanoid=hp,state=state,cast=cast,commands=commands,nextHit=0,hitAt=nil,target=nil,spells=Spells.new(),oilTarget=nil,oilLife=nil,center=nil}
+ model:PivotTo(source.CFrame+offset)
+ -- Start on the same clearance plane used by Navigation. A small toad starts
+ -- lower than its owner's root; otherwise the first step is rejected as a drop.
+ local floor=workspace:Raycast(root.Position+Vector3.new(0,2,0),Vector3.new(0,-12,0),ray)
+ if floor and floor.Normal.Y>=.7 then
+  local height=math.max(hp.HipHeight+root.Size.Y/2,math.max(4,root.Size.Y)/2+.05)
+  model:PivotTo(model:GetPivot()+Vector3.new(0,floor.Position.Y+height-root.Position.Y,0))
+ end
+ Collision.Apply(model); model.Parent=folder
+ records[player]={owner=player,character=character,model=model,root=root,humanoid=hp,state=state,cast=cast,commands=commands,commandRequest=commands.lastRequest,nextHit=0,hitAt=nil,target=nil,spells=Spells.new(),oilTarget=nil,oilLife=nil,center=nil}
+ Navigation.Register(model,root,hp)
  Fighters.GetOrCreate(model); character:SetAttribute("GamakichiCount",1); character:SetAttribute("GamakichiAdult",cast.profile.adult); character:SetAttribute("Ready_GamakichiOil",0); character:SetAttribute("Ready_GamakichiChop",0)
 end
 local function publish(r: Record)
@@ -109,7 +121,7 @@ function Service.Update(now: number,delta: number)
   if player.Parent~=Players or player.Character~=r.character or not Damage.CanAct(r.character)
    or not r.model.Parent or r.humanoid.Health<=0 or not Domain.live(r.state,r.cast,now) then Service.Remove(player); continue end
   local fighter=Fighters.Get(r.model)
-  if fighter and (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then r.hitAt=nil; r.target=nil; Spells.cancel(r.spells); r.oilTarget=nil; r.center=nil; publish(r); continue end
+  if fighter and (fighter.logic.mode=="Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(r.model); r.hitAt=nil; r.target=nil; Spells.cancel(r.spells); r.oilTarget=nil; r.center=nil; publish(r); continue end
   r.humanoid.Health=math.min(r.humanoid.MaxHealth,r.humanoid.Health+r.cast.profile.regen*delta)
   if Spells.claimOil(r.spells,now) then
    local target=r.oilTarget; r.oilTarget=nil
@@ -130,12 +142,14 @@ function Service.Update(now: number,delta: number)
    Service.Visual:Fire({source=r.model,kind="GamakichiChopImpact",position=r.center,radius=Units.toStuds(Spells.Chopping.Radius),wave=wave})
   end
   publish(r)
-  if r.spells.channel or r.spells.flight then continue end
+  if r.spells.channel or r.spells.flight then Navigation.Stop(r.model); continue end
   local intent=Commands.resolve(r.commands)
+  if r.commandRequest~=r.commands.lastRequest then r.commandRequest=r.commands.lastRequest; r.hitAt=nil; r.target=nil end
+  if intent.mode=="Idle" or intent.mode=="Hold" then r.hitAt=nil; r.target=nil; Navigation.Stop(r.model); continue end
   local target: Model?=nil
   if intent.targetId then
    for candidate in Fighters.GetAll() do if candidate:GetAttribute("AbilityEntityId")==intent.targetId then target=candidate; break end end
-   if not target or not Damage.CanDamage(r.model,target) then target=nil end
+   if not target or not Damage.CanDamage(r.model,target) then Commands.invalidateTarget(r.commands,intent.targetId); target=nil end
   end
   if r.hitAt and now>=r.hitAt then
    local victim=r.target; r.hitAt=nil; r.target=nil
@@ -147,17 +161,18 @@ function Service.Update(now: number,delta: number)
    end
   end
   local destination=if target then target:FindFirstChild("HumanoidRootPart") else r.character:FindFirstChild("HumanoidRootPart")
-  if not destination or not destination:IsA("BasePart") or intent.mode=="Idle" then continue end
-  local distance=destination.Position-r.root.Position; local flat=distance*Vector3.new(1,0,1)
+  if not destination or not destination:IsA("BasePart") then Navigation.Stop(r.model); continue end
+  local distance=destination.Position-r.root.Position
+  local flat=distance*Vector3.new(1,0,1)
+  if flat.Magnitude>.001 then r.model:PivotTo(CFrame.lookAt(r.root.Position,r.root.Position+flat)) end
   local stop=if target then Units.toStuds(100)+(r.root.Size.X+destination.Size.X)/2 else Domain.Policy.FollowDistance
   if target and distance.Magnitude<=stop and now>=r.nextHit and not r.hitAt and Targets.Visible(r.model,target,r.root.Position,destination.Position) then
    r.nextHit=now+Domain.Policy.AttackInterval; r.hitAt=now+Domain.Policy.DamagePoint; r.target=target; r.model:SetAttribute("SummonSwingAt",now)
   end
-  local horizontalStop=math.sqrt(math.max(0,stop*stop-distance.Y*distance.Y))
-  if flat.Magnitude>horizontalStop+.001 and not r.hitAt then
-   local move=flat.Unit*math.min(flat.Magnitude-horizontalStop,Units.toStuds(r.cast.profile.speed)*math.min(delta,.1)*Oil.Movement(r.model,now))
-   local ray=RaycastParams.new(); ray.FilterType=Enum.RaycastFilterType.Exclude; ray.FilterDescendantsInstances={r.model,r.character}; ray.RespectCanCollide=true
-   if not workspace:Blockcast(r.root.CFrame,r.root.Size,move,ray) then r.model:PivotTo(CFrame.lookAt(r.root.Position+move,r.root.Position+move+flat)) end
+  if r.hitAt then Navigation.Stop(r.model)
+  else
+   local moving=Navigation.Step(r.model,r.character,target or r.character,destination,stop,now,delta,Units.toStuds(r.cast.profile.speed)*Oil.Movement(r.model,now))
+   r.model:SetAttribute("SummonMoving",moving)
   end
  end
 end

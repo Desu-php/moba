@@ -19,7 +19,8 @@ function Navigation.Register(model: Model, root: BasePart, humanoid: Humanoid)
 	serial += 1
 	agents[model] = { model = model, root = root, clock = Policy.new(), target = nil, slot = nil, goal = nil,
 		waypoints = {}, waypoint = 1, pathGoal = nil, nextSlot = 0, progressAt = 0,
-		progressPosition = root.Position, failures = 0, serial = serial, groundOffset = humanoid.HipHeight + root.Size.Y / 2, queued = false }
+		progressPosition = root.Position, failures = 0, serial = serial,
+		groundOffset = math.max(humanoid.HipHeight + root.Size.Y / 2, math.max(4, root.Size.Y) / 2 + 0.05), queued = false }
 end
 function Navigation.Remove(model: Model)
 	local agent = agents[model]; if not agent then return end
@@ -34,8 +35,8 @@ function Navigation.Stop(model: Model)
 end
 local function parameters(agent: Agent, owner: Model, target: Model): RaycastParams
 	local excluded: { Instance } = { agent.model, owner, target }
-	-- Only these registered shadow clones use local circle avoidance. Do not exclude
-	-- the entire summons folder: Gamakichi and neutral geometry keep their collision policy.
+	-- Registered clones and Gamakichi use explicit body clearance/peer avoidance.
+	-- World geometry remains collidable, while summon bodies never block players.
 	for model in agents do table.insert(excluded, model) end
 	local ray = RaycastParams.new(); ray.FilterType = Enum.RaycastFilterType.Exclude
 	ray.FilterDescendantsInstances = excluded; ray.RespectCanCollide = true
@@ -47,7 +48,7 @@ local function ground(agent: Agent, point: Vector3, ray: RaycastParams): Vector3
 	return Vector3.new(point.X, hit.Position.Y + agent.groundOffset, point.Z)
 end
 local function bodySize(agent: Agent): Vector3
-	return Vector3.new(math.max(2.2, agent.root.Size.X), 4, math.max(2.2, agent.root.Size.Z))
+	return Vector3.new(math.max(2.2, agent.root.Size.X), math.max(4, agent.root.Size.Y), math.max(2.2, agent.root.Size.Z))
 end
 local function bodyClear(agent: Agent, point: Vector3, ray: RaycastParams): boolean
 	local overlap = OverlapParams.new(); overlap.FilterType = Enum.RaycastFilterType.Exclude
@@ -140,8 +141,8 @@ local function request(requester: Agent, now: number)
 		local points: { Vector3 } = {}
 		local path: Path? = nil
 		local ok = pcall(function()
-			local computed = Pathfinding:CreatePath({ AgentRadius = math.max(1.5, agent.root.Size.X / 2),
-				AgentHeight = 5, AgentCanJump = false, AgentCanClimb = false, WaypointSpacing = 3 })
+			local computed = Pathfinding:CreatePath({ AgentRadius = math.max(1.5, agent.root.Size.X / 2, agent.root.Size.Z / 2),
+				AgentHeight = math.max(5, agent.root.Size.Y), AgentCanJump = false, AgentCanClimb = false, WaypointSpacing = 3 })
 			path = computed; computed:ComputeAsync(origin, goal)
 			if computed.Status ~= Enum.PathStatus.Success then return end
 			for _, waypoint in computed:GetWaypoints() do

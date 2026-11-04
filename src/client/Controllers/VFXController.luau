@@ -20,6 +20,7 @@ local shakeDuration = 0
 local shakeAmplitude = 0
 local shakeHumanoid: Humanoid? = nil
 local cameraOffset = Vector3.zero
+local lastHitSound = 0
 
 local function dispose(effect: Effect)
 	for _, tween in effect.tweens do tween:Cancel() end
@@ -116,6 +117,31 @@ function VFXController.Hit(character: Model, position: Vector3, heavy: boolean)
 		tween:Play()
 	end
 	remember(group, lifetime, tweens)
+end
+
+-- Only the server's Damage.Applied path sends these messages. Predicted swings
+-- never create numbers, hit markers, impact sound or camera feedback.
+function VFXController.DamageFeedback(message: any)
+	if typeof(message.amount) ~= "number" or message.amount <= 0 or typeof(message.position) ~= "Vector3" then return end
+	local target = message.target
+	if typeof(target) ~= "Instance" or not target:IsA("Model") then return end
+	local camera = workspace.CurrentCamera
+	if camera and (camera.CFrame.Position-message.position).Magnitude > 240 then return end
+	local anchor = part("ConfirmedDamage", message.position+Vector3.new(0,2,0), Vector3.one*.1, Config.NormalColor)
+	anchor.Transparency = 1; anchor.Parent = folder
+	local gui = Instance.new("BillboardGui"); gui.Size = UDim2.fromOffset(100,40); gui.AlwaysOnTop = false; gui.Adornee = anchor; gui.Parent = anchor
+	local label = Instance.new("TextLabel"); label.Size = UDim2.fromScale(1,1); label.BackgroundTransparency = 1
+	label.Text = tostring(math.floor(message.amount+.5)); label.TextColor3 = Config.NormalColor; label.TextSize = 22; label.Font = Enum.Font.GothamBold; label.TextStrokeTransparency = .35; label.Parent = gui
+	local rise = TweenService:Create(anchor,TweenInfo.new(.65),{Position=anchor.Position+Vector3.new(0,2.5,0)})
+	local fade = TweenService:Create(label,TweenInfo.new(.65),{TextTransparency=1,TextStrokeTransparency=1})
+	rise:Play(); fade:Play(); remember(anchor,.7,{rise,fade})
+	VFXController.Hit(target,message.position,false)
+	-- Rate-limit presentation, not damage: every target still gets its own number.
+	if os.clock()-lastHitSound >= .09 then
+		lastHitSound=os.clock(); VFXController.Shake(false)
+		Players.LocalPlayer:SetAttribute("CombatHitUntil",workspace:GetServerTimeNow()+.13)
+		local sound=Instance.new("Sound"); sound.SoundId="rbxasset://sounds/impact_water.mp3"; sound.Volume=.22; sound.PlaybackSpeed=1.8; sound.Parent=anchor; sound:Play()
+	end
 end
 
 local function stopShake()

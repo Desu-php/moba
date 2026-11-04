@@ -10,10 +10,12 @@ function V.select(state: State, id: string, rank: number, startedAt: number, now
  local previous=state.choice
  if id=="Odama" then
   if rank<2 then return nil,"Rank",0 end
-  if previous or not ordinary or now<startedAt or now>=startedAt+1 then return nil,"Window",0 end
+  if previous or not ordinary or now<startedAt or now>=startedAt+15 then return nil,"Window",0 end
  elseif id=="Rasenshuriken" then
   if rank<3 then return nil,"Rank",0 end
-  if not previous or previous.id~="Odama" or now<previous.selectedAt or now>=previous.selectedAt+1 then return nil,"Window",0 end
+  if ordinary and not previous then
+   if now<startedAt or now>=startedAt+15 then return nil,"Window",0 end
+  elseif not previous or previous.id~="Odama" or now<previous.selectedAt or now>=previous.selectedAt+1 then return nil,"Window",0 end
  else return nil,"Unsupported",0 end
  if now<(state.cooldowns[id] or 0) then return nil,"Cooldown",0 end
  if mana<200 then return nil,"Mana",0 end

@@ -157,6 +157,13 @@ function S.Remove(p: Player)
   records[p]=nil
  end
 end
+function S.StudioResetCooldowns(p: Player)
+ if not game:GetService("RunService"):IsStudio() then return end
+ local r=records[p];if not r then return end
+ r.state.cooldownAt=0;r.state.threeHeadAt=0
+ if r.state.active and not r.state.active.buff then r.state.active=nil end
+ if r.model then r.model:SetAttribute("Ready_KuramaForm",0);r.model:SetAttribute("KuramaLocked",Form.isLocked(r.state)) end
+end
 function S.Reset()
  for p,r in records do
   local model=r.model; S.Remove(p)

@@ -1,0 +1,26 @@
+{
+  "name": "CombatUXRegression",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "$attributes": { "CombatUXTestFixture": true }
+    },
+    "ReplicatedStorage": {
+      "Shared": { "$path": "../src/shared" }
+    },
+    "ServerScriptService": {
+      "Server": { "$path": "../src/server" },
+      "CombatUXSetup": { "$path": "combat-ux/Setup.server.luau" },
+      "CombatUXTests": { "$path": "combat-ux/Runner.server.luau" }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "GameSettingsAvatar": "R15",
+        "LoadCharacterAppearance": false
+      },
+      "StarterPlayerScripts": {
+        "Client": { "$path": "../src/client" }
+      }
+    }
+  }
+}

@@ -49,6 +49,13 @@ local function bind(model: Model)
 end
 local function active(rig: Rig, now: number): (string, number, number)
 	local model = rig.model
+	local throwAt=model:GetAttribute("RasenshurikenThrowAt")
+ if typeof(throwAt)=="number" and now>=throwAt and now<throwAt+.8 then return "RasenshurikenThrow",throwAt,.8 end
+	local variant = model:GetAttribute("RasenganVariant")
+	local technique = if variant == "Odama" or variant == "Rasenshuriken" then variant else "Rasengan"
+	local function attackKey(key: string): string
+		return if model:GetAttribute("RasenganHeld") == true and (string.match(key,"^Punch%d$") or key == "HeavyPunch") then technique.."Strike" else key
+	end
 	if model:GetAttribute("NativeMeditationClone")==true then return "Meditation",now,1 end
 	local sageReady=model:GetAttribute("SageReadyAt")
  if model:GetAttribute("SagePhase")=="Preparing" and typeof(sageReady)=="number" and now<sageReady then return "SagePrepare",now,1 end
@@ -60,9 +67,14 @@ local function active(rig: Rig, now: number): (string, number, number)
 	local ownPause = typeof(selfPause)=="number" and now<selfPause
 	local phase = model:GetAttribute("RasenganPhase")
 	local impact = model:GetAttribute("RasenganImpactAt")
-	if phase=="Consumed" and ownPause and typeof(impact)=="number" and impact>now then return "RasenganStrike",impact-1,1 end
+	if phase=="Consumed" and ownPause and typeof(impact)=="number" and impact>now then
+		local impactDelay = if technique == "Rasenshuriken" then .5 else 1
+		return technique.."Strike",impact-impactDelay,impactDelay
+	end
 	local rasenganAt = model:GetAttribute("RasenganStartedAt"); local ready = model:GetAttribute("RasenganReadyAt")
-	if phase=="Preparing" and ownPause and typeof(rasenganAt)=="number" and typeof(ready)=="number" and now>=rasenganAt+1 and now<ready then return "RasenganPrepare",rasenganAt+1,1 end
+	-- Begin gathering immediately, including the one-second selection window.
+	-- Presentation alone never introduces a new movement or input lock.
+	if phase=="Preparing" and typeof(rasenganAt)=="number" and typeof(ready)=="number" and now>=rasenganAt and now<ready then return technique.."Prepare",rasenganAt,ready-rasenganAt end
 	if model:GetAttribute("RasenganHelper")==true then return "RasenganHelper",0,1 end
 	if model:GetAttribute("CombatState") == "Stunned" then return "Stun", now, 1 end
 	local ability = model:GetAttribute("AbilityId")
@@ -71,12 +83,12 @@ local function active(rig: Rig, now: number): (string, number, number)
 		if typeof(at) == "number" and typeof(ends) == "number" and now < ends then return ability, at, ends - at end
 	end
 	local intent = if rig.owned then prediction else nil
-	if intent and now < intent.at + intent.duration then return intent.key, intent.at, intent.duration end
+	if intent and now < intent.at + intent.duration then return attackKey(intent.key), intent.at, intent.duration end
 	local swingAt = model:GetAttribute("SummonSwingAt")
 	if typeof(swingAt) == "number" and now < swingAt + 0.28 then return "Punch" .. tostring(model:GetAttribute("SummonSwingStep") or 1), swingAt, 0.28 end
 	local ends, at = model:GetAttribute("CombatAttackEndsAt"), model:GetAttribute("CombatLastAttackAt")
 	if typeof(ends) == "number" and typeof(at) == "number" and now < ends then
-		return "Punch1", at, ends - at
+		return attackKey("Punch1"), at, ends - at
 	end
 	local velocity = rig.root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
 	return if velocity.Magnitude > 1.5 or model:GetAttribute("SummonMoving") == true then "Run" else "Idle", 0, 1
@@ -153,7 +165,12 @@ function Motion.Start()
 				table.clear(rig.poses); continue
 			end
 			local pose = Poses.sample(key, now, math.clamp((now - at) / math.max(0.001, duration), 0, 1))
-			if holding then pose = Poses.holdRasengan(pose,now) end
+			if holding then pose = Poses.holdRasengan(pose,now,tostring(model:GetAttribute("RasenganVariant"))) end
+			if (key == "RasenganPrepare" or key == "OdamaPrepare" or key == "RasenshurikenPrepare")
+				and rig.humanoid.WalkSpeed > 0 and (rig.root.AssemblyLinearVelocity*Vector3.new(1,0,1)).Magnitude > 1.5 then
+				local run = Poses.sample("Run",now,0)
+				for _, joint in {"LeftHip","RightHip","LeftKnee","RightKnee"} do pose[joint] = run[joint] end
+			end
 			local alpha = 1 - math.exp(-Config.Visual.BlendSpeed * dt)
 			for _, entry in rig.joints do
 				local motor = entry.joint

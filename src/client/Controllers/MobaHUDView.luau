@@ -30,14 +30,41 @@ local appearance = if source then tostring(source:GetAttribute("HeroAppearanceVe
 	portrait.source = source; portrait.appearance = appearance; portrait.viewport:ClearAllChildren(); portrait.copy = nil
 	if not source then return end
 	local head = source:FindFirstChild("Head"); if not head or not head:IsA("BasePart") then portrait.source = nil; return end
-	local old = source.Archivable; source.Archivable = true; local copy = source:Clone(); source.Archivable = old
-	for _, child in copy:GetDescendants() do
-		if child:IsA("LuaSourceContainer") or child:IsA("Tool") or child:IsA("ForceField") then child:Destroy()
-		elseif child:IsA("BasePart") then child.Anchored = true; child.CanCollide = false end
-	end
-	local world = Instance.new("WorldModel"); world.Parent = portrait.viewport; copy.Parent = world; portrait.copy = copy
-	local camera = Instance.new("Camera"); camera.FieldOfView = 35
-	camera.CFrame = CFrame.lookAt(head.Position + head.CFrame.LookVector * 4.8 + Vector3.new(0,.3,0), head.Position - Vector3.new(0,.25,0))
-	camera.Parent = portrait.viewport; portrait.viewport.CurrentCamera = camera
+ -- A fixed cosmetic bust keeps combat poses, helper clones and live effects out of the portrait.
+ local copy=Instance.new("Model");copy.Name="HeroPortrait";portrait.copy=copy
+ local upper=source:FindFirstChild("UpperTorso")
+ local torsoHeight=if upper and upper:IsA("BasePart") then upper.Size.Y else 1.6
+ local headY=torsoHeight/2+head.Size.Y/2+.1
+ local frames: {[string]: CFrame}={Head=CFrame.new(0,headY,0),UpperTorso=CFrame.identity,
+  LowerTorso=CFrame.new(0,-1,0),LeftUpperArm=CFrame.new(-1.5,.1,0),RightUpperArm=CFrame.new(1.5,.1,0)}
+ local function visualClone(original: BasePart, frame: CFrame): BasePart
+  local part=original:Clone()
+  for _,child in part:GetDescendants() do
+   if not child:IsA("DataModelMesh") and not child:IsA("Decal") and not child:IsA("SurfaceAppearance") then child:Destroy() end
+  end
+  part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false
+  part.LocalTransparencyModifier=0;part.CFrame=frame;part.Parent=copy;return part
+ end
+ for name,frame in frames do
+  local original=source:FindFirstChild(name)
+  if original and original:IsA("BasePart") then visualClone(original,frame) end
+ end
+ if costume then for _,original in costume:GetChildren() do
+  if not original:IsA("BasePart") then continue end
+  local body=original:GetAttribute("CosmeticBody");local offset=original:GetAttribute("CosmeticOffset")
+  if typeof(body)=="string" and frames[body] and typeof(offset)=="CFrame" then visualClone(original,frames[body]*offset) end
+ end end
+ for _,item in source:GetChildren() do if item:IsA("Shirt") or item:IsA("Pants") then item:Clone().Parent=copy end end
+ local sourceHumanoid=source:FindFirstChildOfClass("Humanoid")
+ if sourceHumanoid then
+  local humanoid=sourceHumanoid:Clone();humanoid:ClearAllChildren();humanoid.AutomaticScalingEnabled=false
+  humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None;humanoid.Parent=copy
+ end
+ local world=Instance.new("WorldModel");world.Parent=portrait.viewport;copy.Parent=world
+ local camera=Instance.new("Camera");camera.FieldOfView=35
+ camera.CFrame=CFrame.lookAt(Vector3.new(0,headY+.3,-4.8),Vector3.new(0,headY-.25,0))
+ camera.Parent=portrait.viewport;portrait.viewport.CurrentCamera=camera
+ -- A face first displayed only in a ViewportFrame may not be fetched by the world renderer.
+ task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync({copy}) end) end)
 end
 return View

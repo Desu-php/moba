@@ -51,6 +51,16 @@ local ok,err=xpcall(function()
  check("F command without learning clones",Ability.HandleRequest(a,4,character,"CloneCommand",target,state.roundId))
  waitFor(function() return hp.Health<10000 end,2,"summon attack")
  check("raw base attack, no owner scaling",hp.Health==9959)
+ check("Hold accepted on shared command remote",Ability.HandleRequest(a,5,character,"CloneCommand","Hold",state.roundId))
+ task.wait(.05); local heldPosition=r.root.Position; local heldHealth=hp.Health
+ root.Position+=Vector3.new(0,0,-12); task.wait(.3)
+ check("Hold cancels chasing and pending basic strike",(r.root.Position-heldPosition).Magnitude<.001 and hp.Health==heldHealth and character:GetAttribute("SummonOrder")=="Hold")
+ local physics=game:GetService("PhysicsService")
+ local nonblocking=not physics:CollisionGroupsAreCollidable("SurvivalSummons","SurvivalHeroes") and not physics:CollisionGroupsAreCollidable("SurvivalSummons","SurvivalSummons")
+ for _,part in r.model:GetDescendants() do if part:IsA("BasePart") and part.CollisionGroup~="SurvivalSummons" then nonblocking=false end end
+ check("toad remains nonblocking after simulated frames",nonblocking)
+ check("Follow accepted without target",Ability.HandleRequest(a,6,character,"CloneCommand","Follow",state.roundId))
+ check("Follow clears old enemy",session.commands.commandedTarget==nil and character:GetAttribute("SummonOrder")=="Follow")
  local ownerProfile=Progression.Get(a); assert(ownerProfile)
  local kills=ownerProfile.TotalMinionKills; hp.Health=41
  Damage.Apply(r.model,hp,41)
@@ -60,7 +70,7 @@ local ok,err=xpcall(function()
  check("second Naruto summons independently",Ability.HandleRequest(b,1,enemy,"Gamakichi",state.roundId))
  local other=Gama.Get(b); assert(other)
  check("two owned summons isolated",other~=r and other.model:GetAttribute("SummonOwner")==b.UserId)
- local castSerial=4
+ local castSerial=6
  Progression.AddXP(a,100000)
  check("learning does not mutate active summon",Gama.Get(a)==r and r.cast.rank==1 and r.humanoid.MaxHealth==500)
  for rank=2,10 do

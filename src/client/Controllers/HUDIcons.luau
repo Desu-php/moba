@@ -2,7 +2,7 @@
 -- Original code-drawn Naruto symbols. No uploaded images or Valve assets.
 local Icons = {}
 local palettes: {[string]: Color3} = {
-	Rasengan=Color3.fromRGB(32,133,190), ShadowClones=Color3.fromRGB(183,104,39),
+	Rasengan=Color3.fromRGB(32,133,190), Odama=Color3.fromRGB(23,92,178), Rasenshuriken=Color3.fromRGB(36,115,126), ShadowClones=Color3.fromRGB(183,104,39),
 	Gamakichi=Color3.fromRGB(148,66,50), SageMode=Color3.fromRGB(186,96,42),
 	KCM=Color3.fromRGB(198,151,34), CloneCommand=Color3.fromRGB(86,129,148),
 	GamakichiOil=Color3.fromRGB(87,127,52), GamakichiChop=Color3.fromRGB(126,83,62),
@@ -26,7 +26,22 @@ function Icons.draw(parent: GuiObject, id: string): Frame
 			local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(159,232,255); stroke.Thickness=2; stroke.Parent=r
 		end
 		shape("Core",.5,.5,.22,.22,true); shape("Flow",.5,.5,.78,.045,false,-35)
-	elseif id=="ShadowClones" or id=="CloneCommand" then
+	elseif id=="Odama" then
+        local outer=shape("LargeAura",.5,.5,.91,.91,true); outer.BackgroundColor3=Color3.fromRGB(83,198,255); outer.BackgroundTransparency=.35
+        shape("LargeCore",.5,.5,.72,.72,true).BackgroundColor3=Color3.fromRGB(224,252,255)
+        for i=1,3 do
+            local r=shape("CompressedFlow",.5,.5,.25+i*.16,.25+i*.16,true);r.BackgroundTransparency=1
+            local stroke=Instance.new("UIStroke");stroke.Color=Color3.fromRGB(79,166,237);stroke.Thickness=2;stroke.Parent=r
+        end
+    elseif id=="Rasenshuriken" then
+        for i=0,3 do
+            local a=math.pi*i/2
+            local blade=shape("WindBlade",.5+math.cos(a)*.24,.5+math.sin(a)*.24,.15,.48,false,45+i*90)
+            blade.BackgroundColor3=Color3.fromRGB(210,255,255)
+        end
+        shape("WindCore",.5,.5,.45,.45,true).BackgroundColor3=Color3.fromRGB(115,228,255)
+        local core=shape("Core",.5,.5,.29,.29,true);core.BackgroundColor3=Color3.fromRGB(245,255,255)
+    elseif id=="ShadowClones" or id=="CloneCommand" then
 		for i=1,3 do local x=.19+(i-1)*.30; shape("Head",x,.37,.18,.22,true); shape("Body",x,.66,.23,.30,true) end
 		if id=="CloneCommand" then shape("Command",.5,.20,.74,.035,false) end
 	elseif id=="Gamakichi" or id=="GamakichiOil" then

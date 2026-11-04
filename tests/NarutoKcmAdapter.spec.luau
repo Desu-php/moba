@@ -172,3 +172,15 @@ check("Kurama nativeflag blocks KCM entry",select(2,f.a.Enter(t))=="FormBusy")
 f.snapshots.a.context.fullKurama=false; f.snapshots.a.context.kuramaCooldown=true; f.time(3); f.a.Update(t)
 check("postbuff scriptlock blocks KCM",select(2,f.a.Enter(t))=="KuramaLocked")
 print("ALL PASS: "..count.." NarutoKcm adapter fake-port checks; no Roblox/native morph certification")
+
+-- Developer reset changes only this owned cooldown; active form/resources survive.
+do
+ local g=fixture();local a=g.a.Bind("a");local b=g.a.Bind("b");assert(a and b)
+ assert(g.a.Enter(a));assert(g.a.Enter(b))
+ local chakra=g.a.Chakra(a);local rank,cast=g.a.ActiveCast(a);local other=g.output[b.serial].cooldownAt
+ assert(g.a.ResetCooldown(a));assert(g.output[a.serial].cooldownAt==0)
+ assert(g.a.Chakra(a)==chakra and g.a.ActiveCast(a)==rank and select(2,g.a.ActiveCast(a))==cast)
+ assert(g.output[b.serial].cooldownAt==other)
+ g.snapshots.a.life=2;assert(not g.a.ResetCooldown(a))
+ print("PASS KCM cooldown reset: active form/chakra preserved, owner and life isolated")
+end

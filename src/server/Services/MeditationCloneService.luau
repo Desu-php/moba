@@ -4,6 +4,7 @@ local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Domain=require(Shared.Abilities.MeditationState)
 local Units=require(Shared.Abilities.WorldUnits)
 local Fighters=require(script.Parent.FighterStateService)
+local Collision=require(script.Parent.SummonCollision)
 type Record={model: Model, humanoid: Humanoid, owner: Player, character: Model, state: Domain.State, clone: Domain.Clone, valid: ()->boolean, credit: (number)->(), connection: RBXScriptConnection?}
 local records: {[Model]: Record}={}
 local Service={}
@@ -71,6 +72,7 @@ function Service.Spawn(owner: Player, character: Model, state: Domain.State, clo
   if wall then offset=offset.Unit*math.max(0,wall.Distance-.1) end
   local folder=workspace:FindFirstChild("HeroSummons")
   if not folder then folder=Instance.new("Folder"); folder.Name="HeroSummons"; folder.Parent=workspace end
+  Collision.Apply(model)
   model:PivotTo(character:GetPivot()+offset); model.Parent=folder
   -- A built-in seated meditation pose; no external animation/asset dependency.
   humanoid.Sit=true

@@ -54,7 +54,7 @@ check("late frame cannot deliver expired impact", not Rules.claim(state, late, 1
 Rules.finish(state, late, 102)
 local fresh = Rules.new(3)
 check("new match resets cooldowns", Rules.remaining(fresh, "FixtureAction", 0) == 0)
-for _, key in { "Idle", "Run", "Punch1", "Punch2", "Punch3", "HeavyPunch", "ShadowClones", "RasenganPrepare", "RasenganStrike", "RasenganHelper", "Stun" } do
+for _, key in { "Idle", "Run", "Punch1", "Punch2", "Punch3", "HeavyPunch", "ShadowClones", "RasenganPrepare", "RasenganStrike", "RasenganHelper", "OdamaPrepare", "OdamaStrike", "RasenshurikenPrepare", "RasenshurikenStrike", "RasenshurikenThrow", "Stun" } do
 	local pose = Poses.sample(key, 1.5, 0.5)
 	local finite = true; local moved = false
 	for _, angles in pose do for _, value in angles do finite = finite and value == value and math.abs(value) < math.huge; moved = moved or math.abs(value) > 0.05 end end
@@ -80,6 +80,19 @@ check("clone seal brings both hands inward", seal.LeftShoulder[3] > 0 and seal.R
 
 local held=Poses.holdRasengan(Poses.sample("Run",.12,0),.12)
 check("holding preserves running legs", held.LeftHip[1]==runB.LeftHip[1] and held.RightElbow[1]>1)
+for _,variant in {"Rasengan","Odama","Rasenshuriken"} do
+ local carried=Poses.holdRasengan(Poses.sample("Run",.12,0),.12,variant)
+ for _,joint in {"LeftHip","RightHip","LeftKnee","RightKnee"} do
+  check(variant.." carry leaves locomotion joint "..joint,carried[joint][1]==runB[joint][1])
+ end
+ local preparing=Poses.sample(variant.."Prepare",.2,.95)
+ local striking=Poses.sample(variant.."Strike",.2,.95)
+ check(variant.." impact extends arm from preparation",striking.RightElbow[1]<preparing.RightElbow[1])
+end
+local odamaHeld=Poses.holdRasengan(Poses.sample("Idle",0,0),0,"Odama")
+local shurikenHeld=Poses.holdRasengan(Poses.sample("Idle",0,0),0,"Rasenshuriken")
+check("Odama supports sphere with offhand instead of run arm",odamaHeld.LeftShoulder[1]>1 and odamaHeld.LeftElbow[1]<1)
+check("Rasenshuriken has raised silhouette distinct from both spheres",shurikenHeld.RightShoulder[1]>2.2 and shurikenHeld.RightShoulder[1]>odamaHeld.RightShoulder[1]+1)
 check("removed palm has no configured input", (Config.Abilities :: {[string]:any})["WindPalm"]==nil and table.find(Config.Order,"WindPalm")==nil)
 local movement = { W=true,A=true,S=true,D=true }
 for _,id in Config.Order do check(id.." does not consume movement keys",not (movement :: {[string]:boolean})[Config.Abilities[id].Key]) end

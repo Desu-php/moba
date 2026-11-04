@@ -14,6 +14,7 @@ local Targets = require(script.Parent.AbilityTargetService)
 local Push = require(script.Parent.AbilityDisplacementService)
 local Oil=require(script.Parent.OilStatusService)
 local Navigation = require(script.Parent.CloneNavigation)
+local Collision = require(script.Parent.SummonCollision)
 export type Record = { model: Model, root: BasePart, humanoid: Humanoid, owner: Player, state: Domain.State,
 	clone: Domain.Clone, commands: Commands.State, nextHit: number, attackDamage: number }
 local Service = { Spawned = Instance.new("BindableEvent") }
@@ -40,6 +41,8 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	if not sourceRoot or not sourceRoot:IsA("BasePart") or not sourceHumanoid or sourceHumanoid.Health <= 0 then Domain.remove(state, clone); return nil end
 	local previous = character.Archivable; character.Archivable = true
 	local model = character:Clone(); character.Archivable = previous
+	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	humanoid.EvaluateStateMachine = false
 	for _, item in model:GetDescendants() do
 		if item:IsA("LuaSourceContainer") or item:IsA("Tool") or item:IsA("ForceField") then item:Destroy()
 		elseif item:IsA("BasePart") then item.CanCollide = false; item.CanTouch = false; item.Massless = true end
@@ -48,6 +51,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	for _,key in {"SagePhase","SageRank","SageReadyAt","SageExpiresAt","SageAuraUntil"} do model:SetAttribute(key,nil) end
  game:GetService("CollectionService"):RemoveTag(model,"NarutoSage")
  model:SetAttribute("SleepUntil",nil); model:SetAttribute("RasenganVariant",nil); model:SetAttribute("RasenganVariantUntil",nil)
+ require(script.Parent.HeroAppearanceService).Apply(model)
  model.Name = "ShadowClone"; model:SetAttribute("EntityKind", "Summon"); model:SetAttribute("NativeNarutoClone", true)
 	model:SetAttribute("SummonOwner", player.UserId); model:SetAttribute("CombatDisabled", false)
 	model:SetAttribute("AbilityId", ""); model:SetAttribute("AbilityEntityId", nil); model:SetAttribute("LifeId", nil)
@@ -56,7 +60,8 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	model:SetAttribute("RasenganExpiresAt", clone.expiresAt)
 	model:SetAttribute("OutgoingDamageMultiplier", clone.outgoingMultiplier); model:SetAttribute("IncomingDamageMultiplier", clone.incomingMultiplier)
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
-	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	-- Navigation owns movement. Collision groups also protect against copied-rig
+	-- initialization restoring CanCollide after these explicit flags are set.
 	-- Explicit prototype inheritance policy: copy current/max HP once, without .05 scaling.
 	humanoid.WalkSpeed=Stats.Get(player).WalkSpeed; humanoid.MaxHealth = sourceHumanoid.MaxHealth; humanoid.Health = sourceHumanoid.Health
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None; humanoid.BreakJointsOnDeath = false
@@ -68,6 +73,7 @@ function Service.Spawn(player: Player, character: Model, state: Domain.State, cl
 	if wall and offset.Magnitude > 0 then offset = offset.Unit * math.max(0, wall.Distance - 0.01) end
 	local folder = workspace:FindFirstChild("HeroSummons")
 	if not folder then folder = Instance.new("Folder"); folder.Name = "HeroSummons"; folder.Parent = workspace end
+	Collision.Apply(model)
 	model:PivotTo(character:GetPivot() + offset); model.Parent = folder
 	local stats = Stats.Get(player)
 	records[model] = { model = model, root = root, humanoid = humanoid, owner = player, state = state, clone = clone,
@@ -86,7 +92,7 @@ function Service.Update(now: number, delta: number, sourceStats: (Player) -> (nu
 		if fighter and (fighter.logic.mode == "Stunned" or (fighter.sleep and fighter.sleep.active)) then Navigation.Stop(model); continue end
 		local intent = Commands.resolve(record.commands)
 		local character = owner.Character
-		if not character or not Damage.CanAct(character) or intent.mode == "Idle" then Navigation.Stop(model); continue end
+		if not character or not Damage.CanAct(character) or intent.mode == "Idle" or intent.mode == "Hold" then Navigation.Stop(model); continue end
 		local target: Model? = nil
 		if intent.targetId then
 			for candidate in Fighters.GetAll() do

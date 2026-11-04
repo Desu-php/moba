@@ -41,6 +41,7 @@ function M.configure(config: Config)
   if s.closed or not finite(amount) or amount<0 or amount>s.chakra then return false end
   s.chakra-=amount; return true
  end
+ function D.clearCooldown(s: State) s.cooldownAt=0 end
  function D.balance(s: State): Balance return {chakra=s.chakra,cooldownAt=s.cooldownAt} end
  -- Process elapsed whole ticks. Context must be advanced at each authoritative context change.
  -- On a long gap caller supplies historically correct context or chooses a runtime suspension policy.

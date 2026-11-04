@@ -1,0 +1,50 @@
+[Anime Battlegrounds] Server ready
+[CombatUXQA] PASS production rank unlocks exist
+[CombatUXQA] PASS Rasengan zero chakra rejected
+[CombatUXQA] PASS Rasengan accepted
+[CombatUXQA] PASS Rasengan one 100 chakra debit
+[CombatUXQA] PASS duplicate prepared Rasengan rejected without second debit
+[CombatUXQA] PASS Odama selection accepted in source window
+[CombatUXQA] PASS Rasenshuriken selection accepted in next window
+[CombatUXQA] PASS variant stays one active cast
+[CombatUXQA] PASS external stun cancels variant without refunding cooldown
+[CombatUXQA] PASS Sage III accepted
+[CombatUXQA] PASS Sage exact initial cost
+[CombatUXQA] PASS Sage preparation remains explicit
+Player:Move called, but player currently has no character.
+[Anime Battlegrounds] Client ready; left mouse button attacks
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+[CombatUXQA] PASS Sage activates and movement resumes
+[CombatUXQA] PASS mass clones accepted
+[CombatUXQA] PASS thirty clones spawned
+[CombatUXQA] PASS Hold command accepted
+[CombatUXQA] PASS every clone part ignores owner and peers
+[CombatUXQA] PASS Hold physically keeps all thirty clones still
+[CombatUXQA] PASS Follow command accepted
+[CombatUXQA] PASS Follow resumes physical movement
+[CombatUXQA] PASS Attack command accepts server-valid enemy
+[CombatUXQA] PASS Attack rejects owner as friendly target
+[CombatUXQA] PASS Hold after Attack accepted
+[CombatUXQA] PASS adult Gamakichi accepted
+[CombatUXQA] PASS adult profile and 300 chakra debit
+[CombatUXQA] PASS toad parts ignore owner and peers
+[CombatUXQA] PASS summon cooldown rejects repeated cast without debit
+[CombatUXQA] PASS Follow shared by toad and clones
+[CombatUXQA] PASS toad follows physically after spawn grounding
+[CombatUXQA] PASS Hold shared by toad and clones
+[CombatUXQA] PASS toad Hold physically stops movement
+[CombatUXQA] PASS Gamakichi oil accepted
+[CombatUXQA] PASS oil waits for projectile arrival
+[CombatUXQA] PASS oil applies slow after arrival
+[CombatUXQA] PASS oil cooldown rejects repeated spell
+[CombatUXQA] PASS adult chopping accepted
+[CombatUXQA] PASS chopping has no premature damage
+[CombatUXQA] PASS four chopping waves deal expected damage
+[CombatUXQA] PASS chopping cooldown rejects repeat
+[CombatUXQA] PASS late clone collision groups remain intact
+[CombatUXQA] PASS held cast starts before death
+[CombatUXQA] PASS death removes toad and cancels held cast and commands
+[CombatUXQA] PASS surviving source-lifetime clones stop on owner death
+[CombatUXQA] PASS 43 checks

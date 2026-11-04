@@ -58,8 +58,8 @@ function Module.configure(config: Configuration)
 		return finite(now) and cast ~= nil and Module.current(state, cast)
 			and now >= cast.startedAt and now < cast.expiresAt
 	end
-	-- Caller supplies a server-admitted hostile nonstructure attack-start event.
-	-- Using confirmed contact instead requires an explicitly documented adapter policy.
+	-- Roblox combat UX adapter supplies server-verified melee contact at the hit
+	-- frame (not attack-start intent). The original delayed control/damage remains.
 	function Rules.attack(state: State, cast: Cast, now: number, targetId: string, hostile: boolean, structure: boolean): boolean
 		if not finite(now) or not Module.current(state, cast) or cast.phase == "Consumed" or now < cast.readyAt
 			or now >= cast.expiresAt or targetId == "" or not hostile or structure then return false end

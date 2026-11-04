@@ -5,10 +5,14 @@ local RunService=game:GetService("RunService")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config=require(Shared.Config.AbilityConfig)
 local Definition=require(Shared.Abilities.NarutoDefinitions).Rasengan
-local Units=require(Shared.Abilities.WorldUnits)
 local Rounds=require(script.Parent.RoundController)
 local Ranged=require(script.Parent.NarutoRangedVFXController)
-type Effect={parts:{BasePart},at:number,untilAt:number,origin:Vector3,model:Model?,kind:string,destination:Vector3?,radius:number?,caster:Model?}
+local RasenganArt=require(script.Parent.RasenganVisual)
+local ChakraAura=require(script.Parent.ChakraAuraVisual)
+local FlightArt=require(script.Parent.RasenshurikenFlightVisual)
+local AreaRules=require(Shared.Abilities.RasenshurikenThrowRules)
+local Units=require(Shared.Abilities.WorldUnits)
+type Effect={areaId:number?,parts:{BasePart},at:number,untilAt:number,origin:Vector3,model:Model?,kind:string,destination:Vector3?,radius:number?,caster:Model?,orb:RasenganArt.Orb?,burst:RasenganArt.Burst?}
 type Helper={model:Model,cast:number}
 local effects:{Effect}={}
 local orbs:{[Model]:Effect}={}
@@ -24,28 +28,33 @@ local function part(name:string,color:Color3,size:Vector3): Part
 end
 local function remove(index:number)
 	local effect=effects[index]; if effect.model then orbs[effect.model]=nil end
+	if effect.orb then RasenganArt.Destroy(effect.orb) end
+	if effect.burst then effect.burst.group:Destroy() end
 	for _,p in effect.parts do p:Destroy() end; table.remove(effects,index)
 end
-local function create(position:Vector3,kind:string,model:Model?): Effect?
+local function create(position:Vector3,kind:string,model:Model?,variant:string?): Effect?
 	local camera=workspace.CurrentCamera
 	if #effects>=Config.Visual.MaxEffects or (camera and (camera.CFrame.Position-position).Magnitude>Config.Visual.ViewDistance) then return nil end
 	local now=workspace:GetServerTimeNow()
 	local effect:Effect={parts={},at=now,untilAt=now+(if kind=="Area" then 3.5 elseif kind=="Orb" then 20 elseif kind=="Finish" then .7 else .5),origin=position,model=model,kind=kind}
-	local count=if kind=="Orb" then 32 elseif kind=="Oil" then 1 elseif kind=="Area" or kind=="Chop" or kind=="Channel" or kind=="OilImpact" then 4 else 8
+	if kind=="Orb" and model and folder then
+  local detailed=model:GetAttribute("NativeNarutoClone")~=true and (not camera or (camera.CFrame.Position-position).Magnitude<90)
+  effect.orb=RasenganArt.Create(folder,model,detailed); table.insert(effects,effect); return effect
+ end
+ if (kind=="Contact" or kind=="Impact" or kind=="Finish") and folder then
+  local burst=RasenganArt.Burst(folder,position,variant or "Rasengan",kind,now); effect.burst=burst
+  effect.untilAt=now+burst.duration; table.insert(effects,effect); return effect
+ end
+ local count=if kind=="Oil" then 1 elseif kind=="Area" then 97 elseif kind=="Chop" then 24 elseif kind=="Smoke" then 14 elseif kind=="Channel" or kind=="OilImpact" then 4 else 8
 	for i=1,count do
 		local p=part(if kind=="Orb" then "RasenganSpiral" else "Rasengan"..kind,Color3.fromRGB(110,211,255),Vector3.one*.2)
 		if kind=="Oil" or kind=="OilImpact" then p.Shape=Enum.PartType.Ball; p.Color=Color3.fromRGB(82,49,24); p.Material=Enum.Material.SmoothPlastic; p.Size=Vector3.one*.8
-		elseif kind=="Area" or kind=="Channel" or kind=="Chop" then p.Shape=Enum.PartType.Cylinder; p.Color=Color3.fromRGB(220,211,179)
-		elseif kind=="Orb" then
-			if i<=2 then p.Shape=Enum.PartType.Ball; p.Size=Vector3.one*(if i==1 then .9 else 1.15); p.Transparency=if i==1 then .08 else .78
-			else p.Size=Vector3.new(.035,.035,.29); p.Color=Color3.fromRGB(211,247,255) end
+		elseif kind=="Area" then p.Color=Color3.fromRGB(205,248,255); if i==1 then p.Shape=Enum.PartType.Ball;p.Material=Enum.Material.ForceField;p.Color=Color3.fromRGB(30,125,255) end
+		elseif kind=="Channel" or kind=="Chop" then if kind=="Channel" then p.Shape=Enum.PartType.Cylinder end; p.Color=Color3.fromRGB(218,241,255)
 		elseif kind=="Smoke" then p.Shape=Enum.PartType.Ball; p.Material=Enum.Material.SmoothPlastic; p.Color=Color3.fromRGB(193,207,214)
 		elseif kind=="Finish" and i==1 then p.Shape=Enum.PartType.Cylinder
 		else p.Shape=Enum.PartType.Ball end
 		table.insert(effect.parts,p)
-	end
-	if kind=="Orb" then
-		local light=Instance.new("PointLight"); light.Color=Color3.fromRGB(94,194,255); light.Range=4; light.Brightness=.55; light.Parent=effect.parts[1]
 	end
 	table.insert(effects,effect); return effect
 end
@@ -58,6 +67,7 @@ local function helper(source:Model,cast:number)
 	if helpers[source] then return end
 	local root=source:FindFirstChild("HumanoidRootPart"); if not root or not root:IsA("BasePart") then return end
 	local old=source.Archivable; source.Archivable=true; local copy=source:Clone(); source.Archivable=old
+ local copiedHumanoid=copy:FindFirstChildOfClass("Humanoid"); if copiedHumanoid then copiedHumanoid.EvaluateStateMachine=false end
 	for _,item in copy:GetDescendants() do
 		if item:IsA("LuaSourceContainer") or item:IsA("Tool") or item:IsA("ForceField") then item:Destroy()
 		elseif item:IsA("BasePart") then item.CanCollide=false; item.CanTouch=false; item.CanQuery=false; item.Massless=true end
@@ -66,16 +76,26 @@ local function helper(source:Model,cast:number)
 	copy:SetAttribute("RasenganVisible",false); copy:SetAttribute("RasenganHeld",false); copy:SetAttribute("EntityKind","Cosmetic")
 	local copyRoot=copy:FindFirstChild("HumanoidRootPart") :: BasePart; copyRoot.Anchored=true
 	local humanoid=copy:FindFirstChildOfClass("Humanoid"); if humanoid then humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None end
-	local position=root.Position+root.CFrame.RightVector*Units.toStuds(Definition.HelperOffsetWarcraft)
+	-- Cosmetic choreography: the helper works beside the palm, not seven studs away.
+	local position=root.Position+root.CFrame.RightVector*2.3+root.CFrame.LookVector*.6
 	copy:PivotTo(CFrame.lookAt(position,root.Position)); copy.Parent=folder
 	helpers[source]={model=copy,cast=cast}; create(position,"Smoke",nil)
 end
 local function visible(model:Model,now:number): boolean
 	if model:GetAttribute("NativeNarutoClone")==true then return model:GetAttribute("RasenganVisible")==true end
 	local at=model:GetAttribute("RasenganStartedAt")
-	return model:GetAttribute("RasenganHeld")==true and typeof(at)=="number" and now>=at+Definition.HandEffectDelay
+	return model:GetAttribute("RasenganHeld")==true and typeof(at)=="number" and now>=at+.08
 end
 function VFX.Event(message:any)
+ if folder then FlightArt.Event(message,folder) end
+ if message.kind=="RasenshurikenAreaEnd" then
+  for i=#effects,1,-1 do if effects[i].areaId==message.id then remove(i) end end;return
+ end
+ if message.kind=="RasenshurikenDetonate" then
+  local e=create(message.position,"Area",nil);if e then e.radius=message.radius;e.areaId=message.id;e.at=message.startAt;e.untilAt=e.at+AreaRules.Duration end;return
+ end
+ local variant=if typeof(message.variant)=="string" then message.variant else "Rasengan"
+ if variant~="Odama" and variant~="Rasenshuriken" then variant="Rasengan" end
  if typeof(message.kind)=="string" and string.sub(message.kind,1,6)=="Rikudo" then Ranged.Event(message);return end
 	if typeof(message.position)~="Vector3" then return end
 	if message.kind=="GamakichiOil" or message.kind=="GamakichiOilImpact" or message.kind=="GamakichiChannel" or message.kind=="GamakichiChopImpact" then
@@ -90,8 +110,10 @@ function VFX.Event(message:any)
 		end
 	elseif message.kind=="Smoke" then create(message.position,"Smoke",nil)
 	elseif message.kind=="RasenshurikenArea" then
-  local e=create(message.position,"Area",nil);if e then e.radius=message.radius;e.caster=message.source end
- elseif message.kind=="RasenganFinish" then create(message.position,"Finish",nil)
+  local e=create(message.position,"Area",nil);if e then e.radius=message.radius;e.caster=message.source;e.areaId=message.id;e.at=message.startAt or e.at;e.untilAt=e.at+AreaRules.Duration end
+ elseif message.kind=="RasenganContact" then create(message.position,"Contact",nil,variant)
+	elseif message.kind=="RasenganImpact" then create(message.position,"Impact",nil,variant)
+	elseif message.kind=="RasenganFinish" then create(message.position,"Finish",nil,variant)
 	elseif message.kind=="RasenganTrail" then create(message.position,"Trail",nil) end
 end
 function VFX.GetDiagnostics(model:Model): (boolean,boolean)
@@ -102,12 +124,15 @@ function VFX.Start()
 	if started then return end; started=true
 	local created=Instance.new("Folder"); created.Name="LocalHeroVFX"; created.Parent=workspace; folder=created
 	Rounds.Watch(function()
+        FlightArt.Clear()
 		for i=#effects,1,-1 do remove(i) end
 		for model in helpers do removeHelper(model,false) end
 	end)
-	RunService.PreRender:Connect(function()
+	RunService.PreRender:Connect(function(dt)
 		local now=workspace:GetServerTimeNow(); local match=game:GetService("ReplicatedStorage"):FindFirstChild("SurvivalState")
 		local active=match~=nil and match:GetAttribute("Phase")=="InProgress"
+        ChakraAura.Update(created,now)
+        FlightArt.Update(now,dt)
 		local sageTagged:{[Model]:boolean}={}
         if active then for _,model in game:GetService("CollectionService"):GetTagged("NarutoSage") do
             if model:IsA("Model") and model.Parent then
@@ -156,30 +181,52 @@ function VFX.Start()
 			local elapsed=now-effect.at
 			if model then
 				local hand=model:FindFirstChild("RightHand"); if not hand or not hand:IsA("BasePart") then remove(index); continue end
-				local center=hand.CFrame*CFrame.new(0,-.55,-.7)
-				for i,p in effect.parts do
-					local variant=model:GetAttribute("RasenganVariant")
-                    local scale=if variant=="Odama" then 1.7 else 1
-                    if i<=2 then p.CFrame=center; p.Size=Vector3.one*(if i==1 then .9 else 1.15)*scale
-                    elseif variant=="Rasenshuriken" and i>=29 then
-                        p.Size=Vector3.new(.12,.24,2.4);p.Transparency=.2
-                        p.CFrame=center*CFrame.Angles(0,now*18+(i-29)*math.pi/2,0)*CFrame.new(0,0,1.3)
-					else
-						local ring=math.floor((i-3)/10); local segment=(i-3)%10
-						local rotation=center*CFrame.Angles(ring*math.pi/3+now*2,now*4,ring*.7)
-						local angle=segment*math.pi/5+now*9; local nextAngle=angle+math.pi/5
-						local a=rotation:PointToWorldSpace(Vector3.new(math.cos(angle)*.45,math.sin(angle)*.45,0))
-						local b=rotation:PointToWorldSpace(Vector3.new(math.cos(nextAngle)*.45,math.sin(nextAngle)*.45,0))
-						p.CFrame=CFrame.lookAt((a+b)/2,b)
-					end
-				end
+                if effect.orb then RasenganArt.Update(effect.orb,model,hand,now,dt) end
+            elseif effect.burst then
+                RasenganArt.UpdateBurst(effect.burst,effect.origin,now)
 			else
 				local progress=math.clamp(elapsed/(effect.untilAt-effect.at),0,1)
 				for i,p in effect.parts do
 					local angle=i*math.pi/4; local finish=effect.kind=="Finish"
 					if effect.kind=="Oil" and effect.destination then
 						p.Position=effect.origin:Lerp(effect.destination,progress)+Vector3.new(0,(effect.destination-effect.origin).Magnitude*.05*4*progress*(1-progress),0)
-					elseif effect.kind=="Area" or effect.kind=="Channel" or effect.kind=="Chop" or effect.kind=="OilImpact" then
+					elseif effect.kind=="Area" then
+                        local radius=Units.toStuds(AreaRules.radius(elapsed))
+                        if radius<=0 then p.Transparency=1;continue end
+                        if effect.caster then effect.origin=effect.caster:GetPivot().Position end
+                        local envelope=math.min(1,(1-progress)*5)
+                        if i==1 then
+                            p.Size=Vector3.one*radius*2; p.Position=effect.origin; p.Transparency=1-envelope*.72
+                        elseif i<=73 then
+                            local band=math.floor((i-2)/24);local segment=(i-2)%24
+                            local rotation=CFrame.new(effect.origin)*CFrame.Angles(band*1.05,elapsed*.7,band*.85)
+                            local spin=segment*math.pi/12+elapsed*(if band%2==0 then 11 else -9)
+                            local bandRadius=math.max(0,radius-.15)
+                            local a=rotation:PointToWorldSpace(Vector3.new(math.cos(spin)*bandRadius,math.sin(spin)*bandRadius,0))
+                            local b=rotation:PointToWorldSpace(Vector3.new(math.cos(spin+.28)*bandRadius,math.sin(spin+.28)*bandRadius,0))
+                            p.Size=Vector3.new(.06,.12,(b-a).Magnitude);p.CFrame=CFrame.lookAt((a+b)/2,b);p.Transparency=1-envelope*(.55+.3*math.sin(segment*.4)^2)
+                        else
+                            local spin=i*2.399+elapsed*17;local r=radius*(.2+((i*17)%19)/25)
+                            local a=effect.origin+Vector3.new(math.cos(spin)*r,math.sin(i+elapsed*9)*radius*.7,math.sin(spin)*r)
+                            local b=a+Vector3.new(math.cos(spin+1)*radius*.35,.35,math.sin(spin+1)*radius*.35)
+                            local limit=math.max(.01,radius-.15)
+                            local da,db=a-effect.origin,b-effect.origin
+                            if da.Magnitude>limit then a=effect.origin+da.Unit*limit end
+                            if db.Magnitude>limit then b=effect.origin+db.Unit*limit end
+                            p.Size=Vector3.new(.025,.04,(b-a).Magnitude);p.CFrame=CFrame.lookAt((a+b)/2,b);p.Transparency=1-envelope*.8
+                        end
+                    elseif effect.kind=="Chop" then
+                        local radius=(effect.radius or 4)*(.45+progress*.55)
+                        local rotation=CFrame.new(effect.origin)*CFrame.Angles(.25,elapsed*2,math.rad(55))
+                        local angle=(i-1)/23*math.pi*1.4
+                        local a=rotation:PointToWorldSpace(Vector3.new(math.cos(angle)*radius,math.sin(angle)*radius,0))
+                        local b=rotation:PointToWorldSpace(Vector3.new(math.cos(angle+.2)*radius,math.sin(angle+.2)*radius,0))
+                        p.Size=Vector3.new(.07,.25,(b-a).Magnitude);p.CFrame=CFrame.lookAt((a+b)/2,b);p.Transparency=progress
+                    elseif effect.kind=="Smoke" then
+                        local spread=progress*3.3;local angle=i*2.399
+                        p.Position=effect.origin+Vector3.new(math.cos(angle)*spread,math.sin(i)*.7+progress*2,math.sin(angle)*spread)
+                        p.Size=Vector3.one*(.7+math.sin(i)^2+progress*1.7);p.Transparency=.15+progress*.85
+                    elseif effect.kind=="Channel" or effect.kind=="OilImpact" then
 						local radius=(effect.radius or 1)*(if effect.kind=="Area" then 1+math.min(elapsed/1.6,1)*2/3 elseif effect.kind=="Channel" then 1 else progress)
                         if effect.kind=="Area" and effect.caster then effect.origin=effect.caster:GetPivot().Position end
 						if effect.kind=="OilImpact" then p.Position=effect.origin+Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius); p.Transparency=progress

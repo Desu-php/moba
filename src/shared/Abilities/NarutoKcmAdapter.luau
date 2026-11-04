@@ -10,6 +10,7 @@ export type Token = {read owner: string, read life: number, read epoch: number, 
 export type Event = {kind: string, id: number?, rank: number?, reason: string?, amount: number?}
 export type Balance = {chakra: number, cooldownAt: number}
 export type Rules<S> = {
+ clearCooldown: (S)->(),
  new: (number, Balance?) -> S, balance: (S) -> Balance, spend: (S,number) -> boolean,
  update: (S, number, Context) -> {Event}, close: (S, Context) -> {Event},
  canEnter: (S, Context) -> (boolean,string), enter: (S, Context) -> (boolean,string,{Event}),
@@ -172,6 +173,11 @@ function Adapter.configure<S>(rules: Rules<S>, ports: Ports, policy: MorphPolicy
   for _,e in list do if e.kind=="Entered" then r.castId=e.id; ports.effect(token,"Entered",e.id :: number) end end
   events(r,list,current); publish(r,current); r.busy=false
   return true,"Accepted"
+ end
+ function A.ResetCooldown(token: Token): boolean
+  local clear=rules.clearCooldown
+  local r,s=acquire(token);if not r or not s then return false end
+  clear(r.state);publish(r,s);r.busy=false;return true
  end
  function A.Chakra(token: Token): number?
   local r=records[token.owner]; return if r and r.token==token then rules.balance(r.state).chakra else nil

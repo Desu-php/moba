@@ -228,6 +228,11 @@ function S.TryCast(p: Player,id: string,request: number,now: number,target: any)
  model:SetAttribute("Ready_KcmDash",r.dash.cooldownAt)
  return true,"Accepted"
 end
+function S.StudioResetCooldowns(p: Player)
+ if not game:GetService("RunService"):IsStudio() then return end
+ local r=records[tostring(p.UserId)]
+ if r then r.dash.cooldownAt=0;if runtime and r.token then runtime.ResetCooldown(r.token) end end
+end
 function S.Update()
  if runtime then for _,p in Players:GetPlayers() do refresh(p) end; Kurama.Update(workspace:GetServerTimeNow()) end
 end

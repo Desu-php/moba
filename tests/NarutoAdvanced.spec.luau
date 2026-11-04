@@ -10,7 +10,7 @@ local checks=0
 local function check(ok: boolean,label: string) assert(ok,label); checks+=1 end
 local a,b=V.new(),V.new()
 check(select(2,V.select(a,"Odama",1,0,.1,1000,true))=="Rank","rank1 cannot select")
-check(select(2,V.select(a,"Odama",2,0,1,1000,true))=="Window","exclusive upper boundary")
+check(select(2,V.select(a,"Odama",2,0,15,1000,true))=="Window","exclusive upper boundary")
 check(select(2,V.select(a,"Odama",2,0,-.1,1000,true))=="Window","no earlier selection")
 check(select(2,V.select(a,"Odama",2,0,.1,199,true))=="Mana","no free selection")
 local choice,why,debit=V.select(a,"Odama",3,0,.5,1000,true); assert(choice,why)
@@ -74,3 +74,8 @@ ctx.kcmRank=3; ctx.hagoromo=true
 check(Catalog.reason("BijudamaRasenshuriken",ctx)=="DownstreamGraphUnverified","no stale formula")
 check(Catalog.reason("ChakraKnife",ctx)=="RegionPolicyUnknown","no unbounded blink")
 print("PASS NarutoAdvanced: "..checks.." assertions")
+
+local direct=V.new()
+local directChoice,_,directCost=V.select(direct,"Rasenshuriken",3,100,104,200,true)
+check(directChoice~=nil and directCost==200,"direct base to RS without Odama")
+check(direct.cooldowns.Odama==nil,"direct RS does not spend Odama cooldown")

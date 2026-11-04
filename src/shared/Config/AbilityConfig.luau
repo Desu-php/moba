@@ -1,12 +1,13 @@
 --!strict
 export type Ability = { Name: string, Key: string, KeyLabel: string, Cooldown: number, Windup: number, Duration: number }
 local abilities: { [string]: Ability } = {
+ RasenshurikenThrow={Name="Бросок Расенсюрикена",Key="Unknown",KeyLabel="ЛКМ",Cooldown=0,Windup=.35,Duration=3.5},
  RikudoHY={Name="Cho Bijudama RS",Key="V",KeyLabel="V",Cooldown=60,Windup=1.5,Duration=8},
  RikudoHZ={Name="Cho Bijuu RS",Key="B",KeyLabel="B",Cooldown=60,Windup=1.5,Duration=8},
  MeditationToggle={Name="Медитация",Key="Right",KeyLabel="→",Cooldown=0,Windup=0,Duration=0},
  MeditationRecall={Name="Вернуть чакру",Key="J",KeyLabel="J",Cooldown=5,Windup=0,Duration=0},
- Odama={Name="Odama (window)",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
- Rasenshuriken={Name="Rasenshuriken (window)",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
+ Odama={Name="Одама Расенган",Key="Z",KeyLabel="Z",Cooldown=40,Windup=2,Duration=15},
+ Rasenshuriken={Name="Расенсюрикен",Key="X",KeyLabel="X",Cooldown=60,Windup=1.3,Duration=15},
  ShadowSleep={Name="Sleep (enemy)",Key="T",KeyLabel="T",Cooldown=0,Windup=0,Duration=3},
  KuramaForm={Name="Курама",Key="Six",KeyLabel="6",Cooldown=160,Windup=0,Duration=30},
  KcmDash={Name="KCM Dash",Key="E",KeyLabel="E",Cooldown=40,Windup=0,Duration=0},
@@ -23,7 +24,7 @@ local abilities: { [string]: Ability } = {
 }
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "CloneCommand", "GamakichiOil", "GamakichiChop" },
-	PrototypeEnabled = table.freeze({ RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
+	PrototypeEnabled = table.freeze({ RasenshurikenThrow=true, RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=true, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),
 	InputAliases = table.freeze({ V="RikudoHY", B="RikudoHZ", Q = "Rasengan", Six="KuramaForm", E="KcmDash", Left="KuramaConvert", Z="Odama", X="Rasenshuriken", T="ShadowSleep", Right = "MeditationToggle", J = "MeditationRecall" }),
 	MaxRequestId = 2147483647, Burst = 4, RequestsPerSecond = 3, ReplyInterval = 0.25,
 	Clones = { Count = 2, GlobalLimit = 24, Lifetime = 5, Radius = 18, Range = 4, Damage = 3,

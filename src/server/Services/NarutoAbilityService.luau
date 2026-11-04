@@ -10,6 +10,8 @@ local Q = Rasengan.configure(Definitions.Rasengan)
 local Variants=require(Shared.Abilities.RasenganVariants)
 local Sleep=require(script.Parent.NarutoSleepService)
 local Shuriken=require(script.Parent.RasenshurikenMeleeService)
+local Thrown=require(script.Parent.RasenshurikenThrowService)
+local ThrowRules=require(Shared.Abilities.RasenshurikenThrowRules)
 local CloneState = require(Shared.Abilities.CloneState)
 local W = CloneState.configure(Definitions.Clones)
 local Commands = require(Shared.Abilities.CloneCommands)
@@ -53,7 +55,7 @@ local function values(player: Player): Resource.Values
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
-function Service.IsAbility(id: string): boolean return Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
+function Service.IsAbility(id: string): boolean return id=="RasenshurikenThrow" or Ranged.IsAbility(id) or Kcm.IsAbility(id) or id == "MeditationToggle" or id == "MeditationRecall" or id == "ShadowSleep" or id == "Odama" or id == "Rasenshuriken" or id == "SageMode" or id == "GamakichiOil" or id == "GamakichiChop" or id == "Gamakichi" or id == "Rasengan" or id == "ShadowClones" or id == "CloneCommand" end
 function Service.Ready(player: Player): { [string]: number }
 	local session = sessions[player]; local toad=Gama.Get(player); local ranged=Ranged.Ready(player)
 	return if session then { RikudoHY=ranged.RikudoHY or 0, RikudoHZ=ranged.RikudoHZ or 0, KuramaForm=if player.Character then (player.Character:GetAttribute("Ready_KuramaForm") or 0) :: number else 0, KCM=if player.Character then (player.Character:GetAttribute("Ready_KCM") or 0) :: number else 0, KcmDash=if player.Character then (player.Character:GetAttribute("Ready_KcmDash") or 0) :: number else 0, MeditationRecall=session.meditationRecallAt, Odama=session.variants.cooldowns.Odama or 0, Rasenshuriken=session.variants.cooldowns.Rasenshuriken or 0, SageMode=session.sage.cooldownAt, Rasengan = session.q.cooldownAt, ShadowClones = session.clones.cooldownAt, Gamakichi=session.gama.cooldownAt, GamakichiOil=if toad then toad.spells.oilReady else 0, GamakichiChop=if toad then toad.spells.chopReady else 0 } else {}
@@ -61,6 +63,7 @@ end
 local function publish(player: Player, session: Session, now: number)
 	local model = session.character; if not model or model ~= player.Character then return end
 	local cast = session.q.active
+	model:SetAttribute("SummonOrder", Commands.resolve(session.commands).mode)
 	local sage=session.sage.active
  model:SetAttribute("MeditationMode",session.meditationMode)
  model:SetAttribute("Ready_MeditationRecall",session.meditationRecallAt)
@@ -68,7 +71,7 @@ local function publish(player: Player, session: Session, now: number)
  model:SetAttribute("MeditationCloneCount",meditationCount)
  model:SetAttribute("SageHealthProvisional",sage~=nil and sage.rank==3)
  model:SetAttribute("RasenganVariant",if cast then cast.variant else "")
- model:SetAttribute("RasenganVariantUntil",if cast and cast.variant~="Rasenshuriken" then cast.startedAt+1 else 0)
+ model:SetAttribute("RasenganVariantUntil",if cast and cast.variant=="Rasengan" then cast.expiresAt elseif cast and cast.variant=="Odama" then cast.startedAt+1 else 0)
  model:SetAttribute("Ready_Odama",session.variants.cooldowns.Odama or 0)
  model:SetAttribute("Ready_Rasenshuriken",session.variants.cooldowns.Rasenshuriken or 0)
  model:SetAttribute("Ready_SageMode",session.sage.cooldownAt)
@@ -178,6 +181,11 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
  end
 	if id=="GamakichiOil" or id=="GamakichiChop" then return Gama.TrySpell(player,id,requestId,now,targetValue) end
 	if id == "CloneCommand" then
+		if typeof(targetValue) == "string" then
+			local accepted, reason = Commands.order(session.commands, tostring(player.UserId), roundId(), session.life, requestId, targetValue)
+			if accepted then publish(player, session, now) end
+			return accepted, reason
+		end
 		if typeof(targetValue) ~= "Instance" then return false, "Target" end
 		local instance = targetValue :: Instance
 		if not instance:IsA("Model") then return false, "Target" end
@@ -185,20 +193,36 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 		local valid = root ~= nil and root:IsA("BasePart") and Damage.CanDamage(model, target)
 			and (root.Position - fighter.root.Position).Magnitude <= Units.toStuds(Definitions.Clones.RangeWarcraft)
 		if not valid or not Fighters.Get(target) then return false, "Target" end
-		return Commands.command(session.commands, tostring(player.UserId), roundId(), session.life, requestId, Summons.EntityId(target), true)
+		local accepted, reason = Commands.command(session.commands, tostring(player.UserId), roundId(), session.life, requestId, Summons.EntityId(target), true)
+		if accepted then publish(player, session, now) end
+		return accepted, reason
 	end
 	if (fighter.sleep and fighter.sleep.active) or fighter.logic.mode ~= "Idle" or fighter.logic.nextAttackAt > now or session.selfControlUntil > now
 		or (model:GetAttribute("AbilityId") ~= nil and model:GetAttribute("AbilityId") ~= "") then return false, "Busy" end
-	if id=="Odama" or id=="Rasenshuriken" then
+	if id=="RasenshurikenThrow" then
+        local cast=session.q.active;local sage=session.sage.active;local profile=Progression.Get(player)
+        if typeof(targetValue)~="Vector3" then return false,"Malformed" end
+        if not cast or not ThrowRules.allowed(if profile then profile.Learned.Rasengan or 0 else 0,sage~=nil and sage.phase=="Active" and now<sage.expiresAt,cast.variant,cast.phase,now,cast.readyAt,cast.expiresAt) then return false,"Unavailable" end
+        local life,epoch=session.life,roundId()
+        local ok=Thrown.Begin(model,targetValue,now,function() return values(player).strength end,function()
+            return player.Character==model and session.life==life and roundId()==epoch and Damage.CanAct(model)
+        end)
+        if not ok then return false,"Target" end
+        model:SetAttribute("RasenshurikenThrowAt",now)
+        cancelQ(player,session,now)
+        return true,"Accepted"
+    elseif id=="Odama" or id=="Rasenshuriken" then
         if targetValue~=nil then return false,"Malformed" end
-        if session.sage.active or meditationForm(player)~="Ordinary" then return false,"FormAdapterUnverified" end
+        local sage=session.sage.active
+        local sageThrow=id=="Rasenshuriken" and sage~=nil and sage.phase=="Active" and now<sage.expiresAt
+        if not sageThrow and (sage~=nil or meditationForm(player)~="Ordinary") then return false,"FormAdapterUnverified" end
         local cast=session.q.active; if not cast or cast.phase=="Consumed" then return false,"Window" end
         local profile=Progression.Get(player)
         local rank=if profile then profile.Learned.Rasengan or 0 else 0
         local choice,reason,debit=Variants.select(session.variants,id,rank,cast.startedAt,now,session.pool.mana,cast.variant=="Rasengan")
         if not choice then return false,reason end
         assert(Resource.spend(session.pool,debit))
-        cast.variant=id; cast.startedAt=now; cast.readyAt=choice.readyAt; cast.expiresAt=choice.expiresAt
+        cast.variant=id; cast.phase="Preparing"; cast.startedAt=now; cast.readyAt=choice.readyAt; cast.expiresAt=choice.expiresAt
         cast.stun=Variants.stun(id); cast.impactDelay=if id=="Rasenshuriken" then .5 else 1
         session.preparationStunned=false
         if id=="Rasenshuriken" then session.shurikenSnapshot=values(player).strength; selfStun(session,fighter,now,1.5) end
@@ -267,7 +291,7 @@ function Service.TryCast(player: Player, id: string, requestId: number, now: num
 end
 function Service.Reset()
 	Ranged.Reset(); Kcm.Reset()
-	Sleep.Reset(); Shuriken.Reset(); Summons.Reset(); Gama.Reset(); Displacement.Reset(); MeditationClones.Reset()
+	Sleep.Reset(); Shuriken.Reset(); Thrown.Reset(); Summons.Reset(); Gama.Reset(); Displacement.Reset(); MeditationClones.Reset()
 	for player, session in sessions do
 		Meditation.invalidate(session.meditation,roundId(),session.life+1); session.meditationMode=false; session.meditationRecallAt=0
 		session.variants=Variants.new(); clearSage(session); Sage.reset(session.sage,roundId(),session.life+1); session.gama=GamaDomain.new()
@@ -334,8 +358,8 @@ function Service.Update(now: number)
 						local consumedCast: Rasengan.Cast = cast
 						if cast.variant~="Rasenshuriken" then Displacement.Begin(model, target, now, 2, 1, 1, 18, 0.03, function()
 							return session.q.round == round and session.q.life == life and (session.q.active == consumedCast or consumedCast.impacted) and Damage.CanDamage(model, target)
-						end, function() Service.Visual:Fire({kind="RasenganFinish",position=target:GetPivot().Position}) end,
-						function() Service.Visual:Fire({kind="RasenganTrail",position=target:GetPivot().Position}) end) end
+						end, function() Service.Visual:Fire({kind="RasenganFinish",source=model,variant=consumedCast.variant,castId=consumedCast.id,position=target:GetPivot().Position}) end,
+						function() Service.Visual:Fire({kind="RasenganTrail",source=model,variant=consumedCast.variant,castId=consumedCast.id,position=target:GetPivot().Position}) end) end
 					end
 					local impacted = Q.claimImpact(session.q, cast, now)
 					if impacted and target then
@@ -345,7 +369,10 @@ function Service.Update(now: number)
 							if cast.variant=="Rasenshuriken" then
                                 local round,life=session.q.round,session.q.life
                                 Shuriken.Begin(model,target,now,function() return session.q.round==round and session.q.life==life and Damage.CanAct(model) end,function() return values(player).strength end,session.shurikenSnapshot)
-                            else Damage.Apply(model, humanoid, raw) end
+                            else
+                                local dealt=Damage.Apply(model, humanoid, raw)
+                                if dealt>0 then Service.Visual:Fire({kind="RasenganImpact",source=model,variant=cast.variant,castId=cast.id,position=target:GetPivot().Position}) end
+                            end
 						end
 						session.target = nil
 					end
@@ -360,7 +387,7 @@ function Service.Update(now: number)
 		CloneState.expire(session.clones, now)
 		if now >= session.nextPublish then publish(player, session, now) end
 	end
-	Ranged.Update(now); Sleep.Update(now); Shuriken.Update(now); Displacement.Update(now)
+	Ranged.Update(now); Sleep.Update(now); Shuriken.Update(now); Thrown.Update(now); Displacement.Update(now)
 end
 function Service.Start()
 	if started then return end; started = true
@@ -383,6 +410,7 @@ function Service.Start()
   busy=function(p) local s=bind(p);return s.q.active~=nil or s.clones.burst~=nil or s.selfControlUntil>workspace:GetServerTimeNow() or (s.sage.active~=nil and s.sage.active.phase=="Preparing") end,
   pause=function(p,d) local s=bind(p);local f=if p.Character then Fighters.Get(p.Character) else nil;if f then selfStun(s,f,workspace:GetServerTimeNow(),d) end end})
  Ranged.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
+ Thrown.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
  Service.ConfigureMeditationForms(Kcm.MeditationForm)
  Kurama.ConfigureSummonManaReceiver(MeditationClones.RestoreMana)
  Shuriken.Visual.Event:Connect(function(message) Service.Visual:Fire(message) end)
@@ -424,17 +452,24 @@ function Service.Start()
 			end
 		end
 		Kcm.OnAttackStarted(player,chosen~=nil)
-  if chosen then Commands.assist(session.commands, Summons.EntityId(chosen), true) end
+	end)
+	Combat.SetContactHandler(function(fighter: Fighters.Fighter, chosen: Model): boolean
+		local player = fighter.player; local session = if player then sessions[player] else nil
+		if not player or not session then return false end
+		Commands.assist(session.commands, Summons.EntityId(chosen), true)
 		local cast = session.q.active
-		local targetRoot = if chosen then chosen:FindFirstChild("HumanoidRootPart") else nil
-		if cast and chosen and targetRoot and targetRoot:IsA("BasePart")
-			and nearest <= Units.toStuds(50) + (fighter.root.Size.X + targetRoot.Size.X) / 2 then
+		local targetRoot = chosen:FindFirstChild("HumanoidRootPart")
+		if cast and targetRoot and targetRoot:IsA("BasePart")
+			and (targetRoot.Position - fighter.root.Position).Magnitude <= Units.toStuds(50) + (fighter.root.Size.X + targetRoot.Size.X) / 2 then
 			local kind = chosen:GetAttribute("EntityKind")
 			if Q.attack(session.q, cast, workspace:GetServerTimeNow(), Summons.EntityId(chosen), true, kind ~= "Hero" and kind ~= "Minion" and kind ~= "Summon") then
 				session.target = chosen; session.selfControlUntil = workspace:GetServerTimeNow() + 0.01 + cast.impactDelay
 				publish(player, session, workspace:GetServerTimeNow())
+				Service.Visual:Fire({kind="RasenganContact",source=fighter.character,target=chosen,variant=cast.variant,castId=cast.id,position=targetRoot.Position})
+				return true -- One prepared spell replaces this strike, retaining its original damage.
 			end
 		end
+		return false
 	end)
 	local last = workspace:GetServerTimeNow()
 	game:GetService("RunService").Heartbeat:Connect(function()
