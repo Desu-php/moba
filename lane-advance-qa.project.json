@@ -1,0 +1,10 @@
+{
+ "name": "Lane-Advance-QA",
+ "tree": {
+  "$className": "DataModel",
+  "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+  "ServerScriptService": { "Server": { "$path": "src/server" }, "LaneAdvanceQA": { "$path": "tests/minions/LaneAdvance.server.luau" } },
+  "StarterPlayer": { "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false }, "StarterPlayerScripts": { "Client": { "$path": "src/client" } } },
+  "Workspace": { "$attributes": { "DeveloperSoloMode": true } }
+ }
+}

@@ -9204,6 +9204,7 @@ export type Minion = {
 	nextAttack: number, spawnedAt: number, deadAt: number?, lastPosition: Vector3,
 	progressAt: number, recoveries: number, recoveryUntil: number, recoveryGoal: Vector3?,
 	serial: number, combatTarget: Model?, combatOffset: Vector3?,
+	laneAssault: boolean, passUntil: number, passGoal: Vector3?, passes: number,
 	connections: { RBXScriptConnection },
 }
 local AI = { Shot = Instance.new("BindableEvent") }
@@ -9243,7 +9244,7 @@ function AI.Register(model: Model, teamId: string, kind: string, lane: string, r
 		stats = stats, route = route, waypoint = 1, target = nil, mode = "Spawning",
 		nextAttack = now + Config.SpawnGrace, spawnedAt = now, deadAt = nil,
 		lastPosition = root.Position, progressAt = now, recoveries = 0, recoveryUntil = 0, recoveryGoal = nil, connections = {},
-		serial=serial,combatTarget=nil,combatOffset=nil }
+		serial=serial,combatTarget=nil,combatOffset=nil,laneAssault=false,passUntil=0,passGoal=nil,passes=0 }
 	records[model] = npc; active += 1
 	model:SetAttribute("Lane", lane); model:SetAttribute("AIState", "Spawning"); model:SetAttribute("Waypoint", 1)
 	if root:CanSetNetworkOwnership() then root:SetNetworkOwner(nil) end
@@ -9308,9 +9309,23 @@ local function selectTarget(npc: Minion): Model?
 	end end
 	if nearestNPC then return nearestNPC end
 	if nearestHero then return nearestHero end
+	-- Once a wave reaches its lane defenses, the newly unlocked tower is its
+	-- objective even beyond local detection range. Never return to an old waypoint.
+	local ownTower: Model? = nil; local ownTier=math.huge
+	for model, tower in Structures.GetAll() do
+		if tower.kind=="Tower" and tower.lane==npc.lane and Structures.Alive(tower) and Damage.CanDamage(npc.model,model) then
+			local level=(model:GetAttribute("TowerTier") or 1) :: number
+			if level<ownTier then ownTower=model;ownTier=level end
+		end
+	end
+	if ownTower then
+		local root=ownTower.PrimaryPart
+		if root and (npc.laneAssault or (root.Position-origin).Magnitude<=math.max(npc.stats.DetectionRange,Config.StructureDetectionRange)) then return ownTower end
+	end
 	local selected: Model? = nil; local distance = math.huge
 	for model, tower in Structures.GetAll() do
 		if tower.kind ~= "Tower" or not Structures.Alive(tower) then continue end
+		if ownTower and tower.lane~=npc.lane then continue end
 		local separation = (tower.root.Position - origin).Magnitude
 		local sameLane = tower.lane == npc.lane
 		if separation <= (if sameLane then math.max(npc.stats.DetectionRange,Config.StructureDetectionRange) else npc.stats.AttackRange)
@@ -9367,7 +9382,9 @@ local function crowded(npc: Minion, radius: number?): boolean
 	return false
 end
 local function combatGoal(npc: Minion, target: Model, center: Vector3): Vector3?
-	if npc.combatTarget~=target then npc.combatTarget=target;npc.combatOffset=nil end
+	if npc.combatTarget~=target then
+		npc.combatTarget=target;npc.combatOffset=nil;npc.passUntil=0;npc.passGoal=nil;npc.recoveryUntil=0
+	end
 	local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude
 	overlap.FilterDescendantsInstances={npc.model.Parent :: Instance};overlap.RespectCanCollide=true
 	overlap.CollisionGroup="SurvivalMinions"
@@ -9378,18 +9395,25 @@ local function combatGoal(npc: Minion, target: Model, center: Vector3): Vector3?
 		end
 		return #workspace:GetPartBoundsInBox(CFrame.new(center+offset),Vector3.new(Config.BodyDiameter,4,Config.BodyDiameter),overlap)==0
 	end
-	if npc.combatOffset and free(npc.combatOffset) then return center+npc.combatOffset end
 	local radius=npc.stats.AttackRange-.6
-	local best: Vector3?=nil;local score=math.huge
-	for i=0,11 do
-		local angle=i*math.pi/6;local offset=Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius)
-		if free(offset) then
-			local distance=flat(center+offset-npc.root.Position).Magnitude
-			if distance<score then best=offset;score=distance end
+	if npc.combatOffset and npc.combatOffset.Magnitude<=radius+.01 and free(npc.combatOffset) then return center+npc.combatOffset end
+	-- Full melee positions must not strand the rest of a wave at the old tower.
+	-- Reserve spaced waiting rings and promote them as inner positions become free.
+	for ring=0,3 do
+		if ring>0 and npc.combatOffset and math.abs(npc.combatOffset.Magnitude-(radius+ring*Config.Separation))<.01
+			and free(npc.combatOffset) then return center+npc.combatOffset end
+		local best: Vector3?=nil;local score=math.huge
+		local count=12+ring*6
+		for i=0,count-1 do
+			local angle=i*2*math.pi/count;local offset=Vector3.new(math.cos(angle),0,math.sin(angle))*(radius+ring*Config.Separation)
+			if free(offset) then
+				local distance=flat(center+offset-npc.root.Position).Magnitude
+				if distance<score then best=offset;score=distance end
+			end
 		end
+		if best then npc.combatOffset=best;return center+best end
 	end
-	npc.combatOffset=best
-	return if best then center+best else nil
+	npc.combatOffset=nil;return nil
 end
 local function steer(npc: Minion, goal: Vector3): Vector3
 	local delta=flat(goal-npc.root.Position);if delta.Magnitude<.2 then return goal end
@@ -9407,6 +9431,23 @@ local function steer(npc: Minion, goal: Vector3): Vector3
 		end
 	end
 	local direction=forward+force
+	-- The far side of a tower needs a route beside its solid base, not MoveTo
+	-- through its center. Keep the detour outside the full horizontal footprint.
+	local ray=RaycastParams.new();ray.FilterType=Enum.RaycastFilterType.Exclude
+	ray.FilterDescendantsInstances={npc.model.Parent :: Instance};ray.RespectCanCollide=true;ray.CollisionGroup="SurvivalMinions"
+	local hit=workspace:Blockcast(CFrame.new(npc.root.Position),Vector3.new(Config.BodyDiameter,4,Config.BodyDiameter),forward*math.min(delta.Magnitude,6),ray)
+	if hit and hit.Instance:IsA("BasePart") then
+		local obstacle=hit.Instance;local radial=flat(npc.root.Position-obstacle.Position)
+		if radial.Magnitude>.1 then
+			local toward=flat(goal-obstacle.Position)
+			local cross=radial.X*toward.Z-radial.Z*toward.X
+			local side=if math.abs(cross)>.1 then (if cross>0 then 1 else -1) else (if npc.serial%2==0 then 1 else -1)
+			local clearance=Vector2.new(obstacle.Size.X,obstacle.Size.Z).Magnitude/2+Config.BodyDiameter/2+.4
+			local tangent=Vector3.new(-radial.Unit.Z,0,radial.Unit.X)*side
+			local around=obstacle.Position+radial.Unit*clearance+tangent*3
+			direction=flat(around-npc.root.Position).Unit+force*.4
+		end
+	end
 	return if direction.Magnitude>.1 then npc.root.Position+direction.Unit*math.min(delta.Magnitude,6) else npc.root.Position
 end
 local function move(npc: Minion, goal: Vector3, now: number)
@@ -9415,10 +9456,19 @@ local function move(npc: Minion, goal: Vector3, now: number)
 	if displacement.Magnitude >= Config.ProgressDistance then
 		npc.lastPosition = npc.root.Position; npc.progressAt = now
 	end
-	-- Waiting for an occupied combat/road position is not a world-geometry failure.
-	-- Keep steering, but do not jump or despawn a healthy unit queued behind peers.
-	if crowded(npc,Config.AvoidanceRadius) then npc.progressAt=now end
-	if now - npc.progressAt >= Config.StuckTime then
+	local congestion=crowded(npc,Config.AvoidanceRadius)
+	-- A stationary ally must not suppress recovery forever. Use a short, stable
+	-- passing maneuver while retaining collisions and the lane objective.
+	if congestion and now-npc.progressAt>=1.2 and now>=npc.passUntil then
+		local delta=flat(goal-npc.root.Position)
+		if delta.Magnitude>.1 then
+			npc.passes+=1
+			local side=if (npc.serial+npc.passes)%2==0 then 1 else -1
+			npc.passGoal=npc.root.Position+Vector3.new(-delta.Unit.Z,0,delta.Unit.X)*side*Config.Separation+delta.Unit*2
+			npc.passUntil=now+1;npc.progressAt=now
+		end
+	end
+	if now - npc.progressAt >= Config.StuckTime and not congestion then
 		npc.recoveries += 1; npc.progressAt = now
 		if npc.recoveries > Config.MaxRecoveryAttempts then
 			warn(string.format("[Minions] Despawn stuck %s lane=%s waypoint=%d", npc.model.Name, npc.lane, npc.waypoint))
@@ -9431,7 +9481,9 @@ local function move(npc: Minion, goal: Vector3, now: number)
 		npc.recoveryUntil = now + 1
 		warn(string.format("[Minions] Recovery %d/%d: %s %s", npc.recoveries, Config.MaxRecoveryAttempts, npc.model.Name, npc.lane))
 	end
-	npc.humanoid:MoveTo(steer(npc,if now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal))
+	local destination=if now<npc.passUntil and npc.passGoal then npc.passGoal
+		elseif now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal
+	npc.humanoid:MoveTo(steer(npc,destination))
 end
 function AI.Update(now: number)
 	-- Corpse cleanup also runs after the match has stopped.
@@ -9455,6 +9507,7 @@ function AI.Update(now: number)
 		npc.target = target; model:SetAttribute("TargetName", if target then target.Name else "")
 		local goal: Vector3? = nil
 		if target then
+			if target:GetAttribute("EntityKind")=="Tower" and target:GetAttribute("Lane")==npc.lane then npc.laneAssault=true end
 			local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart
 			local position=targetRoot.Position
 			goal = combatGoal(npc,target,position)
@@ -9471,6 +9524,12 @@ function AI.Update(now: number)
 				end
 				continue
 			end
+			if goal and flat(goal-npc.root.Position).Magnitude<.8 and (position-npc.root.Position).Magnitude>npc.stats.AttackRange then
+				-- An occupied melee front has a real waiting position. Arrival is
+				-- progress, not a stuck MoveTo that should eventually delete the unit.
+				setMode(npc,"Waiting");npc.humanoid:MoveTo(npc.root.Position);npc.progressAt=now
+				npc.passUntil=0;npc.recoveryUntil=0;continue
+			end
 		else
 			npc.combatTarget=nil;npc.combatOffset=nil
 			local waypoint = npc.route[npc.waypoint]
@@ -9480,7 +9539,13 @@ function AI.Update(now: number)
 				if direction.Magnitude<.01 then direction=flat(npc.route[2]-npc.route[1]) end
 				return point+Vector3.new(-direction.Z,0,direction.X).Unit*((model:GetAttribute("LaneOffset") or 0) :: number)
 			end
-			if waypoint and flat(formation(waypoint)-npc.root.Position).Magnitude <= Config.WaypointRadius then
+			local function passed(point: Vector3): boolean
+				if flat(formation(point)-npc.root.Position).Magnitude<=Config.WaypointRadius then return true end
+				if npc.waypoint<=1 then return false end
+				local previous=npc.route[npc.waypoint-1];local segment=flat(point-previous)
+				return segment.Magnitude>.01 and flat(npc.root.Position-previous):Dot(segment.Unit)>=segment.Magnitude
+			end
+			while waypoint and passed(waypoint) do
 				npc.waypoint += 1; npc.recoveries = 0; model:SetAttribute("Waypoint", npc.waypoint)
 				waypoint = npc.route[npc.waypoint]
 			end
