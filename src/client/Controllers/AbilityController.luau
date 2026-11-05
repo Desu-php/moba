@@ -6,6 +6,8 @@ local Gui = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.AbilityConfig)
+local Sasuke=require(Shared.Abilities.SasukeDefinitions)
+local SasukeRules=require(Shared.Abilities.SasukeRules)
 local VFX = require(script.Parent.AbilityVFXController)
 local Rounds = require(script.Parent.RoundController)
 local Gama=require(Shared.Abilities.GamakichiState)
@@ -44,7 +46,13 @@ function Controller.ClearCooldownCorrections()
  if not RunService:IsStudio() then return end
  corrections={};correctionUntil=0;Controller.Changed:Fire()
 end
+local function sasukeContinuation(id:string):boolean
+ local m=Players.LocalPlayer.Character;if not m or m:GetAttribute("HeroId")~="Sasuke" then return false end
+ return (id=="Garuda" and m:GetAttribute("GarudaActive")==true) or (id=="Sharingan" and ((m:GetAttribute("SasukeMode") or 0) :: number)>0) or (id=="SusanooRibs" and m:GetAttribute("SusanooForm")==1) or (id=="Amenotejikara" and ((m:GetAttribute("AmenotejikaraSelectingUntil") or 0) :: number)>workspace:GetServerTimeNow())
+end
 function Controller.Remaining(id: string): number
+ if sasukeContinuation(id) then return 0 end
+ if Sasuke.Spells[id] then id=Sasuke.cooldownKey(id) end
  if id=="ShadowSleep" then id="ShadowClones" elseif id=="MeditationCast" then id="SageMode" end
 	if RunService:IsStudio() and Players.LocalPlayer:GetAttribute("DeveloperNoCooldown")==true then return 0 end
 	local model = Players.LocalPlayer.Character; if not model then return 0 end
@@ -56,6 +64,7 @@ function Controller.Unavailable(summonOrder: boolean?): string?
 	local player = Players.LocalPlayer; local model = player.Character
 	local humanoid = if model then model:FindFirstChildOfClass("Humanoid") else nil
 	if not model or not humanoid or humanoid.Health <= 0 or model:GetAttribute("CombatDisabled") == true or player:GetAttribute("Eliminated") == true then return "Недоступно" end
+	if player:GetAttribute("HeroSelectionOpen")==true then return "Выберите героя" end
 	if player:GetAttribute("ShopOpen") == true then return "Закройте магазин" end
 	if Input:GetFocusedTextBox() then return "Ввод текста" end
 	-- Alt only exposes the cursor for HUD buttons and mouse targeting.
@@ -71,11 +80,24 @@ function Controller.Unavailable(summonOrder: boolean?): string?
 	return nil
 end
 function Controller.Cost(id: string): number
+ if sasukeContinuation(id) then return 0 end
+ if Sasuke.Spells[id] then local state=Players.LocalPlayer:FindFirstChild("HeroState");return Sasuke.cost(id,if state then (state:GetAttribute("Rank_"..Sasuke.Spells[id].line) or 0) :: number else 0) end
  if id=="MeditationCast" then id="SageMode" end
  local state=Players.LocalPlayer:FindFirstChild("HeroState")
  return if id=="RikudoHY" or id=="RikudoHZ" then 1800 elseif id=="KcmDash" then 100 elseif id=="Odama" or id=="Rasenshuriken" or id=="ShadowSleep" then 200 elseif id=="SageMode" then 25 elseif id == "Rasengan" then 100 elseif id == "ShadowClones" then 200 elseif id=="Gamakichi" then Gama.rank(if state then (state:GetAttribute("Rank_Gamakichi") or 0) :: number else 0) or 0 else 0
 end
 function Controller.AbilityUnavailable(id: string): string?
+ if Sasuke.Spells[id] then
+  local common=Controller.Unavailable(id=="SasukeModeOff");if common then return common end
+  local player=Players.LocalPlayer;local m=player.Character;local state=player:FindFirstChild("HeroState")
+  if player:GetAttribute("HeroId")~="Sasuke" or not m or not state then return "Другой герой" end
+  local function n(key:string):number return (m:GetAttribute(key) or 0) :: number end
+  local reason=SasukeRules.reason(id,{rank=(state:GetAttribute("Rank_"..Sasuke.Spells[id].line) or 0) :: number,mode=n("SasukeMode"),held=m:GetAttribute("ChidoriHeld")==true,readyAt=n("ChidoriReadyAt"),now=workspace:GetServerTimeNow(),form=n("SusanooForm"),kirinAt=n("KirinReadyAt"),kirinUntil=n("KirinUntil"),spheres=n("ChibakuCount"),beasts=n("SasukeBijuu"),garuda=m:GetAttribute("GarudaActive")==true})
+  if reason then return reason end
+  if id=="ChakraAbsorb" then return "На поле пока нет источников чакры хвостатых" end
+  if n("Mana")<Controller.Cost(id) and id~="SasukeModeOff" then return "Недостаточно чакры" end
+  return nil
+ end
  if id=="MeditationCast" then return Controller.AbilityUnavailable("SageMode") end
 	if not (Config.PrototypeEnabled :: { [string]: boolean })[id] then return "В разработке" end
 	local unavailable = Controller.Unavailable(id=="CloneCommand" or id=="KcmCancel" or id=="GamakichiOil" or id=="GamakichiChop"); if unavailable then return unavailable end
@@ -269,6 +291,7 @@ function Controller.GetMessage(): string
 end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
+ if model:GetAttribute("HeroId")=="Sasuke" then return if model:GetAttribute("ChidoriHeld")==true then "Чидори в руке • первое попадание ЛКМ расходует заряд" else "" end
  local chakra=model:GetAttribute("KuramaChakra"); if typeof(chakra)~="number" then return "" end
  local now=workspace:GetServerTimeNow()
  local layers={}

@@ -20,7 +20,20 @@ function Icons.draw(parent: GuiObject, id: string): Frame
 		if round then local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(1,0); c.Parent=f end
 		return f
 	end
-	if id=="Rasengan" then
+	local sasuke=require(game.ReplicatedStorage.Shared.Abilities.SasukeDefinitions).Spells[id]
+ if sasuke then
+  canvas.BackgroundColor3=if sasuke.line=="SasukeFire" then Color3.fromRGB(177,66,31) elseif sasuke.line=="SasukeLightning" then Color3.fromRGB(51,105,169) else Color3.fromRGB(105,46,148)
+  if sasuke.line=="SasukeLightning" then
+   shape("Bolt",.48,.35,.16,.5,false,32);shape("Bolt",.58,.65,.14,.43,false,32);shape("Cross",.5,.5,.45,.13,false)
+  elseif sasuke.line=="SasukeFire" then
+   shape("Flame",.5,.55,.48,.62,true,-15);shape("Tongue",.5,.25,.22,.4,false,28);shape("Core",.5,.65,.22,.3,true).BackgroundColor3=Color3.fromRGB(255,190,45)
+  elseif sasuke.line=="SasukeSummon" then
+   for i=1,6 do shape("Snake",.5+math.sin(i)*.18,.18+i*.1,.23,.22,true) end
+  else
+   shape("Eye",.5,.5,.8,.42,true);shape("Iris",.5,.5,.38,.38,true).BackgroundColor3=Color3.fromRGB(173,35,79);shape("Pupil",.5,.5,.13,.13,true).BackgroundColor3=Color3.fromRGB(15,10,24)
+   for i=1,3 do local a=i*math.pi*2/3;shape("Tomoe",.5+math.cos(a)*.13,.5+math.sin(a)*.13,.07,.07,true).BackgroundColor3=Color3.fromRGB(15,10,24) end
+  end
+ elseif id=="Rasengan" then
 		for i=1,4 do
 			local r=shape("ChakraRing",.5,.5,.18+i*.14,.18+i*.14,true); r.BackgroundTransparency=1
 			local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(159,232,255); stroke.Thickness=2; stroke.Parent=r

@@ -8,6 +8,8 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Rules = require(Shared.Game.ProgressionRules).configure(require(Shared.Config.ProgressionConfig), require(Shared.Config.ItemConfig).Items)
 local DamageService = { Applied = Instance.new("BindableEvent"), AttackAttempt = Instance.new("BindableEvent") }
 local enabled = true
+local incoming:{[string]:(Model,number,string?)->number}={}
+function DamageService.RegisterIncoming(id:string,handler:(Model,number,string?)->number) incoming[id]=handler end
 local Oil=require(script.Parent.OilStatusService)
 function DamageService.SetEnabled(value: boolean) enabled = value end
 function DamageService.CanAct(model: Model): boolean
@@ -21,19 +23,21 @@ function DamageService.CanAct(model: Model): boolean
 end
 function DamageService.CanDamage(attacker: Model, target: Model): boolean
 return DamageService.CanAct(attacker) and DamageService.CanAct(target) and Teams.IsEnemy(attacker, target)
-		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true or target:GetAttribute("NativeMeditationClone")==true)
+		and (target:GetAttribute("EntityKind") ~= "Summon" or target:GetAttribute("NativeNarutoClone") == true or target:GetAttribute("NativeGamakichi")==true or target:GetAttribute("NativeMeditationClone")==true or target:GetAttribute("NativeAoda")==true)
 		and target:GetAttribute("IsDestroyed") ~= true
 		and Structures.CanReceive(target)
 end
-function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number): number
+function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number, kind:string?): number
 	local target = humanoid.Parent
 	if not target or not target:IsA("Model") or not DamageService.CanDamage(attacker, target) then return 0 end
 	if amount ~= amount or amount <= 0 or amount == math.huge then return 0 end
+	local modifier=incoming[tostring(target:GetAttribute("HeroId"))];if modifier then amount=modifier(target,amount,kind) end
 	local before = humanoid.Health
 	if attacker:GetAttribute("NativeNarutoClone") == true then amount *= (attacker:GetAttribute("OutgoingDamageMultiplier") :: number) end
 	if target:GetAttribute("NativeNarutoClone") == true then amount *= (target:GetAttribute("IncomingDamageMultiplier") :: number) end
 	local stats = Stats.GetForModel(target)
-	if stats then amount = Rules.mitigate(amount, stats.Defense)
+	if kind=="Pure" then -- Source pure damage bypasses armor.
+ elseif stats then local poison=(target:GetAttribute("SnakePoisonUntil") or 0) :: number;amount = Rules.mitigate(amount, stats.Defense-(if poison>workspace:GetServerTimeNow() then (target:GetAttribute("SnakePoisonArmor") or 0) :: number else 0))
 	elseif target:GetAttribute("NativeGamakichi")==true then amount=Rules.mitigate(amount,(target:GetAttribute("SummonArmor") or 0) :: number) end
 	Life.Register(target)
 	humanoid:TakeDamage(math.min(amount, before))
@@ -47,8 +51,15 @@ function DamageService.Apply(attacker: Model, humanoid: Humanoid, amount: number
 	return dealt
 end
 function DamageService.ApplyAttack(attacker: Model,humanoid: Humanoid,amount: number): number
- local target=humanoid.Parent; if target and target:IsA("Model") and DamageService.CanDamage(attacker,target) then DamageService.AttackAttempt:Fire(attacker,target) end
+ local target=humanoid.Parent
+ if target and target:IsA("Model") and DamageService.CanDamage(attacker,target) then
+  local untilAt=(target:GetAttribute("SasukeGenjutsuUntil") or 0) :: number
+  local sleeping=(target:GetAttribute("SleepUntil") or 0) :: number
+  DamageService.AttackAttempt:Fire(attacker,target)
+  if untilAt>workspace:GetServerTimeNow() and sleeping>workspace:GetServerTimeNow() then DamageService.Apply(attacker,humanoid,50,"Pure") end
+ end
+ if target and target:GetAttribute("NativeAoda")==true and math.random()<.3 then return 0 end
  if Oil.MissesAttack(attacker) then return 0 end
- return DamageService.Apply(attacker,humanoid,amount)
+ return DamageService.Apply(attacker,humanoid,amount,"Attack")
 end
 return DamageService

@@ -10,6 +10,8 @@ local HeroService = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
 local prepared: { [Model]: boolean } = setmetatable({}, { __mode = "k" })
 local started = false
+local selections:{[Player]:number}={}
+local choosing:{[Player]:boolean}={}
 function HeroService.Assign(player: Player, model: Model)
 	local id = player:GetAttribute("HeroId")
 	if typeof(id) ~= "string" or not Config.Heroes[id] then id = Config.DefaultHero end
@@ -57,6 +59,23 @@ end
 function HeroService.Start()
 	if started then return end; started = true
 	game:GetService("StarterPlayer").LoadCharacterAppearance = false
+ local selection=Instance.new("RemoteEvent");selection.Name="HeroSelection";selection.Parent=game.ReplicatedStorage
+ selection.OnServerEvent:Connect(function(player:Player,id:any,...:any)
+  if select("#",...)~=0 or typeof(id)~="string" or not Config.Heroes[id] or choosing[player] then return end
+  local now=os.clock();if now-(selections[player] or -10)<2 then return end;selections[player]=now
+  local model=player.Character;local root=if model then model:FindFirstChild("HumanoidRootPart") else nil
+  local hp=if model then model:FindFirstChildOfClass("Humanoid") else nil
+  if not hp or hp.Health<=0 then selection:FireClient(player,false,"Дождитесь возрождения героя");return end
+  local spawn=player.RespawnLocation;local state=require(script.Parent.TeamService).GetState()
+  if not state or not model or not root or not root:IsA("BasePart") or not spawn or (root.Position-spawn.Position).Magnitude>30 then selection:FireClient(player,false,"Выбор героя доступен на своей базе");return end
+  if player:GetAttribute("HeroChosenRound")==state.roundId and not game:GetService("RunService"):IsStudio() then selection:FireClient(player,false,"Герой уже выбран на этот матч");return end
+  if model:GetAttribute("CombatState")=="Stunned" then return end
+  choosing[player]=true;player:SetAttribute("HeroChosenRound",state.roundId);player:SetAttribute("HeroId",id)
+  local progression=require(script.Parent.HeroProgressionService);local profile=progression.Get(player)
+  if profile then profile.Learned={};profile.SkillPoints=profile.Level;progression.Publish(player) end
+  selection:FireClient(player,true,id)
+  task.spawn(function() local ok,err=pcall(function() player:LoadCharacterAsync() end);choosing[player]=nil;if not ok then warn("[Heroes] Respawn failed",err) end end)
+ end)
 	Players.PlayerAdded:Connect(bind)
 	Players.PlayerRemoving:Connect(function(player)
 		for _, connection in connections[player] or {} do connection:Disconnect() end

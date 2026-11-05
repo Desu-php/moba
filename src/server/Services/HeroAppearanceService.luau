@@ -7,6 +7,7 @@ local KuramaAvatar=require(Shared.KuramaAvatar)
 local Appearance={}
 local bound: {[Model]: {RBXScriptConnection}}=setmetatable({}, {__mode="k"})
 local function dress(model: Model)
+ if model:GetAttribute("HeroId")=="Sasuke" then require(script.Parent.SasukeAppearanceService).Apply(model);return end
  local head=model:FindFirstChild("Head")
  if not head or not head:IsA("BasePart") or not model:FindFirstChild("UpperTorso") then return end
  local form=if model:GetAttribute("KuramaActive")==true then "Kurama" elseif model:GetAttribute("KcmActive")==true then "KCM" elseif model:GetAttribute("SagePhase")=="Active" then "Sage" else "Normal"
@@ -84,7 +85,7 @@ function Appearance.Apply(model: Model)
  dress(model)
  if bound[model] then return end
  local connections={};bound[model]=connections
- for _,attribute in {"SagePhase","KcmActive","KcmRank","KuramaActive"} do
+ for _,attribute in {"SagePhase","KcmActive","KcmRank","KuramaActive","SasukeMode","SusanooForm","GarudaActive"} do
   table.insert(connections,model:GetAttributeChangedSignal(attribute):Connect(function() dress(model) end))
  end
  model.Destroying:Once(function() for _,connection in connections do connection:Disconnect() end;bound[model]=nil end)

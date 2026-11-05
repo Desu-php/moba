@@ -2,7 +2,10 @@
 -- Initial point/+1 per level follow documented native defaults. Clone unlock is MVP policy.
 export type Profile = { Level: number, SkillPoints: number, Learned: { [string]: number } }
 local RankPolicy = require("./NarutoRankPolicy")
+local Sasuke=require("./SasukeDefinitions")
+local SasukeRules=require("./SasukeRules")
 local Learning = {}
+function Learning.order(heroId:string?):{string} return if heroId=="Sasuke" then Sasuke.LearningOrder else Learning.Order end
 Learning.NativePolicy = table.freeze({ CloneFirstLevel=1, CloneFirstLevelStatus="CallerSelectedNativeBoundary" })
 Learning.Order = table.freeze({ "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM" })
 local lines: { [string]: { max: number, runtime: number, levels: { number } } } = {
@@ -12,7 +15,8 @@ local lines: { [string]: { max: number, runtime: number, levels: { number } } } 
 	SageMode = { max=3, runtime=3, levels={6,10,14} },
 	KCM = { max=3, runtime=3, levels={13,20,27} },
 }
-function Learning.reason(profile: Profile, id: string): string?
+function Learning.reason(profile: Profile, id: string, heroId:string?): string?
+	if heroId=="Sasuke" then return SasukeRules.rankReason(profile.Level,profile.SkillPoints,profile.Learned[id] or 0,id) end
 	local line = lines[id]; if not line then return "UnknownAbility" end
 	local rank = profile.Learned[id] or 0
 	if rank >= line.max then return "MaxRank" end
@@ -26,8 +30,8 @@ function Learning.reason(profile: Profile, id: string): string?
 	if profile.SkillPoints <= 0 then return "NoPoints" end
 	return nil
 end
-function Learning.learn(profile: Profile, id: string): (boolean, string)
-	local reason = Learning.reason(profile,id); if reason then return false,reason end
+function Learning.learn(profile: Profile, id: string, heroId:string?): (boolean, string)
+	local reason = Learning.reason(profile,id,heroId); if reason then return false,reason end
 	profile.SkillPoints -= 1; profile.Learned[id] = (profile.Learned[id] or 0)+1
 	return true,"Learned"
 end

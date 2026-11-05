@@ -25,9 +25,9 @@ function Progression.Publish(player: Player)
   folder:SetAttribute(key, (data :: any)[key])
  end
  folder:SetAttribute("SkillPoints", data.SkillPoints)
- for _, id in Learning.Order do
+ for _, id in Learning.order(tostring(player:GetAttribute("HeroId"))) do
   folder:SetAttribute("Rank_"..id, data.Learned[id] or 0)
-  folder:SetAttribute("LearnReason_"..id, Learning.reason(data,id) or "Ready")
+  folder:SetAttribute("LearnReason_"..id, Learning.reason(data,id,tostring(player:GetAttribute("HeroId"))) or "Ready")
  end
  folder:SetAttribute("XPToNextLevel", Rules.required(data.Level)); folder:SetAttribute("Gold", Economy.GetGold(player))
  for id in Items.Items do folder:SetAttribute("Own_" .. id, data.Owned[id] == true) end

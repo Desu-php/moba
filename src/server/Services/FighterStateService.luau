@@ -30,6 +30,8 @@ local started = false
 local walkSpeeds: {[Model]: number}=setmetatable({}, {__mode="k"})
 local function effectiveSpeed(model: Model,speed: number): number
  if model:GetAttribute("CombatDisabled")==true then return 0 end
+ local gravity=model:GetAttribute("GravitySlowUntil");if typeof(gravity)=="number" and gravity>Workspace:GetServerTimeNow() then speed*=.6 end
+ local poison=model:GetAttribute("SnakePoisonUntil");if typeof(poison)=="number" and poison>Workspace:GetServerTimeNow() then speed*=((model:GetAttribute("SnakePoisonMove") or 1) :: number) end
  local ends=model:GetAttribute("OilUntil"); local multiplier=model:GetAttribute("OilMoveMultiplier")
  return if typeof(ends)=="number" and ends>Workspace:GetServerTimeNow() and typeof(multiplier)=="number" then speed*math.clamp(multiplier,0,1) else speed
 end
@@ -229,7 +231,7 @@ end
 function FighterStateService.WakeSleep(fighter: Fighter)
  local status=fighter.sleep; if not status then return end
  Sleep.wake(status,true,0); fighter.sleep=nil
- fighter.character:SetAttribute("SleepUntil",nil)
+ fighter.character:SetAttribute("SleepUntil",nil);fighter.character:SetAttribute("SasukeGenjutsuUntil",nil)
  if fighter.logic.mode~="Stunned" then restoreMovement(fighter) end
  FighterStateService.Publish(fighter)
 end

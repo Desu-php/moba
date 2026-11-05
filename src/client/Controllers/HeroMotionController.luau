@@ -169,6 +169,7 @@ function Motion.Start()
 				table.clear(rig.poses); continue
 			end
 			local pose = Poses.sample(key, now, math.clamp((now - at) / math.max(0.001, duration), 0, 1))
+			if model:GetAttribute("HeroId")=="Sasuke" then pose=require(Shared.Combat.SasukePoses).sample(model,key,now,math.clamp((now-at)/math.max(.001,duration),0,1),pose) end
 			if holding then pose = Poses.holdRasengan(pose,now,tostring(model:GetAttribute("RasenganVariant"))) end
 			if (key == "RasenganPrepare" or key == "OdamaPrepare" or key == "RasenshurikenPrepare")
 				and rig.humanoid.WalkSpeed > 0 and (rig.root.AssemblyLinearVelocity*Vector3.new(1,0,1)).Magnitude > 1.5 then

@@ -33,6 +33,12 @@ local profiles: { [string]: AttackProfile } = { Default = defaultProfile }
 local ninja = table.clone(profileValues)
 ninja.AnimationSet = "OrangeNinja"
 profiles.OrangeNinja = table.freeze(ninja)
+local sasuke=table.clone(profileValues)
+sasuke.AnimationSet="Sasuke";sasuke.Damage=10;sasuke.AttackCooldown=2
+profiles.Sasuke=table.freeze(sasuke)
+local susanoo=table.clone(profileValues);susanoo.AnimationSet="Sasuke";susanoo.Damage=10;susanoo.AttackCooldown=3;susanoo.HitDelay=.6;susanoo.AttackDuration=1.1
+susanoo.HitboxSize={X=12,Y=14,Z=16};susanoo.HitboxOffset={X=0,Y=0,Z=-8};susanoo.MaxTargetDistance=18
+profiles.SasukeSusanoo=table.freeze(susanoo)
 local kurama = table.clone(profileValues)
 -- Ewar attack cooldown/range from the map; windup, box and animation are the third-person adaptation.
 -- Keep damage in the existing stat ledger (+90 for the form), rather than applying the bonus twice.

@@ -12,6 +12,8 @@ local Fighters = require(script.Parent.FighterStateService)
 local Hitboxes = require(script.Parent.HitboxService)
 local Damage = require(script.Parent.DamageService)
 local Naruto = require(script.Parent.NarutoAbilityService)
+local Sasuke=require(script.Parent.SasukeAbilityService)
+local SasukeDefs=require(Shared.Abilities.SasukeDefinitions)
 type Session = { bucket: Limiter.Bucket, lastId: number, lastReply: number }
 local sessions: {[Player]: Session} = {}
 local remote: RemoteEvent? = nil
@@ -32,26 +34,28 @@ function Ability.TryCast(player: Player, ...: any): (boolean,string)
 	local function result(ok: boolean,reason: string): (boolean,string)
 		local match=Teams.GetState()
 		if remote and (ok or now-session.lastReply>=Config.ReplyInterval) then
-			session.lastReply=now; remote:FireClient(player,{kind="Result",requestId=id,character=player.Character,roundId=if match then match.roundId else nil,accepted=ok,reason=reason,ready=Naruto.Ready(player)})
+			session.lastReply=now; remote:FireClient(player,{kind="Result",requestId=id,character=player.Character,roundId=if match then match.roundId else nil,accepted=ok,reason=reason,ready=if player:GetAttribute("HeroId")=="Sasuke" then Sasuke.Ready(player) else Naruto.Ready(player)})
 		end
 		return ok,reason
 	end
 	if not allowed then return result(false,"RateLimited") end
 	local arity=select("#",...)
-	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="RasenshurikenThrow" and abilityId~="RikudoHY" and abilityId~="RikudoHZ" and abilityId~="KcmDash" and abilityId~="ShadowSleep" and abilityId~="CloneCommand" and abilityId~="ShadowClones" and abilityId~="GamakichiOil" and abilityId~="GamakichiChop")
+	if (arity~=3 and arity~=4) or (arity==4 and abilityId~="RasenshurikenThrow" and abilityId~="RikudoHY" and abilityId~="RikudoHZ" and abilityId~="KcmDash" and abilityId~="ShadowSleep" and abilityId~="CloneCommand" and abilityId~="ShadowClones" and abilityId~="GamakichiOil" and abilityId~="GamakichiChop" and not (typeof(abilityId)=="string" and SasukeDefs.Spells[abilityId] and SasukeDefs.Spells[abilityId].target~="Self"))
 		or typeof(character)~="Instance"
 		or typeof(abilityId)~="string" or #abilityId>32 or not Config.Abilities[abilityId] then return result(false,"Malformed") end
 	local instance=character :: Instance
 	if not instance:IsA("Model") or instance~=player.Character then return result(false,"Malformed") end
 	local model=instance :: Model
 	if id<=session.lastId then return result(false,"Replay") end; session.lastId=id
-	local hero=Heroes.Heroes[tostring(player:GetAttribute("HeroId"))]
+	if model:GetAttribute("HeroId")~=player:GetAttribute("HeroId") then return result(false,"Unavailable") end
+ local hero=Heroes.Heroes[tostring(player:GetAttribute("HeroId"))]
 	if not hero or not table.find(hero.Abilities,abilityId) then return result(false,"Unsupported") end
 	local match=Teams.GetState(); local fighter=Fighters.GetOrCreate(model)
 	if not match or match.phase~="InProgress" or not Teams.IsParticipant(player) or not fighter or not Damage.CanAct(model)
 		or player:GetAttribute("Eliminated")==true or fighter.root.Anchored or not fighter.root:IsDescendantOf(model)
 		or fighter.humanoid:GetState()==Enum.HumanoidStateType.Dead or not Hitboxes.IsFiniteCFrame(fighter.root.CFrame) then return result(false,"Unavailable") end
 	Fighters.Update(fighter,now)
+	if SasukeDefs.Spells[abilityId] then return result(Sasuke.TryCast(player,abilityId,id,now,target)) end
 	if not Naruto.IsAbility(abilityId) then return result(false,"Unsupported") end
  local profile=require(script.Parent.HeroProgressionService).Get(player)
  local line=if abilityId=="MeditationCast" then "SageMode" elseif abilityId=="RikudoHY" or abilityId=="RikudoHZ" then "KCM" elseif abilityId=="KcmDash" or abilityId=="KcmCancel" then "KCM" elseif abilityId=="RasenshurikenThrow" or abilityId=="Odama" or abilityId=="Rasenshuriken" then "Rasengan" elseif abilityId=="ShadowSleep" then "ShadowClones" elseif abilityId=="MeditationToggle" or abilityId=="MeditationRecall" then "SageMode" elseif abilityId=="CloneCommand" then "ShadowClones" elseif abilityId=="GamakichiOil" or abilityId=="GamakichiChop" then "Gamakichi" else abilityId
@@ -63,10 +67,11 @@ function Ability.HandleRequest(player: Player,...: any): (boolean,string)
 	if not match or not Protocol.accepts(match.roundId,args[args.n]) then return false,"StaleRound" end
 	return Ability.TryCast(player,table.unpack(args,1,args.n-1))
 end
-function Ability.Reset() Naruto.Reset() end
+function Ability.Reset() Naruto.Reset();Sasuke.Reset() end
 function Ability.Start()
 	if started then return end; started=true
 	Naruto.Start(); Naruto.Visual.Event:Connect(sendAll)
+ Sasuke.Start();Sasuke.Visual.Event:Connect(sendAll)
 	require(script.Parent.NarutoSummonService).Spawned.Event:Connect(function(model: Model) sendAll({kind="Smoke",position=model:GetPivot().Position}) end)
 	local event=Instance.new("RemoteEvent"); event.Name="HeroAbility"; event.Parent=Storage; remote=event
 	-- Confirmed damage only, private to its owning player. Summons report to their
@@ -82,6 +87,6 @@ function Ability.Start()
 	end)
 	event.OnServerEvent:Connect(function(player,...: any) Ability.HandleRequest(player,...) end)
 	Players.PlayerRemoving:Connect(function(player) sessions[player]=nil end)
-	game:GetService("RunService").Heartbeat:Connect(function() Naruto.Update(workspace:GetServerTimeNow()) end)
+	game:GetService("RunService").Heartbeat:Connect(function() Naruto.Update(workspace:GetServerTimeNow());Sasuke.Update(workspace:GetServerTimeNow()) end)
 end
 return Ability

@@ -78,7 +78,7 @@ end
 
 function Controller.IsCaptured(): boolean
 	return started and enabled and active and Input.KeyboardEnabled and Rules.captured(focused, Gui.MenuIsOpen, Input:GetFocusedTextBox() ~= nil,
-		player:GetAttribute("ShopOpen") == true, player:GetAttribute("StatsOpen") == true,
+		player:GetAttribute("ShopOpen") == true or player:GetAttribute("HeroSelectionOpen")==true, player:GetAttribute("StatsOpen") == true,
 		player:GetAttribute("CombatCursorFree") == true or player:GetAttribute("DeveloperConsoleOpen") == true)
 end
 
@@ -188,12 +188,13 @@ function Controller.Start()
 		end
 		local rotation = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
 		local fox = model:GetAttribute("HeroVisualForm") == "Kurama"
-		local desiredPivot = root.Position + Vector3.new(0, if fox then Kurama.CameraHeight else setting("Height", Config.Height, 0.5, 6), 0)
+  local susanoo=((model:GetAttribute("SusanooForm") or 0) :: number)>=3
+		local desiredPivot = root.Position + Vector3.new(0, if fox then Kurama.CameraHeight elseif susanoo then 8 else setting("Height", Config.Height, 0.5, 6), 0)
 		local oldPivot = pivot
 		pivot = if not oldPivot or (oldPivot - desiredPivot).Magnitude > Config.TeleportDistance then desiredPivot
 			else oldPivot:Lerp(desiredPivot, Rules.alpha(setting("Smoothing", Config.Smoothing, 0, 60), dt))
 		local focus = (pivot :: Vector3) + CFrame.Angles(0, yaw, 0):VectorToWorldSpace(humanoid.CameraOffset)
-		local desiredOffset = -rotation.LookVector * (if fox then Kurama.CameraDistance else setting("Distance", Config.Distance, 4, 24))
+		local desiredOffset = -rotation.LookVector * (if fox then Kurama.CameraDistance elseif susanoo then 23 else setting("Distance", Config.Distance, 4, 24))
 			+ rotation.RightVector * setting("Shoulder", Config.Shoulder, -3, 3)
 		local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = exclusions(model); params.RespectCanCollide = true

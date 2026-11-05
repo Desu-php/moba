@@ -4,6 +4,9 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config.ProgressionConfig)
 local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, require(Shared.Config.ItemConfig).Items)
+local Sasuke=require(Shared.Abilities.SasukeDefinitions)
+local SasukeConfig:any=table.clone(Config);SasukeConfig.Attributes=Sasuke.Hero;SasukeConfig.NativeMana=Sasuke.NativeInference;SasukeConfig.DamagePerStrength=0
+local SasukeStats=Logic.configure(SasukeConfig,require(Shared.Config.ItemConfig).Items)
 local Progression = require(script.Parent.HeroProgressionService)
 local Fighters = require(script.Parent.FighterStateService)
 local Teams = require(script.Parent.TeamService)
@@ -18,7 +21,9 @@ local started = false
 function Stats.Get(player: Player): Logic.Stats
  local model = player.Character
  local bonus = if model then model:GetAttribute("StrengthBonus") else nil
- local values=Rules.stats(Progression.Get(player) or Rules.new(), if typeof(bonus)=="number" and bonus==bonus and math.abs(bonus)<math.huge then bonus else 0)
+ local rules=if player:GetAttribute("HeroId")=="Sasuke" then SasukeStats else Rules
+ local values=rules.stats(Progression.Get(player) or Rules.new(), if typeof(bonus)=="number" and bonus==bonus and math.abs(bonus)<math.huge then bonus else 0)
+ if player:GetAttribute("HeroId")=="Sasuke" then values.AttackDamageBonus+=values.Agility end
  if model and modifiers[model] then
   local m=Layers.sum(modifiers[model]); values.MaxHealth+=m.health; values.Defense+=m.armor
   values.WalkSpeed+=m.speed; values.AttackDamageBonus+=m.attack

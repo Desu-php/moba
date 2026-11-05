@@ -19,6 +19,7 @@ local requests: {[Player]: number}={}
 local started=false
 local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД героя\nrefresh — восстановить HP, чакру и все КД один раз\nsolo — начать тест одному • help — команды"
 local function cooldowns(player: Player, includeSummon: boolean?)
+ if player:GetAttribute("HeroId")=="Sasuke" then table.clear(require(script.Parent.SasukeAbilityService).Ready(player)) end
  local s=Naruto.Get(player)
  if s then
   s.q.cooldownAt=0;s.clones.cooldownAt=0;s.sage.cooldownAt=0;s.gama.cooldownAt=0;s.meditationRecallAt=0
@@ -51,6 +52,7 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
  local profile=Progression.Get(player);local s=Naruto.Get(player)
  if not profile or not s then return false,"Дождитесь появления героя." end
  if command.name=="rikudo" then
+  if player:GetAttribute("HeroId")~="OrangeNinja" then return false,"Команда rikudo доступна только Наруто." end
   local match=require(script.Parent.MatchService).GetState()
   if not match or match.phase~="InProgress" or not player.Character or not require(script.Parent.DamageService).CanAct(player.Character) then
    return false,"Дождитесь начала матча и появления живого героя."
@@ -73,7 +75,7 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
   Progression.Publish(player);Progression.Changed:Fire(player,"XP",gained,if match then match.roundId else nil)
   return true,"Уровень: "..profile.Level..". Очки навыков: "..profile.SkillPoints.."."
  elseif command.name=="learnall" then
-  for _,id in Learning.Order do while Learning.reason(profile,id)==nil do Learning.learn(profile,id) end end
+  for _,id in Learning.order(tostring(player:GetAttribute("HeroId"))) do while Learning.reason(profile,id,tostring(player:GetAttribute("HeroId")))==nil do Learning.learn(profile,id,tostring(player:GetAttribute("HeroId"))) end end
   Progression.Publish(player)
   return true,"Изучены все навыки, доступные на текущем уровне."
  elseif command.name=="nocd" then

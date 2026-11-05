@@ -2,7 +2,7 @@
 local Families=require("../src/shared/Abilities/AbilityFamilies")
 local Config=require("../src/shared/Config/AbilityConfig")
 local Heroes=require("../src/shared/Config/HeroConfig")
-local Descriptions=require("../src/client/Controllers/AbilityDescriptions")
+local Descriptions=require("../src/client/Controllers/AbilityDescriptions") :: {[string]:string}
 assert(table.concat(Families.Order,",")=="Q,E,R,F,C,T")
 local count=0
 for _,key in Families.Order do

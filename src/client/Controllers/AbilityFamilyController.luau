@@ -4,7 +4,10 @@ local Input=game:GetService("UserInputService")
 local Gui=game:GetService("GuiService")
 local RunService=game:GetService("RunService")
 local Shared=game.ReplicatedStorage:WaitForChild("Shared")
-local Families=require(Shared.Abilities.AbilityFamilies)
+local NarutoFamilies=require(Shared.Abilities.AbilityFamilies)
+local SasukeFamilies=require(Shared.Abilities.SasukeFamilies)
+local Sasuke=require(Shared.Abilities.SasukeDefinitions)
+local Families:any=NarutoFamilies
 local Config=require(Shared.Config.AbilityConfig)
 local Controller=require(script.Parent.AbilityController)
 local Learning=require(script.Parent.LearningController)
@@ -16,12 +19,14 @@ local started=false
 function Module.Start(panel:Frame)
  if started then return end;started=true
  local player=Players.LocalPlayer
- local opened:string?=nil;local hovered:string?=nil;local hoveredFamily:string?=nil;local hoveredEntry:Families.Entry?=nil
+ Families=if player:GetAttribute("HeroId")=="Sasuke" then SasukeFamilies else NarutoFamilies
+ local function isSasuke():boolean return player:GetAttribute("HeroId")=="Sasuke" end
+ local opened:string?=nil;local hovered:string?=nil;local hoveredFamily:string?=nil;local hoveredEntry:NarutoFamilies.Entry?=nil
  local roots:{[string]:TextButton}={};local choices:{TextButton}={};local learnButtons:{{button:TextButton,id:string}}={}
- local strip=View.frame(panel,"FamilyChoices",UDim2.fromOffset(450,118),UDim2.fromOffset(240,-126));strip.Visible=false;strip.ZIndex=6;View.border(strip,View.Gold)
+ local strip=View.frame(panel,"FamilyChoices",UDim2.fromOffset(450,194),UDim2.fromOffset(240,-202));strip.Visible=false;strip.ZIndex=6;View.border(strip,View.Gold)
  local title=View.label(strip,"Title",UDim2.fromOffset(372,21),UDim2.fromOffset(7,1),13);title.TextXAlignment=Enum.TextXAlignment.Left;title.TextColor3=View.Gold
- local footer=View.label(strip,"Hint",UDim2.fromOffset(436,18),UDim2.fromOffset(7,99),11);footer.Text="Клавиша — выбор · ЛКМ — цель · ПКМ — отмена · Alt — курсор"
- local tip=View.frame(panel,"FamilyTooltip",UDim2.fromOffset(440,260),UDim2.fromOffset(240,-394));tip.Visible=false;tip.ZIndex=10;View.border(tip,View.Gold)
+ local footer=View.label(strip,"Hint",UDim2.fromOffset(436,18),UDim2.fromOffset(7,175),11);footer.Text="Клавиша — выбор · ЛКМ — цель · ПКМ — отмена · Alt — курсор"
+ local tip=View.frame(panel,"FamilyTooltip",UDim2.fromOffset(440,260),UDim2.fromOffset(240,-470));tip.Visible=false;tip.ZIndex=10;View.border(tip,View.Gold)
  local hoverEpoch=0;local tipHovered=false
  local function retainHover() hoverEpoch+=1 end
  local function leaveHover()
@@ -40,7 +45,7 @@ function Module.Start(panel:Frame)
   button:SetAttribute("IconId",id);local symbol=button:FindFirstChild("Symbol") :: Frame
   symbol:ClearAllChildren();Icons.draw(symbol,id)
  end
- local function labelName(entry:Families.Entry):string
+ local function labelName(entry:NarutoFamilies.Entry):string
   if entry.id=="KCM" then
    local hero=player:FindFirstChild("HeroState");local rank=if hero then hero:GetAttribute("Rank_KCM") else 0
    return if rank==3 then "Рикудо" elseif rank==2 then "KCM II" else "KCM I"
@@ -52,12 +57,12 @@ function Module.Start(panel:Frame)
  end
  local function blocked():boolean
   local c=player.Character;local h=if c then c:FindFirstChildOfClass("Humanoid") else nil
-  return not h or h.Health<=0 or Input:GetFocusedTextBox()~=nil or Gui.MenuIsOpen or player:GetAttribute("ShopOpen")==true or player:GetAttribute("StatsOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true
+  return not h or h.Health<=0 or Input:GetFocusedTextBox()~=nil or Gui.MenuIsOpen or player:GetAttribute("HeroSelectionOpen")==true or player:GetAttribute("ShopOpen")==true or player:GetAttribute("StatsOpen")==true or player:GetAttribute("DeveloperConsoleOpen")==true
  end
  local function open(key:string)
   if blocked() then return end
   Controller.CancelCloneCommand();opened=key;hovered=nil;hoveredEntry=nil;hoveredFamily=nil;player:SetAttribute("AbilityFamily",key)
-  local family=Families.Definitions[key];strip.Visible=true;title.Text=family.name..(if key=="E" then " • команды всем боевым призывам" else " • выберите продолжение")
+  local family=Families.Definitions[key];local height=if #family.entries>6 then 194 else 118;strip.Size=UDim2.fromOffset(450,height);strip.Position=UDim2.fromOffset(240,-height-8);footer.Position=UDim2.fromOffset(7,height-19);tip.Position=UDim2.fromOffset(240,-height-276);strip.Visible=true;title.Text=family.name..(if key=="E" then " • команды всем боевым призывам" else " • выберите продолжение")
   for i,b in choices do
    local entry=family.entries[i];b.Visible=entry~=nil;b:SetAttribute("AbilityId",if entry then entry.id else nil)
    if entry then
@@ -71,10 +76,12 @@ function Module.Start(panel:Frame)
   open(key)
   if key=="Q" then
    local c=player.Character
-   if not c or c:GetAttribute("RasenganHeld")~=true then Controller.TryCast("Rasengan") end
+   if isSasuke() then
+    if not c or c:GetAttribute("ChidoriHeld")~=true then Controller.TryCast("Chidori") end
+   elseif not c or c:GetAttribute("RasenganHeld")~=true then Controller.TryCast("Rasengan") end
   end
  end
- local function activate(entry:Families.Entry)
+ local function activate(entry:NarutoFamilies.Entry)
   if blocked() then return end
   local old=opened;close()
   local ok=if entry.command then Controller.Command(entry.command)
@@ -86,7 +93,7 @@ function Module.Start(panel:Frame)
  end
  local function addLearn(parent:TextButton,id:string)
   local plus=makeButton(parent,"Learn",parent.Size.X.Offset-18,-19,18,18);plus.Text="+";plus.TextSize=17;plus.TextColor3=View.Gold;plus.ZIndex=5
-  plus.Activated:Connect(function() Learning.TryLearn(id) end);table.insert(learnButtons,{button=plus,id=id})
+  local entry={button=plus,id=id};plus.Activated:Connect(function() Learning.TryLearn(entry.id) end);table.insert(learnButtons,entry)
  end
  for i,key in Families.Order do
   local family=Families.Definitions[key]
@@ -98,10 +105,10 @@ function Module.Start(panel:Frame)
   b.Activated:Connect(function() local _,entry=Families.resolve(opened,key);if entry then activate(entry) else rootPress(key) end end)
   b.MouseEnter:Connect(function() retainHover();hoveredFamily=key;hovered=nil;hoveredEntry=nil;scroll.CanvasPosition=Vector2.zero end)
   b.MouseLeave:Connect(leaveHover)
-  if key=="Q" then addLearn(b,"Rasengan") elseif key=="E" then addLearn(b,"ShadowClones") elseif key=="R" then addLearn(b,"Gamakichi") end
+  if key=="Q" then addLearn(b,if isSasuke() then "SasukeLightning" else "Rasengan") elseif key=="E" then addLearn(b,if isSasuke() then "SasukeFire" else "ShadowClones") elseif key=="R" then addLearn(b,if isSasuke() then "SasukeSummon" else "Gamakichi") elseif key=="C" then addLearn(b,"SasukeEyes") end
  end
- for i=1,6 do
-  local b=makeButton(strip,"Choice"..i,(i-1)*75+2,25,70,71);choices[i]=b
+ for i=1,12 do
+  local b=makeButton(strip,"Choice"..i,((i-1)%6)*75+2,25+math.floor((i-1)/6)*75,70,71);choices[i]=b
   View.frame(b,"Symbol",UDim2.fromOffset(25,25),UDim2.fromOffset(4,3))
   local key=View.label(b,"Key",UDim2.fromOffset(34,23),UDim2.fromOffset(32,3),16);key.TextColor3=View.Gold
   local name=View.label(b,"Name",UDim2.fromOffset(66,26),UDim2.fromOffset(2,29),11);name.TextWrapped=true
@@ -138,16 +145,25 @@ function Module.Start(panel:Frame)
  RunService.Heartbeat:Connect(function()
   local now=workspace:GetServerTimeNow();if now<nextUpdate then return end;nextUpdate=now+.1
   local c=player.Character;local hero=player:FindFirstChild("HeroState")
+  local desired=if isSasuke() then SasukeFamilies else NarutoFamilies
+  if Families~=desired then
+   Families=desired;close()
+   for key,b in roots do local family=Families.Definitions[key];icon(b,family.icon);(b:FindFirstChild("Name") :: TextLabel).Text=family.name end
+   for i,entry in learnButtons do entry.id=if isSasuke() then Sasuke.LearningOrder[i] else ({"Rasengan","ShadowClones","Gamakichi","SasukeEyes"})[i] end
+  end
   local form=if c then tostring(c:GetAttribute("HeroVisualForm"))..":"..tostring(c:GetAttribute("LifeId"))..":"..tostring(c:GetAttribute("SageTechniquesReady")) else ""
   if form~=lastForm then close();Controller.CancelCloneCommand();lastForm=form end
   if blocked() then close() end
-  for _,learn in learnButtons do learn.button.Visible=hero~=nil and hero:GetAttribute("LearnReason_"..learn.id)=="Ready" end
-  sageLearn.Visible=opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_SageMode")=="Ready"
-  kcmLearn.Visible=opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_KCM")=="Ready"
+  for _,learn in learnButtons do learn.button.Visible=(learn.id~="SasukeEyes" or isSasuke()) and hero~=nil and hero:GetAttribute("LearnReason_"..learn.id)=="Ready" end
+  sageLearn.Visible=not isSasuke() and opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_SageMode")=="Ready"
+  kcmLearn.Visible=not isSasuke() and opened=="C" and hero~=nil and hero:GetAttribute("LearnReason_KCM")=="Ready"
   for key,b in roots do
    b.BackgroundColor3=if key==opened then Color3.fromRGB(100,77,35) else View.Card
    local status=b:FindFirstChild("Status") :: TextLabel;status.Text=""
-   if key=="Q" then
+   if isSasuke() then
+    if key=="Q" then local held=c and c:GetAttribute("ChidoriHeld")==true;local remaining=Controller.Remaining("Chidori");status.Text=if held then "ЧИДОРИ" elseif remaining>0 then tostring(math.ceil(remaining)) else "";status.TextSize=10
+    elseif key=="C" and c then local mode=c:GetAttribute("SasukeMode");status.Text=if mode==3 then "РИННЕГАН" elseif mode==2 then "МАНГЕКЁ" elseif mode==1 then "ШАРИНГАН" else "";status.TextSize=9 end
+   elseif key=="Q" then
     local held=c~=nil and c:GetAttribute("RasenganHeld")==true
     local variant=if held and c then tostring(c:GetAttribute("RasenganVariant")) else "Rasengan"
     icon(b,if Config.Abilities[variant] then variant else "Rasengan")
@@ -172,15 +188,17 @@ function Module.Start(panel:Frame)
   if hoveredFamily then
    local family=Families.Definitions[hoveredFamily];local text=family.name.." ["..family.key.."]\n\n"..family.hint.."\n\n"
    for _,entry in family.entries do text..=family.key.." → "..entry.key.."  "..labelName(entry).."\n" end
-   if hoveredFamily=="Q" then text..="\n100 маны • "..(Controller.AbilityUnavailable("Rasengan") or "Готово").."\n"..Descriptions.Rasengan.."\n" end
-   tipText.Text=text.."\nПервое нажатие открывает выбор"..(if hoveredFamily=="Q" then " и формирует Расенган." else ", чакра не расходуется.")
+   if hoveredFamily=="Q" and isSasuke() then text..="\n90 чакры • КД 60 с • молния I, уровень 4\n"..Sasuke.Spells.Chidori.description.."\n" end
+   if hoveredFamily=="Q" and not isSasuke() then text..="\n100 маны • "..(Controller.AbilityUnavailable("Rasengan") or "Готово").."\n"..Descriptions.Rasengan.."\n" end
+   tipText.Text=text.."\nПервое нажатие открывает выбор"..(if hoveredFamily=="Q" then (if isSasuke() then " и формирует Чидори." else " и формирует Расенган.") else ", чакра не расходуется.")
   elseif hovered then
    local id=hovered;local def=Config.Abilities[id]
    local resource=if id=="KuramaForm" then "2500 чакры Курамы" elseif id=="KCM" then "200 чакры Курамы • 40/с" elseif id=="KuramaConvert" then "200 чакры Курамы → 200 маны" else Controller.Cost(id).." маны"
    local entry=hoveredEntry
-   local name=if entry then labelName(entry) else def.Name
+   local name=if Sasuke.Spells[id] then Sasuke.Spells[id].name elseif entry then labelName(entry) else def.Name
    local binding=if entry and opened then opened.." → "..entry.key else def.KeyLabel
-   local description=if entry and entry.command=="Follow" then "Возвращает всех боевых клонов и Гамакичи к Наруто. После возвращения клоны снова ищут врагов рядом с владельцем, а Гамакичи самостоятельно сражается и атакует вышки." elseif entry and entry.command=="Hold" then "Оставляет всех боевых клонов и Гамакичи на текущих позициях без автоматических атак. E → V отзывает их к Наруто и возобновляет автобой; E → X задаёт цель." else ((Descriptions :: {[string]:string})[id] or "")
+   local description=if entry and entry.command=="Follow" then "Возвращает всех боевых клонов и Гамакичи к Наруто. После возвращения клоны снова ищут врагов рядом с владельцем, а Гамакичи самостоятельно сражается и атакует вышки." elseif entry and entry.command=="Hold" then "Оставляет всех боевых клонов и Гамакичи на текущих позициях без автоматических атак. E → V отзывает их к Наруто и возобновляет автобой; E → X задаёт цель." else (if Sasuke.Spells[id] then Sasuke.Spells[id].description.."\nРанг "..Sasuke.Spells[id].rank.." • "..Sasuke.Learning[Sasuke.Spells[id].line].name else (Descriptions :: {[string]:string})[id] or "")
+   if Sasuke.Spells[id] then local d=Sasuke.Spells[id];local rank=if hero then (hero:GetAttribute("Rank_"..d.line) or 0) :: number else 0;resource..=" • КД "..Sasuke.cooldown(id,rank).." с" end
    tipText.Text=name.." ["..binding.."]\n"..resource.."\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then "КД "..math.ceil(Controller.Remaining(id)).." с" else "Готово")).."\n\n"..description
   end
  end)

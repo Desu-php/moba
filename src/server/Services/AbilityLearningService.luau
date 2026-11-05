@@ -27,7 +27,7 @@ function Service.HandleRequest(player: Player, ...: any): (boolean, string)
 	if match.phase~="InProgress" or not Teams.IsParticipant(player) or not Teams.IsActive(Teams.GetId(model)) then return false,"Unavailable" end
 	local profile=Progression.Get(player); if not profile then return false,"Unavailable" end
 	-- Pure validation and point debit are non-yielding; no client ranks/points/stats accepted.
-	local ok,reason=Learning.learn(profile,ability)
+	local ok,reason=Learning.learn(profile,ability,tostring(player:GetAttribute("HeroId")))
 	if ok then Progression.Publish(player) end
 	return ok,reason
 end

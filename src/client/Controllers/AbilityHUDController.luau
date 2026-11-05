@@ -61,7 +61,8 @@ function HUD.Start()
   local camera=workspace.CurrentCamera
   if camera then
    scale.Scale=Layout.scale(camera.ViewportSize.X,camera.ViewportSize.Y)
-   message.Position=UDim2.new(.5,0,1,-((Layout.ConsoleHeight+Layout.DeckHeight)*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
+   local strip=panel:FindFirstChild("FamilyChoices");local deck=if strip and strip:IsA("Frame") and strip.Visible then strip.Size.Y.Offset+8 else Layout.DeckHeight
+   message.Position=UDim2.new(.5,0,1,-((Layout.ConsoleHeight+deck)*scale.Scale+12)); message.Size=UDim2.fromOffset(math.min(900,camera.ViewportSize.X-24),40)
   end
   local model=player.Character; View.updatePortrait(portrait,model)
   commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
@@ -84,7 +85,8 @@ function HUD.Start()
   local rawAttack=profile.Damage*number("AttackDamageMultiplier")+number("AttackDamageBonus")
   local attacksPerSecond=BasicRules.speed(profile,number("Agility"))/profile.AttackCooldown
   stats.Text="STR  "..shown("Strength","%.1f").."\nAGI  "..shown("Agility","%.1f").."\nINT   "..shown("Intelligence","%.1f")..string.format("\nАтака %.1f · %.2f/с",rawAttack,attacksPerSecond).."\nБроня  "..shown("Defense","%.1f").."\nСкор.  "..shown("WalkSpeed","%.1f")
-  statsText.Text="NARUTO  •  Уровень "..shown("Level","%d").."\nXP "..shown("CurrentXP","%d").." / "..shown("XPToNextLevel","%d").."\nОчки навыков: "..shown("SkillPoints","%d").."\n\n"..stats.Text.."\n\nМножитель M1  "..shown("AttackDamageMultiplier","x%.2f").."\nБонус M1  "..shown("AttackDamageBonus","+%.0f").."\nРеген. маны  "..shown("ManaRegen","%.2f/с")
+  hero.Text=if player:GetAttribute("HeroId")=="Sasuke" then "SASUKE" else "NARUTO"
+  statsText.Text=hero.Text.."  •  Уровень "..shown("Level","%d").."\nXP "..shown("CurrentXP","%d").." / "..shown("XPToNextLevel","%d").."\nОчки навыков: "..shown("SkillPoints","%d").."\n\n"..stats.Text.."\n\nМножитель M1  "..shown("AttackDamageMultiplier","x%.2f").."\nБонус M1  "..shown("AttackDamageBonus","+%.0f").."\nРеген. маны  "..shown("ManaRegen","%.2f/с")
   local owned={}; for _,id in Items.Order do if state and state:GetAttribute("Own_"..id)==true then table.insert(owned,id) end end
   for index,slot in inventory do
    local id=owned[index]
@@ -101,7 +103,7 @@ function HUD.Start()
   message.Visible=not (familyTip and familyTip:IsA("GuiObject") and familyTip.Visible)
   if not message.Visible then commands.Visible=false end
   message.Text=if notice~="" and formStatus~="" then notice.."\n"..formStatus else notice..formStatus
-  points.Text=if number("SkillPoints")>0 then string.format("+ %d  •  Ctrl+1–5 / + для обучения",number("SkillPoints")) else "НАВЫКИ"
+  points.Text=if number("SkillPoints")>0 then string.format((if player:GetAttribute("HeroId")=="Sasuke" then "+ %d  •  Ctrl+1–4 / + для обучения" else "+ %d  •  Ctrl+1–5 / + для обучения"),number("SkillPoints")) else "НАВЫКИ"
 
  end)
 end

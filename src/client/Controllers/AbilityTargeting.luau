@@ -8,6 +8,7 @@ local Definitions = require(Shared.Abilities.NarutoDefinitions)
 local Spells = require(Shared.Abilities.GamakichiSpells)
 local Kcm = require(Shared.Abilities.NarutoKcmGameplay)
 local Ranged = require(Shared.Abilities.NarutoRangedState)
+local Sasuke=require(Shared.Abilities.SasukeDefinitions)
 local Targeting = {}
 local folder: Folder? = nil
 local ring: {Part} = {}
@@ -29,7 +30,7 @@ workspace.DescendantRemoving:Connect(function(item)
 end)
 
 function Targeting.IsTargeted(id: string): boolean
-	return id == "CloneCommand" or id == "ShadowSleep" or id == "GamakichiOil" or id == "GamakichiChop" or id == "KcmDash" or id == "RikudoHY" or id == "RikudoHZ"
+	return (Sasuke.Spells[id]~=nil and Sasuke.Spells[id].target~="Self") or id == "CloneCommand" or id == "ShadowSleep" or id == "GamakichiOil" or id == "GamakichiChop" or id == "KcmDash" or id == "RikudoHY" or id == "RikudoHZ"
 end
 local function exclusions(): {Instance}
 	local player = Players.LocalPlayer
@@ -81,13 +82,14 @@ function Targeting.Geometry(id: string): (BasePart?, number, number)
 		elseif id == "KcmDash" then Kcm.Dash.RangeWarcraft elseif id == "RikudoHY" or id == "RikudoHZ" then Ranged.RangeWarcraft else Definitions.Clones.RangeWarcraft
 	local radius = if id == "GamakichiChop" then Spells.Chopping.Radius elseif id == "GamakichiOil" then Spells.Oil.Radius
 		elseif id == "RikudoHY" or id == "RikudoHZ" then rangedRadius else 0
+	if Sasuke.Spells[id] then range=Sasuke.Spells[id].range;radius=Sasuke.Spells[id].radius;if id=="SasukeGenjutsu" and model and model:GetAttribute("SasukeMode")==3 then range=500 end end
 	return if root and root:IsA("BasePart") then root else nil, Units.toStuds(range), Units.toStuds(radius)
 end
 function Targeting.Evaluate(id: string, point: Vector2?): (any, string?, Vector3?)
 	local hit = Targeting.Pick(point); if not hit then return nil, "Наведите прицел на цель или землю", nil end
 	local model = modelAt(hit)
-	local area = id == "GamakichiChop" or id == "RikudoHY" or id == "RikudoHZ"
-	local target: any = if area then hit.Position elseif id == "KcmDash" then model or hit.Position else model
+	local area = (Sasuke.Spells[id]~=nil and Sasuke.Spells[id].target=="Point") or id == "GamakichiChop" or id == "RikudoHY" or id == "RikudoHZ"
+	local target: any = if area then hit.Position elseif id == "KcmDash" or id=="Amenotejikara" then model or hit.Position else model
 	if not target then return nil, "Наведите прицел на врага", hit.Position end
 	local origin, range = Targeting.Geometry(id); if not origin then return nil, "Источник способности недоступен", hit.Position end
 	local position = hit.Position

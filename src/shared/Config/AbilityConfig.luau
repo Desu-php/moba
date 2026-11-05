@@ -23,6 +23,9 @@ local abilities: { [string]: Ability } = {
 	KCM = { Name = "KCM", Key = "Five", KeyLabel = "C → Z", Cooldown = 10, Windup = 0, Duration = 0 },
 	CloneCommand = { Name = "Цель клонам", Key = "F", KeyLabel = "E → X", Cooldown = 0, Windup = 0, Duration = 0 },
 }
+for id,d in require("../Abilities/SasukeDefinitions").Spells do
+ abilities[id]={Name=d.name,Key="Unknown",KeyLabel="Семейство",Cooldown=d.cd,Windup=0,Duration=d.duration}
+end
 return table.freeze({
 	Abilities = abilities, Order = { "Rasengan", "ShadowClones", "Gamakichi", "SageMode", "KCM", "KuramaForm" },
 	PrototypeEnabled = table.freeze({ MeditationCast=true, RasenshurikenThrow=true, RikudoHY=true, RikudoHZ=true, KuramaForm=true, KCM=true, KcmDash=true, KcmCancel=true, KuramaConvert=true, Odama=true, Rasenshuriken=true, ShadowSleep=false, Rasengan = true, ShadowClones = true, Gamakichi = true, CloneCommand = true, GamakichiOil=true, GamakichiChop=true, SageMode=true, MeditationToggle=true, MeditationRecall=true }),

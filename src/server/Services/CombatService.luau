@@ -28,6 +28,9 @@ local sweeps:{[Model]:Sweep}=setmetatable({}, {__mode="k"})
 local CombatService = { AttackStarted = Instance.new("BindableEvent") }
 -- A prepared melee technique may replace the ordinary strike after the server
 -- has verified contact. It must never consume itself merely on attack intent.
+local heroContacts:{[string]:(Fighters.Fighter,Model)->boolean}={}
+local heroGuards:{[string]:(Fighters.Fighter)->boolean}={}
+function CombatService.SetHeroHandlers(id:string,contact:(Fighters.Fighter,Model)->boolean,guard:(Fighters.Fighter)->boolean) heroContacts[id]=contact;heroGuards[id]=guard end
 local contactHandler: ((Fighters.Fighter, Model) -> boolean)? = nil
 local attackGuard: ((Fighters.Fighter) -> boolean)? = nil
 function CombatService.SetAttackGuard(guard: (Fighters.Fighter) -> boolean) attackGuard=guard end
@@ -84,6 +87,7 @@ end
 local function canAttack(fighter: Fighters.Fighter): boolean
 	return fighter.character:IsDescendantOf(Workspace)
 		and (not attackGuard or attackGuard(fighter))
+        and (not heroGuards[tostring(fighter.character:GetAttribute("HeroId"))] or heroGuards[tostring(fighter.character:GetAttribute("HeroId"))](fighter))
 		and Damage.CanAct(fighter.character)
 		and not (fighter.sleep and fighter.sleep.active)
 		and ((fighter.character:GetAttribute("NarutoPausedUntil") or 0) :: number) <= Workspace:GetServerTimeNow()
@@ -97,7 +101,8 @@ end
 
 local function attackSpeed(fighter: Fighters.Fighter): number
 	local stats = Stats.GetForModel(fighter.character)
-	return AttackRules.speed(fighter.profile, if stats then stats.Agility else 0)
+	local poison=(fighter.character:GetAttribute("SnakePoisonUntil") or 0) :: number
+	return AttackRules.speed(fighter.profile, if stats then stats.Agility else 0)*(if poison>Workspace:GetServerTimeNow() then (fighter.character:GetAttribute("SnakePoisonAttack") or 1) :: number else 1)
 end
 -- Only request identity and the exact current character may come from the client.
 function CombatService.TryAttack(player: Player, ...: any): string
@@ -178,7 +183,7 @@ local function resolveHit(fighter: Fighters.Fighter, attack: State.Attack, swept
 		local isStructure = Structures.isStructure(character:GetAttribute("EntityKind"))
 		local victim = if isStructure then nil else Fighters.GetOrCreate(character)
 		if not isStructure and not victim then continue end
-		local handler = contactHandler
+		local handler = heroContacts[tostring(fighter.character:GetAttribute("HeroId"))] or contactHandler
 		if handler and handler(fighter, character) then continue end
 		local dealt = Damage.ApplyAttack(fighter.character, humanoid, profile.Damage * multiplier + (if stats then stats.AttackDamageBonus else 0))
 		-- Only confirmed server damage is a hit.

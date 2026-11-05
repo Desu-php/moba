@@ -17,6 +17,8 @@ local W = CloneState.configure(Definitions.Clones)
 local Commands = require(Shared.Abilities.CloneCommands)
 local Resource = require(Shared.Abilities.NarutoResources)
 local ResourceRules = Resource.configure(Definitions.Hero, Definitions.NativeInference)
+local Sasuke=require(Shared.Abilities.SasukeDefinitions)
+local SasukeResources=Resource.configure(Sasuke.Hero,Sasuke.NativeInference)
 
 local Fighters = require(script.Parent.FighterStateService)
 local Combat = require(script.Parent.CombatService)
@@ -51,7 +53,8 @@ local function roundId(): number local match = Teams.GetState(); return if match
 local function values(player: Player): Resource.Values
 	local character = player.Character
 	local bonus = if character then character:GetAttribute("StrengthBonus") else nil
-	return ResourceRules.values(Stats.Get(player).Level, if typeof(bonus) == "number" and bonus == bonus and math.abs(bonus) < math.huge then bonus else 0)
+	local rules=if player:GetAttribute("HeroId")=="Sasuke" then SasukeResources else ResourceRules
+	return rules.values(Stats.Get(player).Level, if typeof(bonus) == "number" and bonus == bonus and math.abs(bonus) < math.huge then bonus else 0)
 end
 function Service.GetStats(player: Player): (number, number) return Stats.Get(player).Level, values(player).strength end
 function Service.Get(player: Player): Session? return sessions[player] end
