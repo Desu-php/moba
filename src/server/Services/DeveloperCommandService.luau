@@ -17,18 +17,26 @@ local Service={}
 local noCooldown: {[Player]: boolean}={}
 local requests: {[Player]: number}={}
 local started=false
-local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД\nrefresh — восстановить HP, чакру и КД\nsolo — начать тест одному • help — команды"
-local function cooldowns(player: Player)
+local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД героя\nrefresh — восстановить HP, чакру и все КД один раз\nsolo — начать тест одному • help — команды"
+local function cooldowns(player: Player, includeSummon: boolean?)
  local s=Naruto.Get(player)
  if s then
   s.q.cooldownAt=0;s.clones.cooldownAt=0;s.sage.cooldownAt=0;s.gama.cooldownAt=0;s.meditationRecallAt=0
   table.clear(s.variants.cooldowns);s.nextPublish=0
  end
- local toad=Gama.Get(player);if toad then toad.spells.oilReady=0;toad.spells.chopReady=0 end
+ -- nocd is a hero testing aid. Autonomous summons keep their combat cadence.
+ -- Only an explicit one-shot refresh resets the toad's independent cooldowns.
+ local toad=Gama.Get(player)
+ if includeSummon and toad then toad.spells.oilReady=0;toad.spells.chopReady=0 end
  local ranged=Ranged.Inspect(player);if ranged then table.clear(ranged.cooldowns) end
  Kcm.StudioResetCooldowns(player);Kurama.StudioResetCooldowns(player)
  local model=player.Character
- if model then for name in model:GetAttributes() do if string.sub(name,1,6)=="Ready_" then model:SetAttribute(name,0) end end end
+ if model then
+  for name in model:GetAttributes() do
+   local summonSpell=name=="Ready_GamakichiOil" or name=="Ready_GamakichiChop"
+   if string.sub(name,1,6)=="Ready_" and (includeSummon or not summonSpell) then model:SetAttribute(name,0) end
+  end
+ end
 end
 function Service.Execute(player: Player,raw: any): (boolean,string)
  if not RunService:IsStudio() or player.Parent~=Players then return false,"Команды доступны только в Studio." end
@@ -71,9 +79,9 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
  elseif command.name=="nocd" then
   noCooldown[player]=command.enabled==true;player:SetAttribute("DeveloperNoCooldown",command.enabled)
   if command.enabled then cooldowns(player) end
-  return true,if command.enabled then "КД отключены. Подготовка и условия техник сохраняются." else "Обычные КД включены для следующих применений."
+  return true,if command.enabled then "КД героя отключены. Гамакичи сохраняет обычные КД." else "Обычные КД героя включены для следующих применений."
  elseif command.name=="refresh" then
-  cooldowns(player);s.pool.mana=s.pool.maximum
+  cooldowns(player,true);s.pool.mana=s.pool.maximum
   local humanoid=if player.Character then player.Character:FindFirstChildOfClass("Humanoid") else nil
   if humanoid and humanoid.Health>0 then humanoid.Health=humanoid.MaxHealth end
   return true,"HP, чакра и перезарядки восстановлены."

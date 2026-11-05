@@ -21,6 +21,9 @@
       },
       "LaneCrossingQA": {
         "$path": "tests/summon-ai/LaneCrossing.server.luau"
+      },
+      "ObstacleAvoidanceQA": {
+        "$path": "tests/summon-ai/ObstacleAvoidance.server.luau"
       }
     },
     "StarterPlayer": {

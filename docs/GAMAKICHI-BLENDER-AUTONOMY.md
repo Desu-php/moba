@@ -25,3 +25,25 @@ Client bone transforms and the rendered imported skin were observed during comba
 The earlier asset-generation warning cleared on the next play session.
 
 Development release contains neither regression scripts nor the test floor.
+
+## Cooldown and tower-navigation correction
+
+`nocd on` now resets hero cooldowns only, including the summon button, but not the
+toad's independent spell timers or their HUD attributes. Autonomous oil remains
+25 seconds; chopping remains 30 seconds. An explicit `refresh` still clears all
+cooldowns once. The Studio help text states this distinction.
+
+The generated Blue_Mid tower reproduced a navigation failure: Roblox returned a
+successful straight route through its collidable HumanoidRootPart. Body collision
+correctly stopped the summon, but replanning kept returning the same invalid route.
+Navigation now grounds and body-checks engine waypoints, uses a radius enclosing
+the rectangular body, and falls back to a bounded corner visibility graph around
+actual swept blockers. Each edge retains collision and curb checks. The fallback
+uses at most six obstacles / 26 nodes and the existing shared request budget.
+
+Verification: full source/domain/type checks passed. Studio passed 15 autonomy
+checks, including two real automatic spell cycles with hero `nocd` enabled; 39
+obstacle checks for clone-sized, juvenile and adult bodies; and the 13 existing
+grass/road checks. Obstacle checks cover head-on/corner approaches, a wide wall,
+and actual generated towers from grass/road, with clearance and continuous motion.
+See [recorded results](evidence/gamakichi-cooldowns-obstacles.json).

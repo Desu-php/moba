@@ -61,10 +61,27 @@ local ok,err=xpcall(function()
  waitFor(function() return not g.returning end,6,"recall completes")
  check("explicit recall ends and autonomy resumes",true)
  g.spells.oilReady=0;g.spells.chopReady=0
+ Dev.Execute(p,"nocd on")
+ local casts={GamakichiOil={},GamakichiChop={}}
+ local connection=g.model:GetAttributeChangedSignal("SummonSpellAt"):Connect(function()
+  local id=g.model:GetAttribute("SummonSpell")
+  if casts[id] then table.insert(casts[id],g.model:GetAttribute("SummonSpellAt")) end
+ end)
  local caster,ch=dummy("AutonomySpellTarget",g.root.Position+Vector3.new(0,0,-15),"Minion")
  waitFor(function() return (caster:GetAttribute("OilUntil") or 0)>workspace:GetServerTimeNow() end,6,"automatic oil")
  waitFor(function() return ch.Health<10000 end,8,"automatic chop")
  check("autonomous oil and chopping remain functional",g.spells.chopReady>workspace:GetServerTimeNow())
+ local oilReady,chopReady=g.spells.oilReady,g.spells.chopReady
+ task.wait(1)
+ check("hero nocd preserves summon cooldowns and HUD",g.spells.oilReady==oilReady and g.spells.chopReady==chopReady
+  and c:GetAttribute("Ready_GamakichiOil")==oilReady and c:GetAttribute("Ready_GamakichiChop")==chopReady)
+ waitFor(function() return #casts.GamakichiOil>=2 and #casts.GamakichiChop>=2 end,35,"second normal spell cycle")
+ check("automatic oil waits at least 25 seconds",casts.GamakichiOil[2]-casts.GamakichiOil[1]>=25)
+ check("automatic chopping waits at least 30 seconds",casts.GamakichiChop[2]-casts.GamakichiChop[1]>=30)
+ connection:Disconnect()
+ Dev.Execute(p,"refresh")
+ check("explicit refresh still resets summon spells once",g.spells.oilReady==0 and g.spells.chopReady==0)
+ Dev.Execute(p,"nocd off")
  workspace:SetAttribute("GamaAutonomyStatus","PASS")
 end,debug.traceback)
 if not ok then workspace:SetAttribute("GamaAutonomyStatus","FAIL");workspace:SetAttribute("GamaAutonomyError",err);warn(err) end

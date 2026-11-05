@@ -6341,7 +6341,7 @@ export type Agent = {
 }
 local Navigation = {}
 local agents: { [Model]: Agent } = {}
-local waiting: { { agent: Agent, generation: number } } = {}
+local waiting: { { agent: Agent, generation: number, ray: RaycastParams } } = {}
 local serial, active, nextRequest = 0, 0, 0
 local function flat(v: Vector3): Vector3 return v * Vector3.new(1, 0, 1) end
 local function unqueue(agent: Agent)
@@ -6525,10 +6525,75 @@ local function chooseGoal(agent: Agent, target: Model, destination: BasePart, ra
 	agent.slot = bestSlot; agent.failures = 0
 	return best
 end
-local function request(requester: Agent, now: number)
+-- Roblox's navmesh can omit collidable parts inside Humanoid models (towers).
+-- Build a small visibility graph around blockers actually hit by our body sweep.
+-- Grounded corners and every edge use the same clearance rules as movement.
+local function physicsRoute(agent: Agent, origin: Vector3, goal: Vector3, ray: RaycastParams): { Vector3 }?
+	local nodes = { origin, goal }
+	local edges: { { [number]: number } } = { {}, {} }
+	local blockers: { BasePart } = {}
+	local seen: { [BasePart]: boolean } = {}
+	local function connect(a: number, b: number)
+		if stepClear(agent, nodes[a], nodes[b], ray) then
+			local distance = (nodes[a] - nodes[b]).Magnitude
+			edges[a][b] = distance; edges[b][a] = distance
+		else
+			-- Lift above walkable curbs before identifying the solid obstacle.
+			local hit = workspace:Blockcast(CFrame.new(nodes[a] + Vector3.new(0, stepHeight, 0)),
+				bodySize(agent), nodes[b] - nodes[a], ray)
+			if hit and hit.Instance:IsA("BasePart") and not seen[hit.Instance] then
+				seen[hit.Instance] = true; table.insert(blockers, hit.Instance)
+			end
+		end
+	end
+	local function shortest(): { Vector3 }?
+		local distances: { [number]: number } = { [1] = 0 }
+		local previous: { [number]: number } = {}
+		local visited: { [number]: boolean } = {}
+		for _ = 1, #nodes do
+			local selected: number? = nil; local best = math.huge
+			for index, distance in distances do
+				if not visited[index] and distance < best then selected = index; best = distance end
+			end
+			if not selected then return nil end
+			if selected == 2 then
+				local route = {}; local index = 2
+				while index ~= 1 do table.insert(route, 1, nodes[index]); index = previous[index] end
+				table.insert(route, 1, origin); return route
+			end
+			visited[selected] = true
+			for neighbor, length in edges[selected] do
+				if best + length < (distances[neighbor] or math.huge) then
+					distances[neighbor] = best + length; previous[neighbor] = selected
+				end
+			end
+		end
+		return nil
+	end
+	connect(1, 2)
+	-- Bounded work: at most 26 nodes. Complex terrain still uses the navmesh.
+	for obstacleIndex = 1, 6 do
+		local obstacle = blockers[obstacleIndex]; if not obstacle then break end
+		local cf, half = obstacle.CFrame, obstacle.Size / 2
+		local extentX = math.abs(cf.RightVector.X)*half.X + math.abs(cf.UpVector.X)*half.Y + math.abs(cf.LookVector.X)*half.Z
+		local extentZ = math.abs(cf.RightVector.Z)*half.X + math.abs(cf.UpVector.Z)*half.Y + math.abs(cf.LookVector.Z)*half.Z
+		local extent = Vector3.new(extentX + bodySize(agent).X/2 + .45, 0, extentZ + bodySize(agent).Z/2 + .45)
+		for _, sign in { Vector3.new(-1,0,-1), Vector3.new(-1,0,1), Vector3.new(1,0,-1), Vector3.new(1,0,1) } do
+			local point = ground(agent, Vector3.new(cf.X, origin.Y, cf.Z) + extent*sign, ray)
+			if point and bodyClear(agent, point, ray) then
+				table.insert(nodes, point); edges[#nodes] = {}
+				for index = 1, #nodes - 1 do connect(index, #nodes) end
+			end
+		end
+		local route = shortest(); if route then return route end
+		task.wait()
+	end
+	return nil
+end
+local function request(requester: Agent, now: number, ray: RaycastParams)
 	if not requester.queued and Policy.canRequest(requester.clock, now) then
 		requester.queued = true
-		table.insert(waiting, { agent = requester, generation = requester.clock.generation })
+		table.insert(waiting, { agent = requester, generation = requester.clock.generation, ray = ray })
 	end
 	if active >= Policy.MaxConcurrent or now < nextRequest then return end
 	local selected: Agent? = nil
@@ -6536,7 +6601,7 @@ local function request(requester: Agent, now: number)
 		local entry = table.remove(waiting, 1); assert(entry); local candidate = entry.agent
 		if entry.generation == candidate.clock.generation and candidate.queued and agents[candidate.model] == candidate then
 			candidate.queued = false
-			if candidate.goal and Policy.canRequest(candidate.clock, now) then selected = candidate; break end
+			if candidate.goal and Policy.canRequest(candidate.clock, now) then selected = candidate; ray = entry.ray; break end
 		end
 	end
 	if not selected or not selected.goal then return end
@@ -6549,13 +6614,24 @@ local function request(requester: Agent, now: number)
 		local points: { Vector3 } = {}
 		local path: Path? = nil
 		local ok = pcall(function()
-			local computed = Pathfinding:CreatePath({ AgentRadius = math.max(1.5, agent.root.Size.X / 2, agent.root.Size.Z / 2),
+			-- Circumscribe the rectangular body so corners clear diagonal turns.
+			local size = bodySize(agent)
+			local computed = Pathfinding:CreatePath({ AgentRadius = math.sqrt(size.X*size.X + size.Z*size.Z)/2 + .2,
 				AgentHeight = math.max(5, agent.root.Size.Y), AgentCanJump = false, AgentCanClimb = false, WaypointSpacing = 3 })
 			path = computed; computed:ComputeAsync(origin, goal)
-			if computed.Status ~= Enum.PathStatus.Success then return end
-			for _, waypoint in computed:GetWaypoints() do
-				if waypoint.Action ~= Enum.PathWaypointAction.Walk then table.clear(points); return end
-				table.insert(points, waypoint.Position + Vector3.new(0, agent.groundOffset, 0))
+			if computed.Status == Enum.PathStatus.Success then
+				table.insert(points, origin)
+				for index, waypoint in computed:GetWaypoints() do
+					if index == 1 then continue end
+					local point = ground(agent, waypoint.Position + Vector3.new(0, agent.groundOffset, 0), ray)
+					if waypoint.Action ~= Enum.PathWaypointAction.Walk or not point or not bodyClear(agent, point, ray)
+						or not stepClear(agent, points[#points], point, ray) then table.clear(points); break end
+					table.insert(points, point)
+				end
+			end
+			if #points < 2 then
+				local detour = physicsRoute(agent, origin, goal, ray)
+				if detour then points = detour end
 			end
 		end)
 		if path then path:Destroy() end
@@ -6608,7 +6684,7 @@ function Navigation.Step(model: Model, owner: Model, target: Model, destination:
 		while agent.waypoint <= #agent.waypoints and flat(agent.waypoints[agent.waypoint] - position).Magnitude < 0.5 do agent.waypoint += 1 end
 		local waypoint = agent.waypoints[agent.waypoint]
 		if waypoint then aim = waypoint else aim = position end
-		if not agent.pathGoal or flat(agent.pathGoal - goal).Magnitude > Policy.GoalDrift or not waypoint then request(agent, now) end
+		if not agent.pathGoal or flat(agent.pathGoal - goal).Magnitude > Policy.GoalDrift or not waypoint then request(agent, now, ray) end
 	else
 		table.clear(agent.waypoints); agent.pathGoal = nil; unqueue(agent)
 		if agent.formationTarget == target and agent.frontline then
@@ -7228,18 +7304,26 @@ local Service={}
 local noCooldown: {[Player]: boolean}={}
 local requests: {[Player]: number}={}
 local started=false
-local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД\nrefresh — восстановить HP, чакру и КД\nsolo — начать тест одному • help — команды"
-local function cooldowns(player: Player)
+local help="level 30 — уровень • learnall — изучить навыки\nrikudo — сразу включить Рикудо без Хагоромо\nnocd on / nocd off — убрать / вернуть КД героя\nrefresh — восстановить HP, чакру и все КД один раз\nsolo — начать тест одному • help — команды"
+local function cooldowns(player: Player, includeSummon: boolean?)
  local s=Naruto.Get(player)
  if s then
   s.q.cooldownAt=0;s.clones.cooldownAt=0;s.sage.cooldownAt=0;s.gama.cooldownAt=0;s.meditationRecallAt=0
   table.clear(s.variants.cooldowns);s.nextPublish=0
  end
- local toad=Gama.Get(player);if toad then toad.spells.oilReady=0;toad.spells.chopReady=0 end
+ -- nocd is a hero testing aid. Autonomous summons keep their combat cadence.
+ -- Only an explicit one-shot refresh resets the toad's independent cooldowns.
+ local toad=Gama.Get(player)
+ if includeSummon and toad then toad.spells.oilReady=0;toad.spells.chopReady=0 end
  local ranged=Ranged.Inspect(player);if ranged then table.clear(ranged.cooldowns) end
  Kcm.StudioResetCooldowns(player);Kurama.StudioResetCooldowns(player)
  local model=player.Character
- if model then for name in model:GetAttributes() do if string.sub(name,1,6)=="Ready_" then model:SetAttribute(name,0) end end end
+ if model then
+  for name in model:GetAttributes() do
+   local summonSpell=name=="Ready_GamakichiOil" or name=="Ready_GamakichiChop"
+   if string.sub(name,1,6)=="Ready_" and (includeSummon or not summonSpell) then model:SetAttribute(name,0) end
+  end
+ end
 end
 function Service.Execute(player: Player,raw: any): (boolean,string)
  if not RunService:IsStudio() or player.Parent~=Players then return false,"Команды доступны только в Studio." end
@@ -7282,9 +7366,9 @@ function Service.Execute(player: Player,raw: any): (boolean,string)
  elseif command.name=="nocd" then
   noCooldown[player]=command.enabled==true;player:SetAttribute("DeveloperNoCooldown",command.enabled)
   if command.enabled then cooldowns(player) end
-  return true,if command.enabled then "КД отключены. Подготовка и условия техник сохраняются." else "Обычные КД включены для следующих применений."
+  return true,if command.enabled then "КД героя отключены. Гамакичи сохраняет обычные КД." else "Обычные КД героя включены для следующих применений."
  elseif command.name=="refresh" then
-  cooldowns(player);s.pool.mana=s.pool.maximum
+  cooldowns(player,true);s.pool.mana=s.pool.maximum
   local humanoid=if player.Character then player.Character:FindFirstChildOfClass("Humanoid") else nil
   if humanoid and humanoid.Health>0 then humanoid.Health=humanoid.MaxHealth end
   return true,"HP, чакра и перезарядки восстановлены."
