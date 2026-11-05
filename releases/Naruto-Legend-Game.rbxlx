@@ -2571,12 +2571,16 @@ return Poses
 local Reaction={}
 function Reaction.Offset(model:Model,key:string,now:number):CFrame
  local at=model:GetAttribute("PawHitAt")
+ local lightningAt=model:GetAttribute("ChidoriHitAt")
+ local lightning=typeof(lightningAt)=="number" and (typeof(at)~="number" or lightningAt>at)
+ if lightning then at=lightningAt end
  if typeof(at)~="number" then return CFrame.identity end
  local age=now-at
- if age<0 or age>=.44 then return CFrame.identity end
- local force=if age<.07 then math.sin(age/.07*math.pi/2) else (1-(age-.07)/.37)^2
+ local duration=if lightning then .62 else .44
+ if age<0 or age>=duration then return CFrame.identity end
+ local force=if age<.07 then math.sin(age/.07*math.pi/2) else (1-(age-.07)/(duration-.07))^2
  local root=model:FindFirstChild("HumanoidRootPart")
- local direction=model:GetAttribute("PawHitDirection")
+ local direction=model:GetAttribute(if lightning then "ChidoriHitDirection" else "PawHitDirection")
  local localDir=if root and root:IsA("BasePart") and typeof(direction)=="Vector3" then root.CFrame:VectorToObjectSpace(direction) else Vector3.new(0,0,1)
  if key=="Root" or key=="RootJoint" then
   return CFrame.new(localDir.X*.55*force,-.16*force,localDir.Z*.55*force)*CFrame.Angles(localDir.Z*.32*force,0,-localDir.X*.32*force)
@@ -2676,21 +2680,89 @@ return Rig
         </Item>
         <Item class="ModuleScript" referent="48">
           <Properties>
+            <string name="Name">SasukeAttackPoses</string>
+            <string name="Source"><![CDATA[--!strict
+-- Authored for R15: planted feet, sword cuts and a distinct left-hand lightning thrust.
+-- Normalised contact phase comes from the same attack profile as server damage.
+export type Pose = {[string]: {number}}
+local P = {}
+local function smooth(t:number):number t=math.clamp(t,0,1);return t*t*(3-2*t) end
+local function blend(a:Pose,b:Pose,t:number):Pose
+ local out:Pose={};t=smooth(t)
+ for joint,v in a do local w=b[joint] or v;out[joint]={v[1]+(w[1]-v[1])*t,v[2]+(w[2]-v[2])*t,v[3]+(w[3]-v[3])*t} end
+ return out
+end
+local guard:Pose={Waist={-.08,-.12,0},Neck={.06,.08,0},
+ RightShoulder={.52,.08,.12},RightElbow={1.15,0,0},RightWrist={0,0,0},
+ LeftShoulder={.42,-.12,-.18},LeftElbow={1.05,0,0},LeftWrist={0,0,0},
+ LeftHip={.1,0,-.03},RightHip={-.1,0,.03},LeftKnee={-.08,0,0},RightKnee={-.08,0,0}}
+local function poses(chidori:boolean,step:number):(Pose,Pose)
+ local wind=table.clone(guard);local strike=table.clone(guard)
+ if chidori then
+  wind.Waist={-.18,.38,0};wind.Neck={.12,-.22,0}
+  wind.LeftShoulder={-.35,-.18,-.18};wind.LeftElbow={.7,0,0}
+  strike.Waist={-.25,-.36,0};strike.Neck={.16,.2,0}
+  strike.LeftShoulder={1.62,.1,-.12};strike.LeftElbow={.06,0,0};strike.LeftWrist={-.1,0,0}
+  wind.RightShoulder={-.4,.2,.25};wind.RightElbow={.22,0,0};wind.RightWrist={0,.15,.1}
+  strike.RightShoulder=wind.RightShoulder;strike.RightElbow=wind.RightElbow;strike.RightWrist=wind.RightWrist
+  strike.LeftHip={.18,0,-.03};strike.RightHip={-.2,0,.03}
+ else
+  local sign=if step%3==2 then -1 else 1
+  wind.Waist={-.1,-.38*sign,0};wind.Neck={.06,.24*sign,0}
+  wind.RightShoulder={1.95,-.35*sign,.65*sign};wind.RightElbow={.9,0,0};wind.RightWrist={-.35,0,-.15*sign}
+  strike.Waist={-.2,.4*sign,-.04*sign};strike.Neck={.1,-.25*sign,0}
+  strike.RightShoulder={1.15,.25*sign,-.38*sign};strike.RightElbow={.32,0,0};strike.RightWrist={-1.45,0,.1*sign}
+  if step%3==0 then
+   -- Straight overhead cut: same damage and timing, only the visual changes.
+   wind.RightShoulder={2.65,.05,.12};wind.RightElbow={.45,0,0};wind.RightWrist={-.3,0,0}
+   strike.RightShoulder={1.25,.05,.05};strike.RightElbow={.2,0,0};strike.RightWrist={-1.4,0,0}
+   strike.Waist={-.25,.12,0}
+  end
+ end
+ return wind,strike
+end
+function P.sample(kind:string,phase:number,step:number,contact:number):Pose
+ local wind,strike=poses(kind~="Attack",step)
+ local p=math.clamp(phase,0,1);contact=math.clamp(contact,.1,.8)
+ if kind=="Impact" then
+  -- Contact pose persists independently of the ordinary swing's short recovery.
+  if p<.22 then return strike end
+  return blend(strike,guard,(p-.22)/.78)
+ end
+ local windEnd=contact*.4
+ if p<windEnd then return blend(guard,wind,p/windEnd)
+ elseif p<contact then return blend(wind,strike,(p-windEnd)/(contact-windEnd))
+ elseif p<contact+.09 then return strike
+ else return blend(strike,guard,(p-contact-.09)/(1-contact-.09)) end
+end
+return P
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="49">
+          <Properties>
             <string name="Name">SasukePoses</string>
             <string name="Source"><![CDATA[--!strict
 -- Retarget the actual Creator Store R6 keyframe clips to the R15 joints.
 local Data=require("../Config/SasukeVisualData")
 local Factory=require("../CreatorVisualFactory")
+local Attacks=require("./SasukeAttackPoses")
+local Combat=require("../Config/CombatConfig")
 local P={}
 local mapping:{[string]:string}={Torso="Waist",Head="Neck",["Right Arm"]="RightShoulder",["Left Arm"]="LeftShoulder",["Right Leg"]="RightHip",["Left Leg"]="LeftHip"}
 function P.sample(model:Model,key:string,now:number,progress:number,base:{[string]:{number}}):{[string]:{number}}
  local ready=(model:GetAttribute("ChidoriReadyAt") or 0) :: number
  local held=model:GetAttribute("ChidoriHeld")==true
+ if key=="ChidoriImpact" then return Attacks.sample("Impact",progress,1,.35) end
+ if string.find(key,"Punch") then
+  local profile=Combat.Profiles[tostring(model:GetAttribute("CombatProfileId"))] or Combat.Profiles.Sasuke
+  local serial=(model:GetAttribute("CombatAttackSerial") or 1) :: number
+  return Attacks.sample(if held then "Chidori" else "Attack",progress,1+(math.max(1,serial)-1)%3,profile.HitDelay/profile.AttackDuration)
+ end
  local clip:any=nil;local time=0
  if held and now<ready then clip=Data.animations[1];time=math.clamp(1-(ready-now)/.8,0,1)*2
- elseif (held or ((model:GetAttribute("ChidoriStrikeUntil") or 0) :: number)>now) and string.find(key,"Punch") then clip=Data.animations[3];time=progress*.6
  elseif held then clip=Data.animations[2];time=if key=="Run" then now%.6 else .3
- elseif string.find(key,"Punch") then clip=Data.animations[4+((tonumber(string.match(key,"%d")) or 1)-1)%3];time=progress*clip.frames[#clip.frames].time end
+ end
  if not clip then return base end
  local first,last=clip.frames[1],clip.frames[#clip.frames]
  for i=1,#clip.frames-1 do if time>=clip.frames[i].time and time<=clip.frames[i+1].time then first=clip.frames[i];last=clip.frames[i+1];break end end
@@ -2714,11 +2786,11 @@ return P
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="49">
+      <Item class="Folder" referent="50">
         <Properties>
           <string name="Name">Config</string>
         </Properties>
-        <Item class="ModuleScript" referent="50">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">AbilityConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2761,7 +2833,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="51">
+        <Item class="ModuleScript" referent="52">
           <Properties>
             <string name="Name">AnimationIds</string>
             <string name="Source"><![CDATA[--!strict
@@ -2777,7 +2849,22 @@ return table.freeze(sets)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
+          <Properties>
+            <string name="Name">AttributeConfig</string>
+            <string name="Source"><![CDATA[--!strict
+-- MOBA adaptation requested by the player. Keep Warcraft source records unchanged.
+local Attributes = {
+ HealthPerStrength = 22,
+ AttackSpeedPerAgility = .01, -- +1 attack speed on a base of 100.
+ MaximumAttackSpeedMultiplier = 7,
+ Mana = table.freeze({ ManaPerIntelligence = 12, RegenPerIntelligence = .05, BaseManaRegen = .01 }),
+}
+return table.freeze(Attributes)
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">CameraConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2800,7 +2887,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">ChakraParticleData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2809,18 +2896,19 @@ return {{rotSpeed={-1000,-1000},color={{0,0.6431372761726379,1,0.960784316062927
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">CombatConfig</string>
             <string name="Source"><![CDATA[--!strict
 
 -- Plain Luau data: the same timing profile can be tested without Roblox.
 local KuramaAvatar = require("./KuramaAvatarConfig")
+local Attributes = require("./AttributeConfig")
 local profileValues = {
 	AttackCooldown = 0.5,
 	InputBufferWindow = 0.12,
-	AttackSpeedPerAgility = 0.01,
-	MaxAttacksPerSecond = 2.5,
+	AttackSpeedPerAgility = Attributes.AttackSpeedPerAgility,
+	MaxAttacksPerSecond = Attributes.MaximumAttackSpeedMultiplier / .5,
 	Damage = 8,
 	CloneDamage = 5, -- Preserve the existing clone balance independently of hero M1.
 	HitDelay = 0.16,
@@ -2849,14 +2937,18 @@ ninja.AnimationSet = "OrangeNinja"
 profiles.OrangeNinja = table.freeze(ninja)
 local sasuke=table.clone(profileValues)
 sasuke.AnimationSet="Sasuke";sasuke.Damage=10;sasuke.AttackCooldown=2
+sasuke.HitDelay=.24;sasuke.AttackDuration=.68
+sasuke.MaxAttacksPerSecond=Attributes.MaximumAttackSpeedMultiplier/sasuke.AttackCooldown
 profiles.Sasuke=table.freeze(sasuke)
 local susanoo=table.clone(profileValues);susanoo.AnimationSet="Sasuke";susanoo.Damage=10;susanoo.AttackCooldown=3;susanoo.HitDelay=.6;susanoo.AttackDuration=1.1
+susanoo.MaxAttacksPerSecond=Attributes.MaximumAttackSpeedMultiplier/susanoo.AttackCooldown
 susanoo.HitboxSize={X=12,Y=14,Z=16};susanoo.HitboxOffset={X=0,Y=0,Z=-8};susanoo.MaxTargetDistance=18
 profiles.SasukeSusanoo=table.freeze(susanoo)
 local kurama = table.clone(profileValues)
 -- Ewar attack cooldown/range from the map; windup, box and animation are the third-person adaptation.
 -- Keep damage in the existing stat ledger (+90 for the form), rather than applying the bonus twice.
 kurama.AttackCooldown = 2
+kurama.MaxAttacksPerSecond=Attributes.MaximumAttackSpeedMultiplier/kurama.AttackCooldown
 kurama.HitDelay = 0.8
 kurama.AttackDuration = 1.7
 kurama.HitboxSize = table.freeze({ X = 18, Y = 9, Z = 16 })
@@ -2871,7 +2963,7 @@ profiles.Kurama = table.freeze(kurama)
 return table.freeze({
 	DefaultProfile = "Default",
 	Profiles = table.freeze(profiles),
-	RemoteLimit = table.freeze({ Burst = 6, RequestsPerSecond = 8, RejectReplyInterval = 0.25 }),
+	RemoteLimit = table.freeze({ Burst = 8, RequestsPerSecond = 20, RejectReplyInterval = 0.25 }),
 	MaxRequestId = 2147483647,
 	PredictionTimeout = 1.5,
 	CharacterReadyTimeout = 15,
@@ -2882,7 +2974,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="55">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">CreatorVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -2896,7 +2988,7 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="56">
+        <Item class="ModuleScript" referent="58">
           <Properties>
             <string name="Name">DebugConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2910,7 +3002,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="57">
+        <Item class="ModuleScript" referent="59">
           <Properties>
             <string name="Name">GameModeConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2927,7 +3019,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="58">
+        <Item class="ModuleScript" referent="60">
           <Properties>
             <string name="Name">HeroAppearanceConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2940,7 +3032,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="59">
+        <Item class="ModuleScript" referent="61">
           <Properties>
             <string name="Name">HeroConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2956,7 +3048,7 @@ return table.freeze({ DefaultHero = "OrangeNinja", Heroes = heroes, AppearanceVe
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="60">
+        <Item class="ModuleScript" referent="62">
           <Properties>
             <string name="Name">ItemConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2974,7 +3066,7 @@ return { Order = { "IronBlade", "GuardianArmor", "SwiftBoots", "HealingPotion" }
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="61">
+        <Item class="ModuleScript" referent="63">
           <Properties>
             <string name="Name">JungleConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -2994,7 +3086,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="62">
+        <Item class="ModuleScript" referent="64">
           <Properties>
             <string name="Name">KuramaAvatarConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -3012,7 +3104,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="63">
+        <Item class="ModuleScript" referent="65">
           <Properties>
             <string name="Name">MapConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -3039,7 +3131,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="64">
+        <Item class="ModuleScript" referent="66">
           <Properties>
             <string name="Name">MinionConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -3062,7 +3154,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="65">
+        <Item class="ModuleScript" referent="67">
           <Properties>
             <string name="Name">NarutoFormVisualData</string>
             <string name="Source"><![CDATA[--!strict
@@ -3073,13 +3165,14 @@ return data
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="66">
+        <Item class="ModuleScript" referent="68">
           <Properties>
             <string name="Name">ProgressionConfig</string>
             <string name="Source"><![CDATA[--!strict
 local Naruto = require("../Abilities/NarutoDefinitions")
+local Attributes = require("./AttributeConfig")
 return table.freeze({
- Attributes = Naruto.Hero, NativeMana = Naruto.NativeInference, DamagePerStrength = 0.02, ArmorPerAgility = 0.2,
+ Attributes = Naruto.Hero, HealthPerStrength = Attributes.HealthPerStrength, NativeMana = Attributes.Mana, DamagePerStrength = 0.02, ArmorPerAgility = 0.2,
  StartingLevel = 1, MaxLevel = 30, StartingGold = 100,
  XPBase = 100, XPPerLevel = 50, MaxGrant = 1000000, MaxGold = 1000000,
  BaseStats = { WalkSpeed = 16, AttackDamageMultiplier = 1, Defense = 0 },
@@ -3094,7 +3187,7 @@ return table.freeze({
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="67">
+        <Item class="ModuleScript" referent="69">
           <Properties>
             <string name="Name">SasukeParticleData</string>
             <string name="Source"><![CDATA[--!nocheck
@@ -3103,7 +3196,7 @@ return {["Amaterasu"]={{["acceleration"]={0,0,0},["rotSpeed"]={0,0},["color"]={{
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="68">
+        <Item class="ModuleScript" referent="70">
           <Properties>
             <string name="Name">SasukeVisualData</string>
             <string name="Source"><![CDATA[--!nocheck
@@ -3112,7 +3205,7 @@ return {["appearance"]={{["offset"]={0,0,0},["color"]={0.35686275362968445,0.364
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="69">
+        <Item class="ModuleScript" referent="71">
           <Properties>
             <string name="Name">TowerConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -3146,7 +3239,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="70">
+        <Item class="ModuleScript" referent="72">
           <Properties>
             <string name="Name">VFXConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -3176,7 +3269,7 @@ return table.freeze({
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="71">
+      <Item class="ModuleScript" referent="73">
         <Properties>
           <string name="Name">CreatorVisualFactory</string>
           <string name="Source"><![CDATA[--!strict
@@ -3206,7 +3299,7 @@ return Factory
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="72">
+      <Item class="ModuleScript" referent="74">
         <Properties>
           <string name="Name">GamakichiAppearance</string>
           <string name="Source"><![CDATA[--!strict
@@ -3234,7 +3327,7 @@ return A
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="73">
+      <Item class="ModuleScript" referent="75">
         <Properties>
           <string name="Name">GamakichiClips</string>
           <string name="Source"><![CDATA[--!nocheck
@@ -3400,7 +3493,7 @@ Oil={duration=0.8,frames={
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Model" referent="74">
+      <Item class="Model" referent="76">
         <Properties>
           <string name="Name">GamakichiRig</string>
           <BinaryString name="AttributesSerialize">AQAAAA4AAABSQlhfUmVpbXBvcnRJZAIkAAAAMDNkNjI4MjUtZTE2My00ZDUxLWE0ZGUtYzNiOWNhNDVhZThk</BinaryString>
@@ -3428,7 +3521,7 @@ Oil={duration=0.8,frames={
           </Vector3>
           <token name="ModelStreamingMode">0</token>
           <bool name="NeedsPivotMigration">false</bool>
-          <Ref name="PrimaryPart">75</Ref>
+          <Ref name="PrimaryPart">77</Ref>
           <bool name="DefinesCapabilities">false</bool>
           <float name="ScaleFactor">0.01</float>
           <BinaryString name="SerializedOverrides">
@@ -3453,7 +3546,7 @@ Oil={duration=0.8,frames={
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="MeshPart" referent="75">
+        <Item class="MeshPart" referent="77">
           <Properties>
             <string name="Name">Gamakichi</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -3594,7 +3687,7 @@ Oil={duration=0.8,frames={
             </Vector3>
             <int name="VertexCount">9730</int>
           </Properties>
-          <Item class="Bone" referent="76">
+          <Item class="Bone" referent="78">
             <Properties>
               <string name="Name">Root</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3620,7 +3713,7 @@ Oil={duration=0.8,frames={
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Bone" referent="77">
+            <Item class="Bone" referent="79">
               <Properties>
                 <string name="Name">Body</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3646,7 +3739,7 @@ Oil={duration=0.8,frames={
                 <BinaryString name="Tags"></BinaryString>
                 <bool name="Visible">false</bool>
               </Properties>
-              <Item class="Bone" referent="78">
+              <Item class="Bone" referent="80">
                 <Properties>
                   <string name="Name">Head</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3672,7 +3765,7 @@ Oil={duration=0.8,frames={
                   <BinaryString name="Tags"></BinaryString>
                   <bool name="Visible">false</bool>
                 </Properties>
-                <Item class="Bone" referent="79">
+                <Item class="Bone" referent="81">
                   <Properties>
                     <string name="Name">Jaw</string>
                     <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3700,7 +3793,7 @@ Oil={duration=0.8,frames={
                   </Properties>
                 </Item>
               </Item>
-              <Item class="Bone" referent="80">
+              <Item class="Bone" referent="82">
                 <Properties>
                   <string name="Name">LeftShoulder</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3726,7 +3819,7 @@ Oil={duration=0.8,frames={
                   <BinaryString name="Tags"></BinaryString>
                   <bool name="Visible">false</bool>
                 </Properties>
-                <Item class="Bone" referent="81">
+                <Item class="Bone" referent="83">
                   <Properties>
                     <string name="Name">LeftElbow</string>
                     <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3752,7 +3845,7 @@ Oil={duration=0.8,frames={
                     <BinaryString name="Tags"></BinaryString>
                     <bool name="Visible">false</bool>
                   </Properties>
-                  <Item class="Bone" referent="82">
+                  <Item class="Bone" referent="84">
                     <Properties>
                       <string name="Name">LeftWrist</string>
                       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3781,7 +3874,7 @@ Oil={duration=0.8,frames={
                   </Item>
                 </Item>
               </Item>
-              <Item class="Bone" referent="83">
+              <Item class="Bone" referent="85">
                 <Properties>
                   <string name="Name">LeftHip</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3807,7 +3900,7 @@ Oil={duration=0.8,frames={
                   <BinaryString name="Tags"></BinaryString>
                   <bool name="Visible">false</bool>
                 </Properties>
-                <Item class="Bone" referent="84">
+                <Item class="Bone" referent="86">
                   <Properties>
                     <string name="Name">LeftKnee</string>
                     <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3833,7 +3926,7 @@ Oil={duration=0.8,frames={
                     <BinaryString name="Tags"></BinaryString>
                     <bool name="Visible">false</bool>
                   </Properties>
-                  <Item class="Bone" referent="85">
+                  <Item class="Bone" referent="87">
                     <Properties>
                       <string name="Name">LeftAnkle</string>
                       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3862,7 +3955,7 @@ Oil={duration=0.8,frames={
                   </Item>
                 </Item>
               </Item>
-              <Item class="Bone" referent="86">
+              <Item class="Bone" referent="88">
                 <Properties>
                   <string name="Name">RightShoulder</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3888,7 +3981,7 @@ Oil={duration=0.8,frames={
                   <BinaryString name="Tags"></BinaryString>
                   <bool name="Visible">false</bool>
                 </Properties>
-                <Item class="Bone" referent="87">
+                <Item class="Bone" referent="89">
                   <Properties>
                     <string name="Name">RightElbow</string>
                     <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3914,7 +4007,7 @@ Oil={duration=0.8,frames={
                     <BinaryString name="Tags"></BinaryString>
                     <bool name="Visible">false</bool>
                   </Properties>
-                  <Item class="Bone" referent="88">
+                  <Item class="Bone" referent="90">
                     <Properties>
                       <string name="Name">RightWrist</string>
                       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3943,7 +4036,7 @@ Oil={duration=0.8,frames={
                   </Item>
                 </Item>
               </Item>
-              <Item class="Bone" referent="89">
+              <Item class="Bone" referent="91">
                 <Properties>
                   <string name="Name">RightHip</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3969,7 +4062,7 @@ Oil={duration=0.8,frames={
                   <BinaryString name="Tags"></BinaryString>
                   <bool name="Visible">false</bool>
                 </Properties>
-                <Item class="Bone" referent="90">
+                <Item class="Bone" referent="92">
                   <Properties>
                     <string name="Name">RightKnee</string>
                     <BinaryString name="AttributesSerialize"></BinaryString>
@@ -3995,7 +4088,7 @@ Oil={duration=0.8,frames={
                     <BinaryString name="Tags"></BinaryString>
                     <bool name="Visible">false</bool>
                   </Properties>
-                  <Item class="Bone" referent="91">
+                  <Item class="Bone" referent="93">
                     <Properties>
                       <string name="Name">RightAnkle</string>
                       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4027,7 +4120,7 @@ Oil={duration=0.8,frames={
             </Item>
           </Item>
         </Item>
-        <Item class="Folder" referent="92">
+        <Item class="Folder" referent="94">
           <Properties>
             <string name="Name">InitialPoses</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4043,7 +4136,7 @@ Oil={duration=0.8,frames={
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="CFrameValue" referent="93">
+          <Item class="CFrameValue" referent="95">
             <Properties>
               <string name="Name">Gamakichi_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4069,7 +4162,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="94">
+          <Item class="CFrameValue" referent="96">
             <Properties>
               <string name="Name">Gamakichi_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4095,7 +4188,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="95">
+          <Item class="CFrameValue" referent="97">
             <Properties>
               <string name="Name">Gamakichi_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4121,7 +4214,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="96">
+          <Item class="CFrameValue" referent="98">
             <Properties>
               <string name="Name">GamakichiRig_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4147,7 +4240,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="97">
+          <Item class="CFrameValue" referent="99">
             <Properties>
               <string name="Name">GamakichiRig_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4173,7 +4266,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="98">
+          <Item class="CFrameValue" referent="100">
             <Properties>
               <string name="Name">GamakichiRig_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4199,7 +4292,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="99">
+          <Item class="CFrameValue" referent="101">
             <Properties>
               <string name="Name">Root_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4225,7 +4318,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="100">
+          <Item class="CFrameValue" referent="102">
             <Properties>
               <string name="Name">Root_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4251,7 +4344,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="101">
+          <Item class="CFrameValue" referent="103">
             <Properties>
               <string name="Name">Root_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4277,7 +4370,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="102">
+          <Item class="CFrameValue" referent="104">
             <Properties>
               <string name="Name">Body_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4303,7 +4396,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="103">
+          <Item class="CFrameValue" referent="105">
             <Properties>
               <string name="Name">Body_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4329,7 +4422,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="104">
+          <Item class="CFrameValue" referent="106">
             <Properties>
               <string name="Name">Body_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4355,7 +4448,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="105">
+          <Item class="CFrameValue" referent="107">
             <Properties>
               <string name="Name">Head_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4381,7 +4474,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="106">
+          <Item class="CFrameValue" referent="108">
             <Properties>
               <string name="Name">Head_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4407,7 +4500,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="107">
+          <Item class="CFrameValue" referent="109">
             <Properties>
               <string name="Name">Head_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4433,7 +4526,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="108">
+          <Item class="CFrameValue" referent="110">
             <Properties>
               <string name="Name">Jaw_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4459,7 +4552,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="109">
+          <Item class="CFrameValue" referent="111">
             <Properties>
               <string name="Name">Jaw_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4485,7 +4578,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="110">
+          <Item class="CFrameValue" referent="112">
             <Properties>
               <string name="Name">Jaw_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4511,7 +4604,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="111">
+          <Item class="CFrameValue" referent="113">
             <Properties>
               <string name="Name">LeftShoulder_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4537,7 +4630,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="112">
+          <Item class="CFrameValue" referent="114">
             <Properties>
               <string name="Name">LeftShoulder_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4563,7 +4656,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="113">
+          <Item class="CFrameValue" referent="115">
             <Properties>
               <string name="Name">LeftShoulder_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4589,7 +4682,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="114">
+          <Item class="CFrameValue" referent="116">
             <Properties>
               <string name="Name">LeftElbow_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4615,7 +4708,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="115">
+          <Item class="CFrameValue" referent="117">
             <Properties>
               <string name="Name">LeftElbow_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4641,7 +4734,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="116">
+          <Item class="CFrameValue" referent="118">
             <Properties>
               <string name="Name">LeftElbow_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4667,7 +4760,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="117">
+          <Item class="CFrameValue" referent="119">
             <Properties>
               <string name="Name">LeftWrist_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4693,7 +4786,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="118">
+          <Item class="CFrameValue" referent="120">
             <Properties>
               <string name="Name">LeftWrist_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4719,7 +4812,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="119">
+          <Item class="CFrameValue" referent="121">
             <Properties>
               <string name="Name">LeftWrist_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4745,7 +4838,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="120">
+          <Item class="CFrameValue" referent="122">
             <Properties>
               <string name="Name">LeftHip_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4771,7 +4864,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="121">
+          <Item class="CFrameValue" referent="123">
             <Properties>
               <string name="Name">LeftHip_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4797,7 +4890,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="122">
+          <Item class="CFrameValue" referent="124">
             <Properties>
               <string name="Name">LeftHip_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4823,7 +4916,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="123">
+          <Item class="CFrameValue" referent="125">
             <Properties>
               <string name="Name">LeftKnee_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4849,7 +4942,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="124">
+          <Item class="CFrameValue" referent="126">
             <Properties>
               <string name="Name">LeftKnee_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4875,7 +4968,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="125">
+          <Item class="CFrameValue" referent="127">
             <Properties>
               <string name="Name">LeftKnee_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4901,7 +4994,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="126">
+          <Item class="CFrameValue" referent="128">
             <Properties>
               <string name="Name">LeftAnkle_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4927,7 +5020,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="127">
+          <Item class="CFrameValue" referent="129">
             <Properties>
               <string name="Name">LeftAnkle_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4953,7 +5046,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="128">
+          <Item class="CFrameValue" referent="130">
             <Properties>
               <string name="Name">LeftAnkle_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -4979,7 +5072,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="129">
+          <Item class="CFrameValue" referent="131">
             <Properties>
               <string name="Name">RightShoulder_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5005,7 +5098,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="130">
+          <Item class="CFrameValue" referent="132">
             <Properties>
               <string name="Name">RightShoulder_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5031,7 +5124,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="131">
+          <Item class="CFrameValue" referent="133">
             <Properties>
               <string name="Name">RightShoulder_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5057,7 +5150,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="132">
+          <Item class="CFrameValue" referent="134">
             <Properties>
               <string name="Name">RightElbow_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5083,7 +5176,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="133">
+          <Item class="CFrameValue" referent="135">
             <Properties>
               <string name="Name">RightElbow_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5109,7 +5202,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="134">
+          <Item class="CFrameValue" referent="136">
             <Properties>
               <string name="Name">RightElbow_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5135,7 +5228,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="135">
+          <Item class="CFrameValue" referent="137">
             <Properties>
               <string name="Name">RightWrist_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5161,7 +5254,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="136">
+          <Item class="CFrameValue" referent="138">
             <Properties>
               <string name="Name">RightWrist_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5187,7 +5280,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="137">
+          <Item class="CFrameValue" referent="139">
             <Properties>
               <string name="Name">RightWrist_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5213,7 +5306,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="138">
+          <Item class="CFrameValue" referent="140">
             <Properties>
               <string name="Name">RightHip_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5239,7 +5332,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="139">
+          <Item class="CFrameValue" referent="141">
             <Properties>
               <string name="Name">RightHip_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5265,7 +5358,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="140">
+          <Item class="CFrameValue" referent="142">
             <Properties>
               <string name="Name">RightHip_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5291,7 +5384,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="141">
+          <Item class="CFrameValue" referent="143">
             <Properties>
               <string name="Name">RightKnee_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5317,7 +5410,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="142">
+          <Item class="CFrameValue" referent="144">
             <Properties>
               <string name="Name">RightKnee_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5343,7 +5436,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="143">
+          <Item class="CFrameValue" referent="145">
             <Properties>
               <string name="Name">RightKnee_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5369,7 +5462,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="144">
+          <Item class="CFrameValue" referent="146">
             <Properties>
               <string name="Name">RightAnkle_Composited</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5395,7 +5488,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="145">
+          <Item class="CFrameValue" referent="147">
             <Properties>
               <string name="Name">RightAnkle_Original</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5421,7 +5514,7 @@ Oil={duration=0.8,frames={
               </CoordinateFrame>
             </Properties>
           </Item>
-          <Item class="CFrameValue" referent="146">
+          <Item class="CFrameValue" referent="148">
             <Properties>
               <string name="Name">RightAnkle_Initial</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5448,7 +5541,7 @@ Oil={duration=0.8,frames={
             </Properties>
           </Item>
         </Item>
-        <Item class="AnimationController" referent="147">
+        <Item class="AnimationController" referent="149">
           <Properties>
             <string name="Name">AnimationController</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -5461,11 +5554,11 @@ Oil={duration=0.8,frames={
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="148">
+      <Item class="Folder" referent="150">
         <Properties>
           <string name="Name">Game</string>
         </Properties>
-        <Item class="ModuleScript" referent="149">
+        <Item class="ModuleScript" referent="151">
           <Properties>
             <string name="Name">DeveloperCommandRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -5487,7 +5580,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="150">
+        <Item class="ModuleScript" referent="152">
           <Properties>
             <string name="Name">JungleRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -5517,7 +5610,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="151">
+        <Item class="ModuleScript" referent="153">
           <Properties>
             <string name="Name">MapSceneryPlan</string>
             <string name="Source"><![CDATA[--!strict
@@ -5654,7 +5747,7 @@ return table.freeze(Plan)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="152">
+        <Item class="ModuleScript" referent="154">
           <Properties>
             <string name="Name">MatchRoster</string>
             <string name="Source"><![CDATA[--!strict
@@ -5742,7 +5835,7 @@ return Roster
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="153">
+        <Item class="ModuleScript" referent="155">
           <Properties>
             <string name="Name">MatchState</string>
             <string name="Source"><![CDATA[--!strict
@@ -5825,13 +5918,14 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="154">
+        <Item class="ModuleScript" referent="156">
           <Properties>
             <string name="Name">ProgressionRules</string>
             <string name="Source"><![CDATA[--!strict
 local Resource = require("../Abilities/NarutoResources")
 export type Configuration = {
  read Attributes: Resource.Hero & { read BaseHealth: number, read HealthPerStrength: number }, read NativeMana: Resource.Native, read DamagePerStrength: number, read ArmorPerAgility: number,
+ read HealthPerStrength: number?,
  read StartingLevel: number, read MaxLevel: number, read XPBase: number, read XPPerLevel: number, read MaxGrant: number, read MaxGold: number,
  read BaseStats: { WalkSpeed: number, AttackDamageMultiplier: number, Defense: number },
  read DefenseScale: number,
@@ -5868,7 +5962,7 @@ function Rules.stats(profile: Profile, strengthBonus: number?): Stats
  local levels = math.clamp(profile.Level, 1, Config.MaxLevel) - 1
  local base = Config.BaseStats
  local attributes = Attributes.values(levels + 1, strengthBonus or 0)
- local result = { MaxHealth = Config.Attributes.BaseHealth + Config.Attributes.HealthPerStrength * attributes.strength, WalkSpeed = base.WalkSpeed,
+ local result = { MaxHealth = Config.Attributes.BaseHealth + (Config.HealthPerStrength or Config.Attributes.HealthPerStrength) * attributes.strength, WalkSpeed = base.WalkSpeed,
   AttackDamageMultiplier = base.AttackDamageMultiplier + math.max(0,attributes.strength - Config.Attributes.Strength) * Config.DamagePerStrength, AttackDamageBonus = 0, Defense = base.Defense + attributes.agility * Config.ArmorPerAgility, Level = profile.Level, Strength = attributes.strength, RawStrength = attributes.rawStrength, Agility = attributes.agility, RawAgility = attributes.rawAgility, Intelligence = attributes.intelligence, MaxMana = attributes.maxMana, ManaRegen = attributes.regen }
  for id, owned in profile.Owned do
   local item = items[id]
@@ -5901,7 +5995,7 @@ return Module
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="155">
+        <Item class="ModuleScript" referent="157">
           <Properties>
             <string name="Name">RewardLedger</string>
             <string name="Source"><![CDATA[--!strict
@@ -5937,7 +6031,7 @@ return Ledger
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="156">
+        <Item class="ModuleScript" referent="158">
           <Properties>
             <string name="Name">RewardRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -5981,7 +6075,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="157">
+        <Item class="ModuleScript" referent="159">
           <Properties>
             <string name="Name">RoundProtocol</string>
             <string name="Source"><![CDATA[--!strict
@@ -5997,7 +6091,7 @@ return Protocol
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="158">
+        <Item class="ModuleScript" referent="160">
           <Properties>
             <string name="Name">StructureRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -6011,7 +6105,7 @@ return Rules
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="159">
+        <Item class="ModuleScript" referent="161">
           <Properties>
             <string name="Name">TowerRules</string>
             <string name="Source"><![CDATA[--!strict
@@ -6071,7 +6165,7 @@ return Rules
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="160">
+      <Item class="ModuleScript" referent="162">
         <Properties>
           <string name="Name">KuramaAvatar</string>
           <string name="Source"><![CDATA[--!strict
@@ -6147,15 +6241,15 @@ return Avatar
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="161">
+  <Item class="ServerScriptService" referent="163">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="162">
+    <Item class="Folder" referent="164">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="Script" referent="163">
+      <Item class="Script" referent="165">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -6174,11 +6268,11 @@ print("[Anime Battlegrounds] Server ready")
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Folder" referent="164">
+      <Item class="Folder" referent="166">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="165">
+        <Item class="ModuleScript" referent="167">
           <Properties>
             <string name="Name">AbilityDisplacementService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6229,7 +6323,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="166">
+        <Item class="ModuleScript" referent="168">
           <Properties>
             <string name="Name">AbilityLearningService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6279,7 +6373,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="167">
+        <Item class="ModuleScript" referent="169">
           <Properties>
             <string name="Name">AbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6377,7 +6471,7 @@ return Ability
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="168">
+        <Item class="ModuleScript" referent="170">
           <Properties>
             <string name="Name">AbilityTargetService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6427,7 +6521,7 @@ return Targets
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="169">
+        <Item class="ModuleScript" referent="171">
           <Properties>
             <string name="Name">BaseService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6506,7 +6600,7 @@ return BaseService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="170">
+        <Item class="ModuleScript" referent="172">
           <Properties>
             <string name="Name">CharacterStatsService</string>
             <string name="Source"><![CDATA[--!strict
@@ -6516,7 +6610,7 @@ local Config = require(Shared.Config.ProgressionConfig)
 local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, require(Shared.Config.ItemConfig).Items)
 local Sasuke=require(Shared.Abilities.SasukeDefinitions)
-local SasukeConfig:any=table.clone(Config);SasukeConfig.Attributes=Sasuke.Hero;SasukeConfig.NativeMana=Sasuke.NativeInference;SasukeConfig.DamagePerStrength=0
+local SasukeConfig:any=table.clone(Config);SasukeConfig.Attributes=Sasuke.Hero;SasukeConfig.DamagePerStrength=0
 local SasukeStats=Logic.configure(SasukeConfig,require(Shared.Config.ItemConfig).Items)
 local Progression = require(script.Parent.HeroProgressionService)
 local Fighters = require(script.Parent.FighterStateService)
@@ -6615,7 +6709,7 @@ return Stats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="171">
+        <Item class="ModuleScript" referent="173">
           <Properties>
             <string name="Name">CloneNavigation</string>
             <string name="Source"><![CDATA[--!strict
@@ -7041,7 +7135,7 @@ return Navigation
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="172">
+        <Item class="ModuleScript" referent="174">
           <Properties>
             <string name="Name">CloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7149,7 +7243,7 @@ return CloneService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="173">
+        <Item class="ModuleScript" referent="175">
           <Properties>
             <string name="Name">CombatLifeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7230,7 +7324,7 @@ return LifeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="174">
+        <Item class="ModuleScript" referent="176">
           <Properties>
             <string name="Name">CombatService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7515,7 +7609,7 @@ return CombatService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="175">
+        <Item class="ModuleScript" referent="177">
           <Properties>
             <string name="Name">DamageService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7586,7 +7680,7 @@ return DamageService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="176">
+        <Item class="ModuleScript" referent="178">
           <Properties>
             <string name="Name">DeveloperCommandService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7698,7 +7792,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="177">
+        <Item class="ModuleScript" referent="179">
           <Properties>
             <string name="Name">EconomyService</string>
             <string name="Source"><![CDATA[--!strict
@@ -7743,7 +7837,7 @@ return Economy
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="178">
+        <Item class="ModuleScript" referent="180">
           <Properties>
             <string name="Name">FighterStateService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8065,7 +8159,7 @@ return FighterStateService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="179">
+        <Item class="ModuleScript" referent="181">
           <Properties>
             <string name="Name">GamakichiService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8312,7 +8406,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="180">
+        <Item class="ModuleScript" referent="182">
           <Properties>
             <string name="Name">GameModeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8338,7 +8432,7 @@ return GameModeService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="181">
+        <Item class="ModuleScript" referent="183">
           <Properties>
             <string name="Name">HeroAppearanceService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8437,7 +8531,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="182">
+        <Item class="ModuleScript" referent="184">
           <Properties>
             <string name="Name">HeroProgressionService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8531,7 +8625,7 @@ return Progression
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="183">
+        <Item class="ModuleScript" referent="185">
           <Properties>
             <string name="Name">HeroService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8623,7 +8717,7 @@ return HeroService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="184">
+        <Item class="ModuleScript" referent="186">
           <Properties>
             <string name="Name">HitboxService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8744,7 +8838,7 @@ return HitboxService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="185">
+        <Item class="ModuleScript" referent="187">
           <Properties>
             <string name="Name">ItemShopService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8856,7 +8950,7 @@ return Shop
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="186">
+        <Item class="ModuleScript" referent="188">
           <Properties>
             <string name="Name">JungleService</string>
             <string name="Source"><![CDATA[--!strict
@@ -8982,7 +9076,7 @@ return Jungle
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="187">
+        <Item class="ModuleScript" referent="189">
           <Properties>
             <string name="Name">KnockbackService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9032,7 +9126,7 @@ return KnockbackService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="188">
+        <Item class="ModuleScript" referent="190">
           <Properties>
             <string name="Name">KuramaSwipeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9088,7 +9182,7 @@ return M
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="189">
+        <Item class="ModuleScript" referent="191">
           <Properties>
             <string name="Name">MapBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -9228,7 +9322,7 @@ return MapBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="190">
+        <Item class="ModuleScript" referent="192">
           <Properties>
             <string name="Name">MapScenery</string>
             <string name="Source"><![CDATA[--!strict
@@ -9311,7 +9405,7 @@ return MapScenery
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="191">
+        <Item class="ModuleScript" referent="193">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9445,7 +9539,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="192">
+        <Item class="ModuleScript" referent="194">
           <Properties>
             <string name="Name">MeditationCloneService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9543,7 +9637,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="193">
+        <Item class="ModuleScript" referent="195">
           <Properties>
             <string name="Name">MinionAIService</string>
             <string name="Source"><![CDATA[--!strict
@@ -9932,7 +10026,7 @@ return AI
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="194">
+        <Item class="ModuleScript" referent="196">
           <Properties>
             <string name="Name">MinionAppearance</string>
             <string name="Source"><![CDATA[--!strict
@@ -10008,7 +10102,7 @@ return Appearance
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="195">
+        <Item class="ModuleScript" referent="197">
           <Properties>
             <string name="Name">MinionFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -10074,7 +10168,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="196">
+        <Item class="ModuleScript" referent="198">
           <Properties>
             <string name="Name">MinionSpawnerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -10139,7 +10233,7 @@ return Spawner
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="197">
+        <Item class="ModuleScript" referent="199">
           <Properties>
             <string name="Name">NarutoAbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -10160,9 +10254,10 @@ local CloneState = require(Shared.Abilities.CloneState)
 local W = CloneState.configure(Definitions.Clones)
 local Commands = require(Shared.Abilities.CloneCommands)
 local Resource = require(Shared.Abilities.NarutoResources)
-local ResourceRules = Resource.configure(Definitions.Hero, Definitions.NativeInference)
+local AttributeConfig = require(Shared.Config.AttributeConfig)
+local ResourceRules = Resource.configure(Definitions.Hero, AttributeConfig.Mana)
 local Sasuke=require(Shared.Abilities.SasukeDefinitions)
-local SasukeResources=Resource.configure(Sasuke.Hero,Sasuke.NativeInference)
+local SasukeResources=Resource.configure(Sasuke.Hero,AttributeConfig.Mana)
 
 local Fighters = require(script.Parent.FighterStateService)
 local Combat = require(script.Parent.CombatService)
@@ -10641,7 +10736,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="198">
+        <Item class="ModuleScript" referent="200">
           <Properties>
             <string name="Name">NarutoKcmService</string>
             <string name="Source"><![CDATA[--!strict
@@ -10926,7 +11021,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="199">
+        <Item class="ModuleScript" referent="201">
           <Properties>
             <string name="Name">NarutoKuramaService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11145,7 +11240,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="200">
+        <Item class="ModuleScript" referent="202">
           <Properties>
             <string name="Name">NarutoRangedService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11333,7 +11428,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="201">
+        <Item class="ModuleScript" referent="203">
           <Properties>
             <string name="Name">NarutoSleepService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11400,7 +11495,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="202">
+        <Item class="ModuleScript" referent="204">
           <Properties>
             <string name="Name">NarutoSummonService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11633,7 +11728,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="203">
+        <Item class="ModuleScript" referent="205">
           <Properties>
             <string name="Name">OilStatusService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11689,7 +11784,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="204">
+        <Item class="ModuleScript" referent="206">
           <Properties>
             <string name="Name">RasenshurikenMeleeService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11744,7 +11839,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="205">
+        <Item class="ModuleScript" referent="207">
           <Properties>
             <string name="Name">RasenshurikenThrowService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11827,7 +11922,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="206">
+        <Item class="ModuleScript" referent="208">
           <Properties>
             <string name="Name">RequestLimiter</string>
             <string name="Source"><![CDATA[--!strict
@@ -11862,7 +11957,7 @@ return RequestLimiter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="207">
+        <Item class="ModuleScript" referent="209">
           <Properties>
             <string name="Name">RewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -11932,7 +12027,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="208">
+        <Item class="ModuleScript" referent="210">
           <Properties>
             <string name="Name">SasukeAbilityService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12237,7 +12332,12 @@ function Service.Start()
   local p=f.player;if not p then return false end;local s=sessions[p];if not s then return false end;local now=clock();local stats=Stats.Get(p)
   if s.held and now>=s.readyAt and now<s.heldUntil then
    local variant=s.variant;local dealt=hurt(s,target,D.chidoriDamage(stats.Level,stats.Agility,variant),3)
-   if dealt>0 then s.held=false;s.model:SetAttribute("ChidoriStrikeUntil",now+.6);publish(s);emit(s,"ChidoriHit",target:GetPivot().Position,2,.6)
+   if dealt>0 then
+    s.held=false;s.model:SetAttribute("ChidoriImpactAt",now);s.model:SetAttribute("ChidoriStrikeUntil",now+.3)
+    local direction=target:GetPivot().Position-s.model:GetPivot().Position
+    direction=if direction.Magnitude>.01 then direction.Unit else s.model:GetPivot().LookVector
+    target:SetAttribute("ChidoriHitAt",now);target:SetAttribute("ChidoriHitDirection",direction)
+    publish(s);emit(s,"ChidoriHit",target:GetPivot().Position,2,.55,{direction=direction,target=target,variant=variant})
     if variant=="AmaterasuChidori" then area(s,"Amaterasu",target:GetPivot().Position,Units.toStuds(200),800+5*stats.Agility,10) end
    end
    return true
@@ -12267,7 +12367,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="209">
+        <Item class="ModuleScript" referent="211">
           <Properties>
             <string name="Name">SasukeAppearanceService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12355,7 +12455,7 @@ return A
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="210">
+        <Item class="ModuleScript" referent="212">
           <Properties>
             <string name="Name">SasukeSummonService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12451,7 +12551,7 @@ return S
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="211">
+        <Item class="ModuleScript" referent="213">
           <Properties>
             <string name="Name">StructureReset</string>
             <string name="Source"><![CDATA[--!strict
@@ -12494,7 +12594,7 @@ return Reset
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="212">
+        <Item class="ModuleScript" referent="214">
           <Properties>
             <string name="Name">StructureService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12543,7 +12643,7 @@ return Service
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="213">
+        <Item class="ModuleScript" referent="215">
           <Properties>
             <string name="Name">SummonCollision</string>
             <string name="Source"><![CDATA[--!strict
@@ -12574,7 +12674,7 @@ return Collision
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="214">
+        <Item class="ModuleScript" referent="216">
           <Properties>
             <string name="Name">TeamService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12826,7 +12926,7 @@ return TeamService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="215">
+        <Item class="ModuleScript" referent="217">
           <Properties>
             <string name="Name">TowerFactory</string>
             <string name="Source"><![CDATA[--!strict
@@ -12895,7 +12995,7 @@ return Factory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="216">
+        <Item class="ModuleScript" referent="218">
           <Properties>
             <string name="Name">TowerRewardService</string>
             <string name="Source"><![CDATA[--!strict
@@ -12932,7 +13032,7 @@ return Reward
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="217">
+        <Item class="ModuleScript" referent="219">
           <Properties>
             <string name="Name">TowerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -13141,25 +13241,25 @@ return Service
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="218">
+  <Item class="StarterPlayer" referent="220">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <token name="GameSettingsAvatar">1</token>
       <bool name="LoadCharacterAppearance">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="219">
+    <Item class="StarterPlayerScripts" referent="221">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="220">
+      <Item class="Folder" referent="222">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="Folder" referent="221">
+        <Item class="Folder" referent="223">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="222">
+          <Item class="ModuleScript" referent="224">
             <Properties>
               <string name="Name">AbilityController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13519,7 +13619,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="223">
+          <Item class="ModuleScript" referent="225">
             <Properties>
               <string name="Name">AbilityDescriptions</string>
               <string name="Source"><![CDATA[--!strict
@@ -13549,7 +13649,7 @@ return {
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="224">
+          <Item class="ModuleScript" referent="226">
             <Properties>
               <string name="Name">AbilityFamilyController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13761,7 +13861,7 @@ return Module
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="225">
+          <Item class="ModuleScript" referent="227">
             <Properties>
               <string name="Name">AbilityHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -13772,6 +13872,7 @@ local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Items=require(Shared.Config.ItemConfig)
 local Combat=require(Shared.Config.CombatConfig)
 local BasicRules=require(Shared.Combat.BasicAttackRules)
+local Attributes=require(Shared.Config.AttributeConfig)
 local Controller=require(script.Parent.AbilityController)
 local Learning=require(script.Parent.LearningController)
 local View=require(script.Parent.MobaHUDView)
@@ -13798,7 +13899,7 @@ function HUD.Start()
  local points=View.label(panel,"SkillPoints",UDim2.fromOffset(336,16),UDim2.fromOffset(240,0),12); points.TextColor3=View.Gold
  local gold=View.label(panel,"Gold",UDim2.fromOffset(186,27),UDim2.fromOffset(704,128),17); gold.TextColor3=View.Gold
  local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="I  Характеристики"; statsToggle.Size=UDim2.fromOffset(116,23); statsToggle.Position=UDim2.fromOffset(119,137); statsToggle.TextSize=10; statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=panel
- local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(300,300),UDim2.fromOffset(0,-310)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
+ local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(350,350),UDim2.fromOffset(0,-360)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
  local statsText=View.label(statsPanel,"Values",UDim2.new(1,-24,1,-24),UDim2.fromOffset(12,12),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
  local function toggle() statsPanel.Visible=not statsPanel.Visible; player:SetAttribute("StatsOpen",statsPanel.Visible) end
  statsToggle.Activated:Connect(toggle)
@@ -13853,6 +13954,7 @@ function HUD.Start()
   stats.Text="STR  "..shown("Strength","%.1f").."\nAGI  "..shown("Agility","%.1f").."\nINT   "..shown("Intelligence","%.1f")..string.format("\nАтака %.1f · %.2f/с",rawAttack,attacksPerSecond).."\nБроня  "..shown("Defense","%.1f").."\nСкор.  "..shown("WalkSpeed","%.1f")
   hero.Text=if player:GetAttribute("HeroId")=="Sasuke" then "SASUKE" else "NARUTO"
   statsText.Text=hero.Text.."  •  Уровень "..shown("Level","%d").."\nXP "..shown("CurrentXP","%d").." / "..shown("XPToNextLevel","%d").."\nОчки навыков: "..shown("SkillPoints","%d").."\n\n"..stats.Text.."\n\nМножитель M1  "..shown("AttackDamageMultiplier","x%.2f").."\nБонус M1  "..shown("AttackDamageBonus","+%.0f").."\nРеген. маны  "..shown("ManaRegen","%.2f/с")
+  statsText.Text..=string.format("\n\n1 силы → +%d здоровья\n1 ловкости → +1 скорости атаки\n1 интеллекта → +%d маны\nИнтервал атаки: %.2f с",Attributes.HealthPerStrength,Attributes.Mana.ManaPerIntelligence,1/math.max(.01,attacksPerSecond))
   local owned={}; for _,id in Items.Order do if state and state:GetAttribute("Own_"..id)==true then table.insert(owned,id) end end
   for index,slot in inventory do
    local id=owned[index]
@@ -13877,7 +13979,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="226">
+          <Item class="ModuleScript" referent="228">
             <Properties>
               <string name="Name">AbilityTargeting</string>
               <string name="Source"><![CDATA[--!strict
@@ -14078,7 +14180,7 @@ return Targeting
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="227">
+          <Item class="ModuleScript" referent="229">
             <Properties>
               <string name="Name">AbilityVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -14333,7 +14435,7 @@ return VFX
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="228">
+          <Item class="ModuleScript" referent="230">
             <Properties>
               <string name="Name">AnimationController</string>
               <string name="Source"><![CDATA[--!strict
@@ -14502,7 +14604,7 @@ return AnimationController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="229">
+          <Item class="ModuleScript" referent="231">
             <Properties>
               <string name="Name">CameraController</string>
               <string name="Source"><![CDATA[--!strict
@@ -14734,7 +14836,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="230">
+          <Item class="ModuleScript" referent="232">
             <Properties>
               <string name="Name">ChakraAuraVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -14798,7 +14900,7 @@ return Aura
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="231">
+          <Item class="ModuleScript" referent="233">
             <Properties>
               <string name="Name">ChakraParticleVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -14836,7 +14938,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="232">
+          <Item class="ModuleScript" referent="234">
             <Properties>
               <string name="Name">CombatController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15071,7 +15173,7 @@ return CombatController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="233">
+          <Item class="ModuleScript" referent="235">
             <Properties>
               <string name="Name">DeveloperConsoleController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15118,7 +15220,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="234">
+          <Item class="ModuleScript" referent="236">
             <Properties>
               <string name="Name">GamakichiVisualController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15173,7 +15275,7 @@ return M
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="235">
+          <Item class="ModuleScript" referent="237">
             <Properties>
               <string name="Name">HUDIcons</string>
               <string name="Source"><![CDATA[--!strict
@@ -15281,7 +15383,7 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="236">
+          <Item class="ModuleScript" referent="238">
             <Properties>
               <string name="Name">HUDLayout</string>
               <string name="Source"><![CDATA[--!strict
@@ -15301,7 +15403,7 @@ return table.freeze(Layout)
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="237">
+          <Item class="ModuleScript" referent="239">
             <Properties>
               <string name="Name">HeroAppearanceTransition</string>
               <string name="Source"><![CDATA[--!strict
@@ -15434,7 +15536,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="238">
+          <Item class="ModuleScript" referent="240">
             <Properties>
               <string name="Name">HeroHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15591,7 +15693,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="239">
+          <Item class="ModuleScript" referent="241">
             <Properties>
               <string name="Name">HeroMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15674,6 +15776,8 @@ local function active(rig: Rig, now: number): (string, number, number)
 	if phase=="Preparing" and typeof(rasenganAt)=="number" and typeof(ready)=="number" and now>=rasenganAt and now<ready then return technique.."Prepare",rasenganAt,ready-rasenganAt end
 	if model:GetAttribute("RasenganHelper")==true then return "RasenganHelper",0,1 end
 	if model:GetAttribute("CombatState") == "Stunned" then return "Stun", now, 1 end
+ local chidoriAt=model:GetAttribute("ChidoriImpactAt")
+ if typeof(chidoriAt)=="number" and now>=chidoriAt and now<chidoriAt+.52 then return "ChidoriImpact",chidoriAt,.52 end
 	local ability = model:GetAttribute("AbilityId")
 	if typeof(ability) == "string" and ability ~= "" then
 		local at = model:GetAttribute("AbilityStartedAt"); local ends = model:GetAttribute("AbilityEndsAt")
@@ -15788,7 +15892,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="240">
+          <Item class="ModuleScript" referent="242">
             <Properties>
               <string name="Name">HeroSelectionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15821,7 +15925,7 @@ return C
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="241">
+          <Item class="ModuleScript" referent="243">
             <Properties>
               <string name="Name">InputController</string>
               <string name="Source"><![CDATA[--!strict
@@ -15922,7 +16026,7 @@ return InputController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="242">
+          <Item class="ModuleScript" referent="244">
             <Properties>
               <string name="Name">KuramaVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -16014,7 +16118,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="243">
+          <Item class="ModuleScript" referent="245">
             <Properties>
               <string name="Name">LearningController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16042,7 +16146,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="244">
+          <Item class="ModuleScript" referent="246">
             <Properties>
               <string name="Name">MinionMotionController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16133,7 +16237,7 @@ return Motion
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="245">
+          <Item class="ModuleScript" referent="247">
             <Properties>
               <string name="Name">MobaHUDView</string>
               <string name="Source"><![CDATA[--!strict
@@ -16239,7 +16343,7 @@ return View
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="246">
+          <Item class="ModuleScript" referent="248">
             <Properties>
               <string name="Name">NarutoRangedVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16339,7 +16443,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="247">
+          <Item class="ModuleScript" referent="249">
             <Properties>
               <string name="Name">RasenganEvolutionHUD</string>
               <string name="Source"><![CDATA[--!strict
@@ -16479,7 +16583,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="248">
+          <Item class="ModuleScript" referent="250">
             <Properties>
               <string name="Name">RasenganVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -16624,7 +16728,7 @@ return Visual
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="249">
+          <Item class="ModuleScript" referent="251">
             <Properties>
               <string name="Name">RasenshurikenFlightVisual</string>
               <string name="Source"><![CDATA[--!strict
@@ -16657,7 +16761,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="250">
+          <Item class="ModuleScript" referent="252">
             <Properties>
               <string name="Name">RoundController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16693,7 +16797,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="251">
+          <Item class="ModuleScript" referent="253">
             <Properties>
               <string name="Name">SasukeVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16703,6 +16807,7 @@ local Data=require(Shared.Config.SasukeParticleData) :: any
 local V={}
 local effects:{any}={}
 local held:{[Model]:Folder}={}
+local swordTrails:{[Model]:{trail:Trail,base:Attachment,tip:Attachment}}={}
 local models:{[Model]:boolean}={}
 local folder:Folder
 local function part(parent:Instance,name:string,color:Color3,size:Vector3,cf:CFrame):Part
@@ -16754,6 +16859,21 @@ function V.Message(message:any)
   local p=part(f,"Projectile",color,Vector3.one*math.min(radius*2,4),CFrame.new(origin));p.Shape=Enum.PartType.Ball;table.insert(parts,p)
   local light=Instance.new("PointLight");light.Color=color;light.Range=10;light.Brightness=2;light.Parent=p
  elseif id=="Eiso" then lightning(f,origin,message.extra.finish,Color3.fromRGB(170,230,255),os.clock())
+ elseif id=="ChidoriHit" then
+  local direction=if message.extra and typeof(message.extra.direction)=="Vector3" then message.extra.direction else Vector3.zAxis
+  local frame=CFrame.lookAt(origin,origin+direction)
+  local tint=if message.extra and message.extra.variant=="OnyxChidori" then Color3.fromRGB(178,117,255) elseif message.extra and message.extra.variant=="AmaterasuChidori" then Color3.fromRGB(113,61,167) else Color3.fromRGB(154,225,255)
+  local flash=part(f,"ContactFlash",Color3.fromRGB(232,250,255),Vector3.one*.85,CFrame.new(origin));flash.Shape=Enum.PartType.Ball;table.insert(parts,flash)
+  local light=Instance.new("PointLight");light.Color=tint;light.Range=9;light.Brightness=4;light.Parent=flash
+  for i=1,9 do
+   local angle=i*2.399
+   local offset=frame:VectorToWorldSpace(Vector3.new(math.cos(angle)*1.5,math.sin(angle)*1.5,-(1+i%3)*.7))
+   lightning(f,origin,origin+offset,tint,i*3.1)
+  end
+  local caster=message.character;local hand=if caster then caster:FindFirstChild("LeftHand") else nil
+  if hand and hand:IsA("BasePart") then lightning(f,hand.Position,origin,tint,1) end
+  particles(flash,"Chidori")
+  for _,emitter in flash:GetChildren() do if emitter:IsA("ParticleEmitter") then emitter.Enabled=false;emitter:Emit(12) end end
  elseif id=="Kirin" then
   lightning(f,origin+Vector3.new(0,65,0),origin,Color3.fromRGB(160,218,255),os.clock())
   local p=part(f,"LightningDome",Color3.fromRGB(150,210,255),Vector3.one*radius*2,CFrame.new(origin));p.Shape=Enum.PartType.Ball;p.Transparency=.7;table.insert(parts,p)
@@ -16770,7 +16890,7 @@ function V.Message(message:any)
     local p=part(f,"Flame",color,Vector3.new(.5,2.5,.5),CFrame.new(origin+Vector3.new(math.cos(angle)*r,1,math.sin(angle)*r)));p.Transparency=.15;table.insert(parts,p)
     if id=="Amaterasu" and i<=4 then particles(p,"Amaterasu") end
    end
-  elseif id=="Nagashi" or id=="ChidoriHit" or id=="Counter" then
+  elseif id=="Nagashi" or id=="Counter" then
    for i=1,8 do local angle=i*math.pi/4;lightning(f,origin,origin+Vector3.new(math.cos(angle),0,math.sin(angle))*radius,Color3.fromRGB(170,235,255),i) end
   end
  end
@@ -16791,7 +16911,7 @@ function V.Start()
    local hand=model:FindFirstChild("LeftHand") or model:FindFirstChild("RightHand")
    local variant=model:GetAttribute("ChidoriVariant")
    if variant=="SusanooChidori" then local costume=model:FindFirstChild("HeroAppearance");hand=if costume then costume:FindFirstChild("Larm2") or hand else hand end
-   local active=model:GetAttribute("ChidoriHeld")==true
+   local active=model:GetAttribute("ChidoriHeld")==true or ((model:GetAttribute("ChidoriStrikeUntil") or 0) :: number)>now
    if active and hand and hand:IsA("BasePart") then
     local f=held[model]
     if not f then
@@ -16810,6 +16930,21 @@ function V.Start()
    elseif held[model] then held[model]:Destroy();held[model]=nil end
    local appearance=model:FindFirstChild("HeroAppearance")
    local attackAt=(model:GetAttribute("CombatLastAttackAt") or 0) :: number
+   local swordHand=model:FindFirstChild("RightHand")
+   if swordHand and swordHand:IsA("BasePart") and not swordTrails[model] then
+    local base=Instance.new("Attachment");base.Name="SasukeSwordTrailBase";base.Position=Vector3.new(.088,-.144,-.6);base.Parent=swordHand
+    local tip=Instance.new("Attachment");tip.Name="SasukeSwordTrailTip";tip.Position=Vector3.new(.088,-.144,-4.5);tip.Parent=swordHand
+    local trail=Instance.new("Trail");trail.Name="SwordArc";trail.Attachment0=base;trail.Attachment1=tip;trail.Lifetime=.12;trail.MinLength=.06
+    trail.Color=ColorSequence.new(Color3.fromRGB(180,216,245));trail.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.65),NumberSequenceKeypoint.new(1,1)})
+    trail.LightEmission=.4;trail.FaceCamera=true;trail.Enabled=false;trail.Parent=swordHand
+    swordTrails[model]={trail=trail,base=base,tip=tip}
+   end
+   local sword=swordTrails[model]
+   if sword then
+    local ends=(model:GetAttribute("CombatAttackEndsAt") or 0) :: number
+    local phase=(now-attackAt)/math.max(.001,ends-attackAt)
+    sword.trail.Enabled=not active and ((model:GetAttribute("SusanooForm") or 0) :: number)<3 and phase>.12 and phase<.7 and now<ends
+   end
    if appearance then for _,p in appearance:GetChildren() do
     if p:IsA("BasePart") and p:GetAttribute("GarudaWing") then
      local w=p:FindFirstChild("FormVisualWeld");local offset=p:GetAttribute("CosmeticOffset")
@@ -16824,8 +16959,15 @@ function V.Start()
    end end end
   end
   for model,f in held do if not models[model] then f:Destroy();held[model]=nil end end
+  for model,sword in swordTrails do if not models[model] then sword.trail:Destroy();sword.base:Destroy();sword.tip:Destroy();swordTrails[model]=nil end end
   for i=#effects,1,-1 do local e=effects[i];local progress=(now-e.at)/e.duration
    if progress>=1 or not e.folder.Parent or (e.caster and not e.caster.Parent) then e.folder:Destroy();table.remove(effects,i);continue end
+   if e.id=="ChidoriHit" then
+    for _,p in e.folder:GetChildren() do if p:IsA("BasePart") then
+     p.Transparency=math.clamp(progress*1.8,0,1)
+     local light=p:FindFirstChildOfClass("PointLight");if light then light.Brightness=4*(1-progress) end
+    end end
+   end
    if e.extra and e.extra.follow and e.caster and e.caster.Parent then
     local point=e.caster:GetPivot().Position;local delta=point-e.point
     for _,p in e.folder:GetChildren() do if p:IsA("BasePart") then p.CFrame+=delta end end;e.point=point
@@ -16845,7 +16987,7 @@ return V
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="252">
+          <Item class="ModuleScript" referent="254">
             <Properties>
               <string name="Name">SurvivalHUDController</string>
               <string name="Source"><![CDATA[--!strict
@@ -16949,7 +17091,7 @@ return HUD
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="253">
+          <Item class="ModuleScript" referent="255">
             <Properties>
               <string name="Name">TowerVFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -17013,7 +17155,7 @@ return Controller
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="254">
+          <Item class="ModuleScript" referent="256">
             <Properties>
               <string name="Name">VFXController</string>
               <string name="Source"><![CDATA[--!strict
@@ -17246,7 +17388,7 @@ return VFXController
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="255">
+        <Item class="LocalScript" referent="257">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -17276,7 +17418,7 @@ print("[Anime Battlegrounds] Client ready; left mouse button attacks")
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="256">
+  <Item class="Workspace" referent="258">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="NeedsPivotMigration">false</bool>

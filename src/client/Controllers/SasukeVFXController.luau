@@ -5,6 +5,7 @@ local Data=require(Shared.Config.SasukeParticleData) :: any
 local V={}
 local effects:{any}={}
 local held:{[Model]:Folder}={}
+local swordTrails:{[Model]:{trail:Trail,base:Attachment,tip:Attachment}}={}
 local models:{[Model]:boolean}={}
 local folder:Folder
 local function part(parent:Instance,name:string,color:Color3,size:Vector3,cf:CFrame):Part
@@ -56,6 +57,21 @@ function V.Message(message:any)
   local p=part(f,"Projectile",color,Vector3.one*math.min(radius*2,4),CFrame.new(origin));p.Shape=Enum.PartType.Ball;table.insert(parts,p)
   local light=Instance.new("PointLight");light.Color=color;light.Range=10;light.Brightness=2;light.Parent=p
  elseif id=="Eiso" then lightning(f,origin,message.extra.finish,Color3.fromRGB(170,230,255),os.clock())
+ elseif id=="ChidoriHit" then
+  local direction=if message.extra and typeof(message.extra.direction)=="Vector3" then message.extra.direction else Vector3.zAxis
+  local frame=CFrame.lookAt(origin,origin+direction)
+  local tint=if message.extra and message.extra.variant=="OnyxChidori" then Color3.fromRGB(178,117,255) elseif message.extra and message.extra.variant=="AmaterasuChidori" then Color3.fromRGB(113,61,167) else Color3.fromRGB(154,225,255)
+  local flash=part(f,"ContactFlash",Color3.fromRGB(232,250,255),Vector3.one*.85,CFrame.new(origin));flash.Shape=Enum.PartType.Ball;table.insert(parts,flash)
+  local light=Instance.new("PointLight");light.Color=tint;light.Range=9;light.Brightness=4;light.Parent=flash
+  for i=1,9 do
+   local angle=i*2.399
+   local offset=frame:VectorToWorldSpace(Vector3.new(math.cos(angle)*1.5,math.sin(angle)*1.5,-(1+i%3)*.7))
+   lightning(f,origin,origin+offset,tint,i*3.1)
+  end
+  local caster=message.character;local hand=if caster then caster:FindFirstChild("LeftHand") else nil
+  if hand and hand:IsA("BasePart") then lightning(f,hand.Position,origin,tint,1) end
+  particles(flash,"Chidori")
+  for _,emitter in flash:GetChildren() do if emitter:IsA("ParticleEmitter") then emitter.Enabled=false;emitter:Emit(12) end end
  elseif id=="Kirin" then
   lightning(f,origin+Vector3.new(0,65,0),origin,Color3.fromRGB(160,218,255),os.clock())
   local p=part(f,"LightningDome",Color3.fromRGB(150,210,255),Vector3.one*radius*2,CFrame.new(origin));p.Shape=Enum.PartType.Ball;p.Transparency=.7;table.insert(parts,p)
@@ -72,7 +88,7 @@ function V.Message(message:any)
     local p=part(f,"Flame",color,Vector3.new(.5,2.5,.5),CFrame.new(origin+Vector3.new(math.cos(angle)*r,1,math.sin(angle)*r)));p.Transparency=.15;table.insert(parts,p)
     if id=="Amaterasu" and i<=4 then particles(p,"Amaterasu") end
    end
-  elseif id=="Nagashi" or id=="ChidoriHit" or id=="Counter" then
+  elseif id=="Nagashi" or id=="Counter" then
    for i=1,8 do local angle=i*math.pi/4;lightning(f,origin,origin+Vector3.new(math.cos(angle),0,math.sin(angle))*radius,Color3.fromRGB(170,235,255),i) end
   end
  end
@@ -93,7 +109,7 @@ function V.Start()
    local hand=model:FindFirstChild("LeftHand") or model:FindFirstChild("RightHand")
    local variant=model:GetAttribute("ChidoriVariant")
    if variant=="SusanooChidori" then local costume=model:FindFirstChild("HeroAppearance");hand=if costume then costume:FindFirstChild("Larm2") or hand else hand end
-   local active=model:GetAttribute("ChidoriHeld")==true
+   local active=model:GetAttribute("ChidoriHeld")==true or ((model:GetAttribute("ChidoriStrikeUntil") or 0) :: number)>now
    if active and hand and hand:IsA("BasePart") then
     local f=held[model]
     if not f then
@@ -112,6 +128,21 @@ function V.Start()
    elseif held[model] then held[model]:Destroy();held[model]=nil end
    local appearance=model:FindFirstChild("HeroAppearance")
    local attackAt=(model:GetAttribute("CombatLastAttackAt") or 0) :: number
+   local swordHand=model:FindFirstChild("RightHand")
+   if swordHand and swordHand:IsA("BasePart") and not swordTrails[model] then
+    local base=Instance.new("Attachment");base.Name="SasukeSwordTrailBase";base.Position=Vector3.new(.088,-.144,-.6);base.Parent=swordHand
+    local tip=Instance.new("Attachment");tip.Name="SasukeSwordTrailTip";tip.Position=Vector3.new(.088,-.144,-4.5);tip.Parent=swordHand
+    local trail=Instance.new("Trail");trail.Name="SwordArc";trail.Attachment0=base;trail.Attachment1=tip;trail.Lifetime=.12;trail.MinLength=.06
+    trail.Color=ColorSequence.new(Color3.fromRGB(180,216,245));trail.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.65),NumberSequenceKeypoint.new(1,1)})
+    trail.LightEmission=.4;trail.FaceCamera=true;trail.Enabled=false;trail.Parent=swordHand
+    swordTrails[model]={trail=trail,base=base,tip=tip}
+   end
+   local sword=swordTrails[model]
+   if sword then
+    local ends=(model:GetAttribute("CombatAttackEndsAt") or 0) :: number
+    local phase=(now-attackAt)/math.max(.001,ends-attackAt)
+    sword.trail.Enabled=not active and ((model:GetAttribute("SusanooForm") or 0) :: number)<3 and phase>.12 and phase<.7 and now<ends
+   end
    if appearance then for _,p in appearance:GetChildren() do
     if p:IsA("BasePart") and p:GetAttribute("GarudaWing") then
      local w=p:FindFirstChild("FormVisualWeld");local offset=p:GetAttribute("CosmeticOffset")
@@ -126,8 +157,15 @@ function V.Start()
    end end end
   end
   for model,f in held do if not models[model] then f:Destroy();held[model]=nil end end
+  for model,sword in swordTrails do if not models[model] then sword.trail:Destroy();sword.base:Destroy();sword.tip:Destroy();swordTrails[model]=nil end end
   for i=#effects,1,-1 do local e=effects[i];local progress=(now-e.at)/e.duration
    if progress>=1 or not e.folder.Parent or (e.caster and not e.caster.Parent) then e.folder:Destroy();table.remove(effects,i);continue end
+   if e.id=="ChidoriHit" then
+    for _,p in e.folder:GetChildren() do if p:IsA("BasePart") then
+     p.Transparency=math.clamp(progress*1.8,0,1)
+     local light=p:FindFirstChildOfClass("PointLight");if light then light.Brightness=4*(1-progress) end
+    end end
+   end
    if e.extra and e.extra.follow and e.caster and e.caster.Parent then
     local point=e.caster:GetPivot().Position;local delta=point-e.point
     for _,p in e.folder:GetChildren() do if p:IsA("BasePart") then p.CFrame+=delta end end;e.point=point

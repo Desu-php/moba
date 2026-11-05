@@ -25,6 +25,11 @@ local stats30=Progression.stats(leveled)
 local speed1=Rate.speed(profile,stats1.Agility); local speed30=Rate.speed(profile,stats30.Agility)
 check("rate uses actual growing AGI",stats30.Agility>stats1.Agility and speed30>speed1)
 check("rate cap",near(Rate.speed(profile,10000)/profile.AttackCooldown,profile.MaxAttacksPerSecond))
+for name,p in Config.Profiles do
+ check(name.." +100 AGI doubles base attack rate",near(Rate.speed(p,100),2))
+ check(name.." Dota-style 700 attack speed ceiling",near(Rate.speed(p,10000),7))
+end
+check("Naruto late level no longer stuck at old 2.5 attacks/sec cap",speed30/profile.AttackCooldown>2.5)
 check("invalid AGI cannot poison clock",Rate.speed(profile,0/0)==1 and Rate.speed(profile,math.huge)==1 and Rate.speed(profile,-100)==1)
 state=State.new(); check("speed admission",State.Request(state,profile,20,100,speed1)=="Started")
 local attack=state.active; assert(attack)

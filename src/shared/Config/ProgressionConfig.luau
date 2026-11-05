@@ -1,7 +1,8 @@
 --!strict
 local Naruto = require("../Abilities/NarutoDefinitions")
+local Attributes = require("./AttributeConfig")
 return table.freeze({
- Attributes = Naruto.Hero, NativeMana = Naruto.NativeInference, DamagePerStrength = 0.02, ArmorPerAgility = 0.2,
+ Attributes = Naruto.Hero, HealthPerStrength = Attributes.HealthPerStrength, NativeMana = Attributes.Mana, DamagePerStrength = 0.02, ArmorPerAgility = 0.2,
  StartingLevel = 1, MaxLevel = 30, StartingGold = 100,
  XPBase = 100, XPPerLevel = 50, MaxGrant = 1000000, MaxGold = 1000000,
  BaseStats = { WalkSpeed = 16, AttackDamageMultiplier = 1, Defense = 0 },

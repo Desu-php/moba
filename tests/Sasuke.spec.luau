@@ -30,4 +30,19 @@ for key,family in F.Definitions do
   assert(D.Spells[e.id] and table.find(H.Heroes.Sasuke.Abilities,e.id));assert(not table.find(H.Heroes.OrangeNinja.Abilities,e.id))
  end
 end
-print("PASS Sasuke hero isolation, rank spending, charge/mode/flight/sky gates, shared cooldowns and family reachability")
+local Poses=require("../src/shared/Combat/SasukeAttackPoses")
+local Combat=require("../src/shared/Config/CombatConfig")
+local contact=Combat.Profiles.Sasuke.HitDelay/Combat.Profiles.Sasuke.AttackDuration
+local thrust=Poses.sample("Chidori",contact,1,contact)
+local impact=Poses.sample("Impact",0,1,contact)
+assert(thrust.LeftShoulder[1]>1.5 and thrust.LeftElbow[1]<.1)
+assert(impact.LeftShoulder[1]==thrust.LeftShoulder[1],"contact must not snap back to ordinary M1")
+assert(Poses.sample("Impact",1,1,contact).LeftShoulder[1]<.5,"recover to guard")
+assert(Poses.sample("Attack",contact,1,contact).RightWrist[1]<-1,"blade points through contact, not at the sky")
+assert(Poses.sample("Attack",contact,1,contact).Waist[2]>0 and Poses.sample("Attack",contact,2,contact).Waist[2]<0,"alternate sword cuts")
+for _,kind in {"Attack","Chidori","Impact"} do for step=1,3 do for frame=0,100 do
+ local pose=Poses.sample(kind,frame/100,step,contact)
+ for _,v in pose do for _,angle in v do assert(angle==angle and math.abs(angle)<math.pi,"finite anatomical joint angles") end end
+ assert(math.abs(pose.LeftHip[1])<.3 and math.abs(pose.RightHip[1])<.3,"feet stay planted during attacks")
+end end end
+print("PASS Sasuke hero isolation, rank spending, charge/mode gates, cooldowns, families and R15 attack contact/recovery")

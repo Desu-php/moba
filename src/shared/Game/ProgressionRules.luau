@@ -2,6 +2,7 @@
 local Resource = require("../Abilities/NarutoResources")
 export type Configuration = {
  read Attributes: Resource.Hero & { read BaseHealth: number, read HealthPerStrength: number }, read NativeMana: Resource.Native, read DamagePerStrength: number, read ArmorPerAgility: number,
+ read HealthPerStrength: number?,
  read StartingLevel: number, read MaxLevel: number, read XPBase: number, read XPPerLevel: number, read MaxGrant: number, read MaxGold: number,
  read BaseStats: { WalkSpeed: number, AttackDamageMultiplier: number, Defense: number },
  read DefenseScale: number,
@@ -38,7 +39,7 @@ function Rules.stats(profile: Profile, strengthBonus: number?): Stats
  local levels = math.clamp(profile.Level, 1, Config.MaxLevel) - 1
  local base = Config.BaseStats
  local attributes = Attributes.values(levels + 1, strengthBonus or 0)
- local result = { MaxHealth = Config.Attributes.BaseHealth + Config.Attributes.HealthPerStrength * attributes.strength, WalkSpeed = base.WalkSpeed,
+ local result = { MaxHealth = Config.Attributes.BaseHealth + (Config.HealthPerStrength or Config.Attributes.HealthPerStrength) * attributes.strength, WalkSpeed = base.WalkSpeed,
   AttackDamageMultiplier = base.AttackDamageMultiplier + math.max(0,attributes.strength - Config.Attributes.Strength) * Config.DamagePerStrength, AttackDamageBonus = 0, Defense = base.Defense + attributes.agility * Config.ArmorPerAgility, Level = profile.Level, Strength = attributes.strength, RawStrength = attributes.rawStrength, Agility = attributes.agility, RawAgility = attributes.rawAgility, Intelligence = attributes.intelligence, MaxMana = attributes.maxMana, ManaRegen = attributes.regen }
  for id, owned in profile.Owned do
   local item = items[id]

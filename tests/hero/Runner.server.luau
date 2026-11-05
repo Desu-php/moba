@@ -94,7 +94,7 @@ local ok, failure = xpcall(function()
 	check("unverified future buttons disabled", hud.gamakichi == false and hud.sage == false and hud.kcm == false)
 	local initial = Native.Get(a); assert(initial)
 	check("native inference marked provisional", model:GetAttribute("NativeStatsProvisional") == true)
-	check("inferred level1 max mana1510", initial.pool.maximum == 1510)
+	check("MOBA level1 max mana1468", initial.pool.maximum == 1468)
 	check("unlearned Q cannot cast", select(2, cast(a, "Rasengan")) == "Unlearned")
 	Progression.AddXP(a, 2700); Progression.AddXP(b, 2700) -- Keep the existing level10 damage fixture, cap coverage lives in LearningTests.
  for _, player in {a,b} do

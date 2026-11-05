@@ -6,6 +6,7 @@ local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Items=require(Shared.Config.ItemConfig)
 local Combat=require(Shared.Config.CombatConfig)
 local BasicRules=require(Shared.Combat.BasicAttackRules)
+local Attributes=require(Shared.Config.AttributeConfig)
 local Controller=require(script.Parent.AbilityController)
 local Learning=require(script.Parent.LearningController)
 local View=require(script.Parent.MobaHUDView)
@@ -32,7 +33,7 @@ function HUD.Start()
  local points=View.label(panel,"SkillPoints",UDim2.fromOffset(336,16),UDim2.fromOffset(240,0),12); points.TextColor3=View.Gold
  local gold=View.label(panel,"Gold",UDim2.fromOffset(186,27),UDim2.fromOffset(704,128),17); gold.TextColor3=View.Gold
  local statsToggle=Instance.new("TextButton"); statsToggle.Name="StatsToggle"; statsToggle.Text="I  Характеристики"; statsToggle.Size=UDim2.fromOffset(116,23); statsToggle.Position=UDim2.fromOffset(119,137); statsToggle.TextSize=10; statsToggle.BackgroundColor3=View.Card; statsToggle.TextColor3=View.Gold; statsToggle.Parent=panel
- local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(300,300),UDim2.fromOffset(0,-310)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
+ local statsPanel=View.frame(panel,"CharacterStats",UDim2.fromOffset(350,350),UDim2.fromOffset(0,-360)); statsPanel.Visible=false; View.border(statsPanel,View.Gold)
  local statsText=View.label(statsPanel,"Values",UDim2.new(1,-24,1,-24),UDim2.fromOffset(12,12),14); statsText.TextXAlignment=Enum.TextXAlignment.Left; statsText.TextYAlignment=Enum.TextYAlignment.Top
  local function toggle() statsPanel.Visible=not statsPanel.Visible; player:SetAttribute("StatsOpen",statsPanel.Visible) end
  statsToggle.Activated:Connect(toggle)
@@ -87,6 +88,7 @@ function HUD.Start()
   stats.Text="STR  "..shown("Strength","%.1f").."\nAGI  "..shown("Agility","%.1f").."\nINT   "..shown("Intelligence","%.1f")..string.format("\nАтака %.1f · %.2f/с",rawAttack,attacksPerSecond).."\nБроня  "..shown("Defense","%.1f").."\nСкор.  "..shown("WalkSpeed","%.1f")
   hero.Text=if player:GetAttribute("HeroId")=="Sasuke" then "SASUKE" else "NARUTO"
   statsText.Text=hero.Text.."  •  Уровень "..shown("Level","%d").."\nXP "..shown("CurrentXP","%d").." / "..shown("XPToNextLevel","%d").."\nОчки навыков: "..shown("SkillPoints","%d").."\n\n"..stats.Text.."\n\nМножитель M1  "..shown("AttackDamageMultiplier","x%.2f").."\nБонус M1  "..shown("AttackDamageBonus","+%.0f").."\nРеген. маны  "..shown("ManaRegen","%.2f/с")
+  statsText.Text..=string.format("\n\n1 силы → +%d здоровья\n1 ловкости → +1 скорости атаки\n1 интеллекта → +%d маны\nИнтервал атаки: %.2f с",Attributes.HealthPerStrength,Attributes.Mana.ManaPerIntelligence,1/math.max(.01,attacksPerSecond))
   local owned={}; for _,id in Items.Order do if state and state:GetAttribute("Own_"..id)==true then table.insert(owned,id) end end
   for index,slot in inventory do
    local id=owned[index]

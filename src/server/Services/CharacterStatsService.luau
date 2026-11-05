@@ -5,7 +5,7 @@ local Config = require(Shared.Config.ProgressionConfig)
 local Logic = require(Shared.Game.ProgressionRules)
 local Rules = Logic.configure(Config, require(Shared.Config.ItemConfig).Items)
 local Sasuke=require(Shared.Abilities.SasukeDefinitions)
-local SasukeConfig:any=table.clone(Config);SasukeConfig.Attributes=Sasuke.Hero;SasukeConfig.NativeMana=Sasuke.NativeInference;SasukeConfig.DamagePerStrength=0
+local SasukeConfig:any=table.clone(Config);SasukeConfig.Attributes=Sasuke.Hero;SasukeConfig.DamagePerStrength=0
 local SasukeStats=Logic.configure(SasukeConfig,require(Shared.Config.ItemConfig).Items)
 local Progression = require(script.Parent.HeroProgressionService)
 local Fighters = require(script.Parent.FighterStateService)

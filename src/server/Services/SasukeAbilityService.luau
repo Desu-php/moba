@@ -300,7 +300,12 @@ function Service.Start()
   local p=f.player;if not p then return false end;local s=sessions[p];if not s then return false end;local now=clock();local stats=Stats.Get(p)
   if s.held and now>=s.readyAt and now<s.heldUntil then
    local variant=s.variant;local dealt=hurt(s,target,D.chidoriDamage(stats.Level,stats.Agility,variant),3)
-   if dealt>0 then s.held=false;s.model:SetAttribute("ChidoriStrikeUntil",now+.6);publish(s);emit(s,"ChidoriHit",target:GetPivot().Position,2,.6)
+   if dealt>0 then
+    s.held=false;s.model:SetAttribute("ChidoriImpactAt",now);s.model:SetAttribute("ChidoriStrikeUntil",now+.3)
+    local direction=target:GetPivot().Position-s.model:GetPivot().Position
+    direction=if direction.Magnitude>.01 then direction.Unit else s.model:GetPivot().LookVector
+    target:SetAttribute("ChidoriHitAt",now);target:SetAttribute("ChidoriHitDirection",direction)
+    publish(s);emit(s,"ChidoriHit",target:GetPivot().Position,2,.55,{direction=direction,target=target,variant=variant})
     if variant=="AmaterasuChidori" then area(s,"Amaterasu",target:GetPivot().Position,Units.toStuds(200),800+5*stats.Agility,10) end
    end
    return true

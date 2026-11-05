@@ -78,6 +78,8 @@ local function active(rig: Rig, now: number): (string, number, number)
 	if phase=="Preparing" and typeof(rasenganAt)=="number" and typeof(ready)=="number" and now>=rasenganAt and now<ready then return technique.."Prepare",rasenganAt,ready-rasenganAt end
 	if model:GetAttribute("RasenganHelper")==true then return "RasenganHelper",0,1 end
 	if model:GetAttribute("CombatState") == "Stunned" then return "Stun", now, 1 end
+ local chidoriAt=model:GetAttribute("ChidoriImpactAt")
+ if typeof(chidoriAt)=="number" and now>=chidoriAt and now<chidoriAt+.52 then return "ChidoriImpact",chidoriAt,.52 end
 	local ability = model:GetAttribute("AbilityId")
 	if typeof(ability) == "string" and ability ~= "" then
 		local at = model:GetAttribute("AbilityStartedAt"); local ends = model:GetAttribute("AbilityEndsAt")
