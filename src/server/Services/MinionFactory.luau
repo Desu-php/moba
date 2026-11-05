@@ -7,7 +7,7 @@ local registered = false
 function Factory.Create(kind: string, teamId: string, color: Color3, position: Vector3, stats: Config.Stats): Model
 	if not registered then
 		if not Physics:IsCollisionGroupRegistered("SurvivalMinions") then Physics:RegisterCollisionGroup("SurvivalMinions") end
-		Physics:CollisionGroupSetCollidable("SurvivalMinions", "SurvivalMinions", false)
+		Physics:CollisionGroupSetCollidable("SurvivalMinions", "SurvivalMinions", true)
 		registered = true
 	end
 	local model = Instance.new("Model"); model.Name = teamId .. kind
@@ -30,6 +30,12 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 		return motor
 	end
 	joint("RootJoint", root, torso, Vector3.zero); joint("Neck", torso, head, Vector3.new(0, 1.5, 0))
+	-- Rotation-independent body clearance; limbs/cosmetics do not snag each other.
+	local body=part("CrowdBody",Vector3.new(4.5,Config.BodyDiameter,Config.BodyDiameter),Vector3.zero,false)
+	body.Shape=Enum.PartType.Cylinder;body.CFrame=root.CFrame*CFrame.Angles(0,0,math.pi/2)
+	body.CanCollide=true;body.CanQuery=false;body.Massless=true
+	body.CustomPhysicalProperties=PhysicalProperties.new(.7,0,0,100,100)
+	local bodyWeld=Instance.new("WeldConstraint");bodyWeld.Part0=root;bodyWeld.Part1=body;bodyWeld.Parent=body
 	for _, side in { -1, 1 } do
 		local label = if side == -1 then "Left" else "Right"
 		local arm = part(label .. " Arm", Vector3.new(1, 2, 1), Vector3.new(side * 1.5, 0, 0), true)
@@ -44,6 +50,7 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 	-- Prevent two walking rigs from using one another as ladders.
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 	humanoid.AutoJumpEnabled = false
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,false);humanoid.JumpPower=0;humanoid.JumpHeight=0
 	humanoid.WalkSpeed = stats.WalkSpeed; humanoid.BreakJointsOnDeath = false; humanoid.DisplayName = teamId .. " " .. kind
 	humanoid.HealthDisplayDistance = 45; humanoid.NameDisplayDistance = 30; humanoid.Parent = model
 	model.PrimaryPart = root

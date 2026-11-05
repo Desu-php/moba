@@ -71,7 +71,9 @@ check("both structures recognized", Structures.isStructure("Base") and Structure
 check("nine towers protect base", not Structures.canReceive("Base", 9))
 check("last tower protects base", not Structures.canReceive("Base", 1))
 check("zero towers opens base", Structures.canReceive("Base", 0))
-check("tower not shielded by other towers", Structures.canReceive("Tower", 3))
+check("other lanes do not shield a tower", Structures.canReceive("Tower", 3, 0))
+check("earlier same-lane tower blocks damage", not Structures.canReceive("Tower", 3, 1))
+check("all earlier same-lane towers must fall", not Structures.canReceive("Tower", 3, 2))
 check("three tiers per lane", #Config.Tiers == 3)
 for _, lanes in Config.Positions :: { [string]: { [string]: { { number } } } } do
 	for _, positions in lanes do

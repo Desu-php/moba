@@ -192,11 +192,11 @@ local ok, failure = xpcall(function()
 	Damage.Apply(minionModel, bottom.structure.humanoid, 9999); task.wait(0.2)
 	check("dead connected teammate receives tower gold", Economy.GetGold(first) == gold + 50)
 	check("inner tiers still protect base", Structures.Remaining("Red") == 6 and not Structures.CanReceive(base.model))
-	for _, record in Towers.GetAll() do
-		if record.structure.teamId=="Red" and record.structure.humanoid.Health>0 then
+	for level=2,3 do for _, record in Towers.GetAll() do
+		if record.structure.teamId=="Red" and record.structure.model:GetAttribute("TowerTier")==level and record.structure.humanoid.Health>0 then
 			check("remaining tier destroyed", Damage.Apply(minionModel,record.structure.humanoid,9999)>0)
 		end
-	end
+	end end
 	check("ninth tower opens base", Structures.Remaining("Red") == 0 and Structures.CanReceive(base.model))
 	check("base damage opens for minions", Damage.Apply(minionModel, base.humanoid, 12) == 12)
 	untilTrue(function() return first.Character ~= nil and first.Character ~= model end, 12, "Respawn failed")

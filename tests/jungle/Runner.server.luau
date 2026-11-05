@@ -133,9 +133,9 @@ local ok, failure = xpcall(function()
 	waitFor(function() return cloneHP.Health==0 and profile.TotalMinionKills==beforeCloneKill+1 end,5,"clone owner bounty")
 	check("clone last hit credits owner exactly once", profile.TotalMinionKills==beforeCloneKill+1 and killGold==105)
 	Summons.Reset(); move(blue,Vector3.new(-145,36,10))
-	for _, tower in Towers.GetAll() do
-		if tower.structure.teamId=="Red" then Damage.Apply(blue.Character :: Model,tower.structure.humanoid,9999) end
-	end
+	for level=1,3 do for _, tower in Towers.GetAll() do
+		if tower.structure.teamId=="Red" and tower.structure.model:GetAttribute("TowerTier")==level then Damage.Apply(blue.Character :: Model,tower.structure.humanoid,9999) end
+	end end
 	local base=Bases.Get("Red"); assert(base)
 	Damage.Apply(blue.Character :: Model,base.humanoid,9999)
 	waitFor(function() return state.phase=="Finished" end,2,"terminal")

@@ -77,12 +77,12 @@ local ok,err=xpcall(function()
  local base=require(S.BaseService).Get(enemyTeam)
  check("other lanes still protect the base",Structures.Remaining(enemyTeam)==6 and Damage.Apply(c,base.humanoid,10)==0)
  local gold=Economy.GetGold(p);local destroyed=0
- for model,record in Structures.GetAll() do
-  if record.teamId==enemyTeam and record.kind=="Tower" and Structures.Alive(record) then
+ for level=1,3 do for model,record in Structures.GetAll() do
+  if record.teamId==enemyTeam and record.kind=="Tower" and model:GetAttribute("TowerTier")==level and Structures.Alive(record) then
    check("living tower can receive lethal damage",Damage.Apply(c,record.humanoid,10000)>0);destroyed+=1
    check("ruins no longer block",not record.root.CanCollide)
   end
- end
+ end end
  check("six remaining towers pay bounty once",Economy.GetGold(p)==gold+destroyed*Config.TeamGold and destroyed==6)
  check("ninth tower opens the base",Structures.Remaining(enemyTeam)==0 and Damage.Apply(c,base.humanoid,10)==10)
  Towers.Reset(state.roundId+1)

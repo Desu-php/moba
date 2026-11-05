@@ -13,6 +13,7 @@ export type Minion = {
 	stats: Config.Stats, route: { Vector3 }, waypoint: number, target: Model?, mode: string,
 	nextAttack: number, spawnedAt: number, deadAt: number?, lastPosition: Vector3,
 	progressAt: number, recoveries: number, recoveryUntil: number, recoveryGoal: Vector3?,
+	serial: number, combatTarget: Model?, combatOffset: Vector3?,
 	connections: { RBXScriptConnection },
 }
 local AI = { Shot = Instance.new("BindableEvent") }
@@ -20,6 +21,8 @@ local records: { [Model]: Minion } = {}
 local grid: { [string]: { Model } } = {}
 local active = 0
 local running = false
+local serial = 0
+local function flat(v: Vector3): Vector3 return v*Vector3.new(1,0,1) end
 local function setMode(npc: Minion, mode: string)
 	if npc.mode ~= mode then npc.mode = mode; npc.model:SetAttribute("AIState", mode) end
 end
@@ -29,6 +32,7 @@ local function dead(npc: Minion)
 	npc.model:SetAttribute("MinionDiedAt", npc.deadAt)
 	setMode(npc, "Dead"); npc.model:SetAttribute("CombatDisabled", true)
 	npc.model:SetAttribute("TargetName", "")
+	for _, item in npc.model:GetDescendants() do if item:IsA("BasePart") then item.CanCollide=false end end
 	npc.humanoid:Move(Vector3.zero)
 end
 function AI.Remove(model: Model)
@@ -44,10 +48,12 @@ function AI.Register(model: Model, teamId: string, kind: string, lane: string, r
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	local now = workspace:GetServerTimeNow()
+	serial += 1
 	local npc: Minion = { model = model, humanoid = humanoid, root = root, teamId = teamId, kind = kind, lane = lane,
 		stats = stats, route = route, waypoint = 1, target = nil, mode = "Spawning",
 		nextAttack = now + Config.SpawnGrace, spawnedAt = now, deadAt = nil,
-		lastPosition = root.Position, progressAt = now, recoveries = 0, recoveryUntil = 0, recoveryGoal = nil, connections = {} }
+		lastPosition = root.Position, progressAt = now, recoveries = 0, recoveryUntil = 0, recoveryGoal = nil, connections = {},
+		serial=serial,combatTarget=nil,combatOffset=nil }
 	records[model] = npc; active += 1
 	model:SetAttribute("Lane", lane); model:SetAttribute("AIState", "Spawning"); model:SetAttribute("Waypoint", 1)
 	if root:CanSetNetworkOwnership() then root:SetNetworkOwner(nil) end
@@ -117,7 +123,7 @@ local function selectTarget(npc: Minion): Model?
 		if tower.kind ~= "Tower" or not Structures.Alive(tower) then continue end
 		local separation = (tower.root.Position - origin).Magnitude
 		local sameLane = tower.lane == npc.lane
-		if separation <= (if sameLane then npc.stats.DetectionRange else npc.stats.AttackRange)
+		if separation <= (if sameLane then math.max(npc.stats.DetectionRange,Config.StructureDetectionRange) else npc.stats.AttackRange)
 			and (separation < distance or (separation == distance and selected ~= nil and model.Name < selected.Name))
 			and Damage.CanDamage(npc.model, model) then selected = model; distance = separation end
 	end
@@ -163,19 +169,71 @@ local function visible(npc: Minion, target: Model, position: Vector3): boolean
 	params.RespectCanCollide = true
 	return workspace:Raycast(npc.root.Position, position - npc.root.Position, params) == nil
 end
+local function crowded(npc: Minion, radius: number?): boolean
+	for _, peer in records do
+		if peer~=npc and not peer.deadAt and math.abs(peer.root.Position.Y-npc.root.Position.Y)<4
+			and flat(peer.root.Position-npc.root.Position).Magnitude<(radius or Config.Separation-.2) then return true end
+	end
+	return false
+end
+local function combatGoal(npc: Minion, target: Model, center: Vector3): Vector3?
+	if npc.combatTarget~=target then npc.combatTarget=target;npc.combatOffset=nil end
+	local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude
+	overlap.FilterDescendantsInstances={npc.model.Parent :: Instance};overlap.RespectCanCollide=true
+	overlap.CollisionGroup="SurvivalMinions"
+	local function free(offset: Vector3): boolean
+		for _, other in records do
+			if other~=npc and not other.deadAt and other.combatTarget==target and other.combatOffset
+				and (offset-other.combatOffset).Magnitude<Config.Separation then return false end
+		end
+		return #workspace:GetPartBoundsInBox(CFrame.new(center+offset),Vector3.new(Config.BodyDiameter,4,Config.BodyDiameter),overlap)==0
+	end
+	if npc.combatOffset and free(npc.combatOffset) then return center+npc.combatOffset end
+	local radius=npc.stats.AttackRange-.6
+	local best: Vector3?=nil;local score=math.huge
+	for i=0,11 do
+		local angle=i*math.pi/6;local offset=Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius)
+		if free(offset) then
+			local distance=flat(center+offset-npc.root.Position).Magnitude
+			if distance<score then best=offset;score=distance end
+		end
+	end
+	npc.combatOffset=best
+	return if best then center+best else nil
+end
+local function steer(npc: Minion, goal: Vector3): Vector3
+	local delta=flat(goal-npc.root.Position);if delta.Magnitude<.2 then return goal end
+	local forward=delta.Unit;local force=Vector3.zero
+	for _, peer in records do
+		if peer==npc or peer.deadAt or math.abs(peer.root.Position.Y-npc.root.Position.Y)>4 then continue end
+		local away=flat(npc.root.Position-peer.root.Position);local distance=away.Magnitude
+		if distance>=Config.AvoidanceRadius then continue end
+		if distance<.01 then away=Vector3.new(if npc.serial<peer.serial then -1 else 1,0,0);distance=.01 end
+		if distance<Config.Separation then force+=away.Unit*((Config.Separation-distance)/Config.Separation)*2 end
+		local ahead=-away:Dot(forward)
+		if ahead>0 and ahead<Config.AvoidanceRadius and (away+forward*ahead).Magnitude<Config.BodyDiameter then
+			local side=if npc.serial%2==0 then 1 else -1
+			force+=Vector3.new(-forward.Z,0,forward.X)*side*(1-distance/Config.AvoidanceRadius)
+		end
+	end
+	local direction=forward+force
+	return if direction.Magnitude>.1 then npc.root.Position+direction.Unit*math.min(delta.Magnitude,6) else npc.root.Position
+end
 local function move(npc: Minion, goal: Vector3, now: number)
 	setMode(npc, "Moving")
 	local displacement = (npc.root.Position - npc.lastPosition) * Vector3.new(1, 0, 1)
 	if displacement.Magnitude >= Config.ProgressDistance then
 		npc.lastPosition = npc.root.Position; npc.progressAt = now
 	end
+	-- Waiting for an occupied combat/road position is not a world-geometry failure.
+	-- Keep steering, but do not jump or despawn a healthy unit queued behind peers.
+	if crowded(npc,Config.AvoidanceRadius) then npc.progressAt=now end
 	if now - npc.progressAt >= Config.StuckTime then
 		npc.recoveries += 1; npc.progressAt = now
 		if npc.recoveries > Config.MaxRecoveryAttempts then
 			warn(string.format("[Minions] Despawn stuck %s lane=%s waypoint=%d", npc.model.Name, npc.lane, npc.waypoint))
 			AI.Remove(npc.model); return
 		end
-		npc.humanoid.Jump = true
 		local delta = goal - npc.root.Position
 		local side = Vector3.new(-delta.Z, 0, delta.X)
 		if side.Magnitude > 0.01 then side = side.Unit else side = Vector3.zAxis end
@@ -183,7 +241,7 @@ local function move(npc: Minion, goal: Vector3, now: number)
 		npc.recoveryUntil = now + 1
 		warn(string.format("[Minions] Recovery %d/%d: %s %s", npc.recoveries, Config.MaxRecoveryAttempts, npc.model.Name, npc.lane))
 	end
-	npc.humanoid:MoveTo(if now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal)
+	npc.humanoid:MoveTo(steer(npc,if now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal))
 end
 function AI.Update(now: number)
 	-- Corpse cleanup also runs after the match has stopped.
@@ -208,8 +266,9 @@ function AI.Update(now: number)
 		local goal: Vector3? = nil
 		if target then
 			local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart
-			goal = targetRoot.Position
-			if (goal - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, goal) then
+			local position=targetRoot.Position
+			goal = combatGoal(npc,target,position)
+			if (position - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, position) and not crowded(npc) then
 				setMode(npc, "Attacking"); npc.humanoid:MoveTo(npc.root.Position); npc.progressAt = now
 				if now >= npc.nextAttack then
 					npc.nextAttack = now + npc.stats.AttackCooldown
@@ -217,20 +276,28 @@ function AI.Update(now: number)
 					model:SetAttribute("MinionAttackAt", now)
 					local humanoid = target:FindFirstChildOfClass("Humanoid")
 					if humanoid and Damage.ApplyAttack(model, humanoid, npc.stats.Damage) > 0 then
-						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
+						AI.Shot:Fire(npc.root.Position, position, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
 					end
 				end
 				continue
 			end
 		else
+			npc.combatTarget=nil;npc.combatOffset=nil
 			local waypoint = npc.route[npc.waypoint]
-			if waypoint and ((waypoint - npc.root.Position) * Vector3.new(1, 0, 1)).Magnitude <= Config.WaypointRadius then
+			local function formation(point: Vector3): Vector3
+				local previous=npc.route[math.max(1,npc.waypoint-1)]
+				local direction=flat(point-previous)
+				if direction.Magnitude<.01 then direction=flat(npc.route[2]-npc.route[1]) end
+				return point+Vector3.new(-direction.Z,0,direction.X).Unit*((model:GetAttribute("LaneOffset") or 0) :: number)
+			end
+			if waypoint and flat(formation(waypoint)-npc.root.Position).Magnitude <= Config.WaypointRadius then
 				npc.waypoint += 1; npc.recoveries = 0; model:SetAttribute("Waypoint", npc.waypoint)
 				waypoint = npc.route[npc.waypoint]
 			end
-			goal = waypoint or baseGoal(npc)
+			goal = if waypoint then formation(waypoint) else baseGoal(npc)
 		end
-		if goal then move(npc, goal, now) end
+		if goal then move(npc, goal, now)
+		else npc.humanoid:MoveTo(npc.root.Position);npc.progressAt=now end
 	end
 end
 return AI

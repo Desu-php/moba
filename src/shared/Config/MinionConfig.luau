@@ -7,7 +7,9 @@ local types: { [string]: Stats } = {
 return table.freeze({
 	Types = types, WaveComposition = { "Melee", "Melee", "Ranged" },
 	FirstWaveDelay = 5, WaveInterval = 20, MaxActiveNPCs = 108,
-	UpdateInterval = 0.15, SpawnSpacing = 3, SpawnGrace = 0.3,
+	UpdateInterval = 0.15, SpawnSpacing = 4.2, SpawnGrace = 0.3,
+	BodyDiameter = 3.4, Separation = 4.2, AvoidanceRadius = 6,
+	StructureDetectionRange = 24, -- Includes both edges of the lane formation.
 	WaypointRadius = 3, StuckTime = 3, ProgressDistance = 1,
 	MaxRecoveryAttempts = 3, RecoveryOffset = 5, CorpseLifetime = 1,
 	SpatialCellSize = 24, ProjectileDuration = 0.18,

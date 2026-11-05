@@ -1,0 +1,10 @@
+{
+ "name": "Crowd-Towers-QA",
+ "tree": {
+  "$className": "DataModel",
+  "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+  "ServerScriptService": { "Server": { "$path": "src/server" }, "CrowdTowersQA": { "$path": "tests/minions/CrowdAndTowers.server.luau" } },
+  "StarterPlayer": { "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false }, "StarterPlayerScripts": { "Client": { "$path": "src/client" } } },
+  "Workspace": { "$attributes": { "DeveloperSoloMode": true } }
+ }
+}

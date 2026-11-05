@@ -38,14 +38,25 @@ local function health(tower: Tower)
 	record.model:SetAttribute("CurrentHealth", record.humanoid.Health)
 	record.model:SetAttribute("MaxHealth", record.humanoid.MaxHealth)
 	local profile = tier(record.model)
+	local blocking = Structures.BlockingTier(record.model)
+	record.model:SetAttribute("ProtectedByPreviousTower",blocking~=nil)
+	record.model:SetAttribute("BlockingTowerTier",blocking or 0)
+	local shield=record.model:FindFirstChild("ProtectionShield")
+	if shield and shield:IsA("Highlight") then shield.Enabled=blocking~=nil and record.humanoid.Health>0 end
 	tower.label.Text = string.format("%s • %s\n%s · %s  |  %d урона\n%d / %d", record.teamId, record.lane, profile.Mark, profile.Name,
 		Config.Damage*profile.DamageMultiplier, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
+	if blocking then tower.label.Text ..= "\nЩИТ · сначала вышка "..Config.Tiers[blocking].Mark end
 	tower.fill.Size = UDim2.fromScale(math.clamp(record.humanoid.Health / record.humanoid.MaxHealth, 0, 1), 1)
+end
+local function refreshProtection()
+	for _, tower in records do if not tower.logic.destroyed then health(tower) end end
 end
 local function destroy(tower: Tower)
 	if not Rules.destroy(tower.logic) then return end
 	local record = tower.structure
 	record.model:SetAttribute("IsDestroyed", true); mode(tower, "Destroyed")
+	local shield=record.model:FindFirstChild("ProtectionShield")
+	if shield and shield:IsA("Highlight") then shield.Enabled=false end
 	for _, item in record.model:GetDescendants() do
 		if item:IsA("BasePart") and item:GetAttribute("StructureCosmetic") ~= nil then
 			item.CanCollide = false; item.CanQuery = false; item.CanTouch = false
@@ -54,6 +65,7 @@ local function destroy(tower: Tower)
 		elseif item:IsA("PointLight") and item.Parent and item.Parent:GetAttribute("StructureCosmetic") ~= nil then item.Enabled = false end
 	end
 	tower.label.Text = record.teamId .. " • " .. record.lane .. "\nБАШНЯ РАЗРУШЕНА"; tower.fill.Size = UDim2.fromScale(0, 1)
+	refreshProtection()
 	Service.Event:Fire("Destroyed", record.model, tower.crystal.Position, tower.crystal.Position, record.teamId, record.lane, currentRound)
 end
 local function valid(tower: Tower, model: Model): boolean
@@ -87,7 +99,7 @@ function Service.Update(now: number)
 		if not model:IsDescendantOf(workspace) or tower.structure.humanoid.Parent ~= model or not tower.structure.root:IsDescendantOf(model) then
 			Rules.destroy(tower.logic); Structures.Remove(model)
 			for _, connection in tower.connections do connection:Disconnect() end
-			records[model] = nil; visuals[model] = nil; continue
+			records[model] = nil; visuals[model] = nil; refreshProtection(); continue
 		end
 		if tower.structure.humanoid.Health <= 0 then destroy(tower) end
 		if tower.logic.destroyed then continue end
@@ -130,7 +142,7 @@ local function register(model: Model)
 	visuals[model] = Reset.capture(model); model:SetAttribute("RoundId", currentRound)
 	local record = Structures.Register(model)
 	local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
-	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(210, 72)
+	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(230, 88)
 	board.StudsOffset = Vector3.new(0, 10+tier(model).Height, 0); board.MaxDistance = 105; board.AlwaysOnTop = true; board.Parent = record.root
 	local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
@@ -158,6 +170,7 @@ function Service.Reset(roundId: number)
 	for _, model in Factory.Build(map):GetChildren() do
 		if model:IsA("Model") and model:GetAttribute("ManagedTower") == true and not records[model] then register(model) end
 	end
+	refreshProtection()
 end
 function Service.Start(map: Folder)
 	if started then return end; started = true
@@ -168,6 +181,7 @@ function Service.Start(map: Folder)
 		if not model:IsA("Model") or model:GetAttribute("ManagedTower") ~= true then continue end
 		register(model)
 	end
+	refreshProtection()
 	Damage.Applied.Event:Connect(function(attacker: Model, victim: Model, amount: number, roundId: number?)
 		if amount <= 0 or roundId ~= currentRound then return end
 		local killed = records[victim]

@@ -2849,7 +2849,9 @@ local types: { [string]: Stats } = {
 return table.freeze({
 	Types = types, WaveComposition = { "Melee", "Melee", "Ranged" },
 	FirstWaveDelay = 5, WaveInterval = 20, MaxActiveNPCs = 108,
-	UpdateInterval = 0.15, SpawnSpacing = 3, SpawnGrace = 0.3,
+	UpdateInterval = 0.15, SpawnSpacing = 4.2, SpawnGrace = 0.3,
+	BodyDiameter = 3.4, Separation = 4.2, AvoidanceRadius = 6,
+	StructureDetectionRange = 24, -- Includes both edges of the lane formation.
 	WaypointRadius = 3, StuckTime = 3, ProgressDistance = 1,
 	MaxRecoveryAttempts = 3, RecoveryOffset = 5, CorpseLifetime = 1,
 	SpatialCellSize = 24, ProjectileDuration = 0.18,
@@ -5740,7 +5742,8 @@ return Protocol
             <string name="Source"><![CDATA[--!strict
 local Rules = {}
 function Rules.isStructure(kind: any): boolean return kind == "Base" or kind == "Tower" end
-function Rules.canReceive(kind: any, remainingTowers: number): boolean
+function Rules.canReceive(kind: any, remainingTowers: number, earlierLaneTowers: number?): boolean
+	if kind == "Tower" then return (earlierLaneTowers or 0) <= 0 end
 	return kind ~= "Base" or remainingTowers <= 0
 end
 return Rules
@@ -9200,6 +9203,7 @@ export type Minion = {
 	stats: Config.Stats, route: { Vector3 }, waypoint: number, target: Model?, mode: string,
 	nextAttack: number, spawnedAt: number, deadAt: number?, lastPosition: Vector3,
 	progressAt: number, recoveries: number, recoveryUntil: number, recoveryGoal: Vector3?,
+	serial: number, combatTarget: Model?, combatOffset: Vector3?,
 	connections: { RBXScriptConnection },
 }
 local AI = { Shot = Instance.new("BindableEvent") }
@@ -9207,6 +9211,8 @@ local records: { [Model]: Minion } = {}
 local grid: { [string]: { Model } } = {}
 local active = 0
 local running = false
+local serial = 0
+local function flat(v: Vector3): Vector3 return v*Vector3.new(1,0,1) end
 local function setMode(npc: Minion, mode: string)
 	if npc.mode ~= mode then npc.mode = mode; npc.model:SetAttribute("AIState", mode) end
 end
@@ -9216,6 +9222,7 @@ local function dead(npc: Minion)
 	npc.model:SetAttribute("MinionDiedAt", npc.deadAt)
 	setMode(npc, "Dead"); npc.model:SetAttribute("CombatDisabled", true)
 	npc.model:SetAttribute("TargetName", "")
+	for _, item in npc.model:GetDescendants() do if item:IsA("BasePart") then item.CanCollide=false end end
 	npc.humanoid:Move(Vector3.zero)
 end
 function AI.Remove(model: Model)
@@ -9231,10 +9238,12 @@ function AI.Register(model: Model, teamId: string, kind: string, lane: string, r
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	local now = workspace:GetServerTimeNow()
+	serial += 1
 	local npc: Minion = { model = model, humanoid = humanoid, root = root, teamId = teamId, kind = kind, lane = lane,
 		stats = stats, route = route, waypoint = 1, target = nil, mode = "Spawning",
 		nextAttack = now + Config.SpawnGrace, spawnedAt = now, deadAt = nil,
-		lastPosition = root.Position, progressAt = now, recoveries = 0, recoveryUntil = 0, recoveryGoal = nil, connections = {} }
+		lastPosition = root.Position, progressAt = now, recoveries = 0, recoveryUntil = 0, recoveryGoal = nil, connections = {},
+		serial=serial,combatTarget=nil,combatOffset=nil }
 	records[model] = npc; active += 1
 	model:SetAttribute("Lane", lane); model:SetAttribute("AIState", "Spawning"); model:SetAttribute("Waypoint", 1)
 	if root:CanSetNetworkOwnership() then root:SetNetworkOwner(nil) end
@@ -9304,7 +9313,7 @@ local function selectTarget(npc: Minion): Model?
 		if tower.kind ~= "Tower" or not Structures.Alive(tower) then continue end
 		local separation = (tower.root.Position - origin).Magnitude
 		local sameLane = tower.lane == npc.lane
-		if separation <= (if sameLane then npc.stats.DetectionRange else npc.stats.AttackRange)
+		if separation <= (if sameLane then math.max(npc.stats.DetectionRange,Config.StructureDetectionRange) else npc.stats.AttackRange)
 			and (separation < distance or (separation == distance and selected ~= nil and model.Name < selected.Name))
 			and Damage.CanDamage(npc.model, model) then selected = model; distance = separation end
 	end
@@ -9350,19 +9359,71 @@ local function visible(npc: Minion, target: Model, position: Vector3): boolean
 	params.RespectCanCollide = true
 	return workspace:Raycast(npc.root.Position, position - npc.root.Position, params) == nil
 end
+local function crowded(npc: Minion, radius: number?): boolean
+	for _, peer in records do
+		if peer~=npc and not peer.deadAt and math.abs(peer.root.Position.Y-npc.root.Position.Y)<4
+			and flat(peer.root.Position-npc.root.Position).Magnitude<(radius or Config.Separation-.2) then return true end
+	end
+	return false
+end
+local function combatGoal(npc: Minion, target: Model, center: Vector3): Vector3?
+	if npc.combatTarget~=target then npc.combatTarget=target;npc.combatOffset=nil end
+	local overlap=OverlapParams.new();overlap.FilterType=Enum.RaycastFilterType.Exclude
+	overlap.FilterDescendantsInstances={npc.model.Parent :: Instance};overlap.RespectCanCollide=true
+	overlap.CollisionGroup="SurvivalMinions"
+	local function free(offset: Vector3): boolean
+		for _, other in records do
+			if other~=npc and not other.deadAt and other.combatTarget==target and other.combatOffset
+				and (offset-other.combatOffset).Magnitude<Config.Separation then return false end
+		end
+		return #workspace:GetPartBoundsInBox(CFrame.new(center+offset),Vector3.new(Config.BodyDiameter,4,Config.BodyDiameter),overlap)==0
+	end
+	if npc.combatOffset and free(npc.combatOffset) then return center+npc.combatOffset end
+	local radius=npc.stats.AttackRange-.6
+	local best: Vector3?=nil;local score=math.huge
+	for i=0,11 do
+		local angle=i*math.pi/6;local offset=Vector3.new(math.cos(angle)*radius,0,math.sin(angle)*radius)
+		if free(offset) then
+			local distance=flat(center+offset-npc.root.Position).Magnitude
+			if distance<score then best=offset;score=distance end
+		end
+	end
+	npc.combatOffset=best
+	return if best then center+best else nil
+end
+local function steer(npc: Minion, goal: Vector3): Vector3
+	local delta=flat(goal-npc.root.Position);if delta.Magnitude<.2 then return goal end
+	local forward=delta.Unit;local force=Vector3.zero
+	for _, peer in records do
+		if peer==npc or peer.deadAt or math.abs(peer.root.Position.Y-npc.root.Position.Y)>4 then continue end
+		local away=flat(npc.root.Position-peer.root.Position);local distance=away.Magnitude
+		if distance>=Config.AvoidanceRadius then continue end
+		if distance<.01 then away=Vector3.new(if npc.serial<peer.serial then -1 else 1,0,0);distance=.01 end
+		if distance<Config.Separation then force+=away.Unit*((Config.Separation-distance)/Config.Separation)*2 end
+		local ahead=-away:Dot(forward)
+		if ahead>0 and ahead<Config.AvoidanceRadius and (away+forward*ahead).Magnitude<Config.BodyDiameter then
+			local side=if npc.serial%2==0 then 1 else -1
+			force+=Vector3.new(-forward.Z,0,forward.X)*side*(1-distance/Config.AvoidanceRadius)
+		end
+	end
+	local direction=forward+force
+	return if direction.Magnitude>.1 then npc.root.Position+direction.Unit*math.min(delta.Magnitude,6) else npc.root.Position
+end
 local function move(npc: Minion, goal: Vector3, now: number)
 	setMode(npc, "Moving")
 	local displacement = (npc.root.Position - npc.lastPosition) * Vector3.new(1, 0, 1)
 	if displacement.Magnitude >= Config.ProgressDistance then
 		npc.lastPosition = npc.root.Position; npc.progressAt = now
 	end
+	-- Waiting for an occupied combat/road position is not a world-geometry failure.
+	-- Keep steering, but do not jump or despawn a healthy unit queued behind peers.
+	if crowded(npc,Config.AvoidanceRadius) then npc.progressAt=now end
 	if now - npc.progressAt >= Config.StuckTime then
 		npc.recoveries += 1; npc.progressAt = now
 		if npc.recoveries > Config.MaxRecoveryAttempts then
 			warn(string.format("[Minions] Despawn stuck %s lane=%s waypoint=%d", npc.model.Name, npc.lane, npc.waypoint))
 			AI.Remove(npc.model); return
 		end
-		npc.humanoid.Jump = true
 		local delta = goal - npc.root.Position
 		local side = Vector3.new(-delta.Z, 0, delta.X)
 		if side.Magnitude > 0.01 then side = side.Unit else side = Vector3.zAxis end
@@ -9370,7 +9431,7 @@ local function move(npc: Minion, goal: Vector3, now: number)
 		npc.recoveryUntil = now + 1
 		warn(string.format("[Minions] Recovery %d/%d: %s %s", npc.recoveries, Config.MaxRecoveryAttempts, npc.model.Name, npc.lane))
 	end
-	npc.humanoid:MoveTo(if now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal)
+	npc.humanoid:MoveTo(steer(npc,if now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal))
 end
 function AI.Update(now: number)
 	-- Corpse cleanup also runs after the match has stopped.
@@ -9395,8 +9456,9 @@ function AI.Update(now: number)
 		local goal: Vector3? = nil
 		if target then
 			local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart
-			goal = targetRoot.Position
-			if (goal - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, goal) then
+			local position=targetRoot.Position
+			goal = combatGoal(npc,target,position)
+			if (position - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, position) and not crowded(npc) then
 				setMode(npc, "Attacking"); npc.humanoid:MoveTo(npc.root.Position); npc.progressAt = now
 				if now >= npc.nextAttack then
 					npc.nextAttack = now + npc.stats.AttackCooldown
@@ -9404,20 +9466,28 @@ function AI.Update(now: number)
 					model:SetAttribute("MinionAttackAt", now)
 					local humanoid = target:FindFirstChildOfClass("Humanoid")
 					if humanoid and Damage.ApplyAttack(model, humanoid, npc.stats.Damage) > 0 then
-						AI.Shot:Fire(npc.root.Position, goal, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
+						AI.Shot:Fire(npc.root.Position, position, npc.kind, npc.teamId, target, model:GetAttribute("RoundId"))
 					end
 				end
 				continue
 			end
 		else
+			npc.combatTarget=nil;npc.combatOffset=nil
 			local waypoint = npc.route[npc.waypoint]
-			if waypoint and ((waypoint - npc.root.Position) * Vector3.new(1, 0, 1)).Magnitude <= Config.WaypointRadius then
+			local function formation(point: Vector3): Vector3
+				local previous=npc.route[math.max(1,npc.waypoint-1)]
+				local direction=flat(point-previous)
+				if direction.Magnitude<.01 then direction=flat(npc.route[2]-npc.route[1]) end
+				return point+Vector3.new(-direction.Z,0,direction.X).Unit*((model:GetAttribute("LaneOffset") or 0) :: number)
+			end
+			if waypoint and flat(formation(waypoint)-npc.root.Position).Magnitude <= Config.WaypointRadius then
 				npc.waypoint += 1; npc.recoveries = 0; model:SetAttribute("Waypoint", npc.waypoint)
 				waypoint = npc.route[npc.waypoint]
 			end
-			goal = waypoint or baseGoal(npc)
+			goal = if waypoint then formation(waypoint) else baseGoal(npc)
 		end
-		if goal then move(npc, goal, now) end
+		if goal then move(npc, goal, now)
+		else npc.humanoid:MoveTo(npc.root.Position);npc.progressAt=now end
 	end
 end
 return AI
@@ -9512,7 +9582,7 @@ local registered = false
 function Factory.Create(kind: string, teamId: string, color: Color3, position: Vector3, stats: Config.Stats): Model
 	if not registered then
 		if not Physics:IsCollisionGroupRegistered("SurvivalMinions") then Physics:RegisterCollisionGroup("SurvivalMinions") end
-		Physics:CollisionGroupSetCollidable("SurvivalMinions", "SurvivalMinions", false)
+		Physics:CollisionGroupSetCollidable("SurvivalMinions", "SurvivalMinions", true)
 		registered = true
 	end
 	local model = Instance.new("Model"); model.Name = teamId .. kind
@@ -9535,6 +9605,12 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 		return motor
 	end
 	joint("RootJoint", root, torso, Vector3.zero); joint("Neck", torso, head, Vector3.new(0, 1.5, 0))
+	-- Rotation-independent body clearance; limbs/cosmetics do not snag each other.
+	local body=part("CrowdBody",Vector3.new(4.5,Config.BodyDiameter,Config.BodyDiameter),Vector3.zero,false)
+	body.Shape=Enum.PartType.Cylinder;body.CFrame=root.CFrame*CFrame.Angles(0,0,math.pi/2)
+	body.CanCollide=true;body.CanQuery=false;body.Massless=true
+	body.CustomPhysicalProperties=PhysicalProperties.new(.7,0,0,100,100)
+	local bodyWeld=Instance.new("WeldConstraint");bodyWeld.Part0=root;bodyWeld.Part1=body;bodyWeld.Parent=body
 	for _, side in { -1, 1 } do
 		local label = if side == -1 then "Left" else "Right"
 		local arm = part(label .. " Arm", Vector3.new(1, 2, 1), Vector3.new(side * 1.5, 0, 0), true)
@@ -9549,6 +9625,7 @@ function Factory.Create(kind: string, teamId: string, color: Color3, position: V
 	-- Prevent two walking rigs from using one another as ladders.
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 	humanoid.AutoJumpEnabled = false
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,false);humanoid.JumpPower=0;humanoid.JumpHeight=0
 	humanoid.WalkSpeed = stats.WalkSpeed; humanoid.BreakJointsOnDeath = false; humanoid.DisplayName = teamId .. " " .. kind
 	humanoid.HealthDisplayDistance = 45; humanoid.NameDisplayDistance = 30; humanoid.Parent = model
 	model.PrimaryPart = root
@@ -9599,8 +9676,12 @@ function Spawner.Spawn(teamId: string, lane: string, kind: string, slot: number)
 	assert(marker and marker:IsA("BasePart"), "Minion spawn missing")
 	local color = Color3.new(1, 1, 1)
 	for _, definition in Mode.Teams do if definition.Id == teamId then color = definition.Color end end
-	local position = marker.Position + Vector3.new(0, 0, (slot - 2) * Config.SpawnSpacing)
+	local direction=(route[2]-route[1])*Vector3.new(1,0,1)
+	local lateral=Vector3.new(-direction.Z,0,direction.X).Unit
+	local offset=((slot-1)%3-1)*Config.SpawnSpacing
+	local position = marker.Position + lateral*offset - direction.Unit*math.floor((slot-1)/3)*Config.SpawnSpacing
 	local model = Factory.Create(kind, teamId, color, position, stats); model.Parent = parent
+	model:SetAttribute("LaneOffset",offset)
 	AI.Register(model, teamId, kind, lane, route, stats)
 	return model
 end
@@ -11480,9 +11561,22 @@ function Service.Remaining(teamId: string): number
 	for _, record in records do if record.kind == "Tower" and record.teamId == teamId and Service.Alive(record) then count += 1 end end
 	return count
 end
+function Service.BlockingTier(model: Model): number?
+	if model:GetAttribute("EntityKind") ~= "Tower" then return nil end
+	local tier = (model:GetAttribute("TowerTier") or 1) :: number
+	local blocked: number? = nil
+	for other, record in records do
+		local level = (other:GetAttribute("TowerTier") or 1) :: number
+		if record.kind == "Tower" and record.teamId == model:GetAttribute("TeamId") and record.lane == model:GetAttribute("Lane")
+			and level < tier and Service.Alive(record) then blocked = math.min(blocked or level, level) end
+	end
+	return blocked
+end
 function Service.CanReceive(model: Model): boolean
-	if model:GetAttribute("EntityKind") ~= "Base" then return true end
-	return Rules.canReceive(model:GetAttribute("EntityKind"), Service.Remaining(tostring(model:GetAttribute("TeamId"))))
+	local kind = model:GetAttribute("EntityKind")
+	if kind == "Tower" then return Rules.canReceive(kind,0,if Service.BlockingTier(model) then 1 else 0) end
+	if kind ~= "Base" then return true end
+	return Rules.canReceive(kind, Service.Remaining(tostring(model:GetAttribute("TeamId"))))
 end
 function Service.Remove(model: Model) records[model] = nil end
 return Service
@@ -11804,6 +11898,10 @@ function Factory.Build(map: Folder): Folder
 		model:SetAttribute("AttackInterval", Config.AttackInterval * profile.IntervalMultiplier)
 		model:SetAttribute("AttackRange", Config.Range)
 		model:SetAttribute("CrystalSize", 2.6 + (tier-1)*.35)
+		local shield=Instance.new("Highlight");shield.Name="ProtectionShield";shield.Adornee=model
+		shield.FillColor=Color3.fromRGB(150,190,235);shield.FillTransparency=.87
+		shield.OutlineColor=Color3.fromRGB(190,215,250);shield.OutlineTransparency=.35
+		shield.DepthMode=Enum.HighlightDepthMode.Occluded;shield.Enabled=tier>1;shield.Parent=model
 		local function part(partName: string, size: Vector3, offset: Vector3, color: Color3, hurtbox: boolean): Part
 			local item = Instance.new("Part"); item.Name = partName; item.Size = size; item.Position = origin + offset
 			item.Anchored = true; item.CanCollide = hurtbox; item.CanQuery = hurtbox; item.CanTouch = false
@@ -11917,14 +12015,25 @@ local function health(tower: Tower)
 	record.model:SetAttribute("CurrentHealth", record.humanoid.Health)
 	record.model:SetAttribute("MaxHealth", record.humanoid.MaxHealth)
 	local profile = tier(record.model)
+	local blocking = Structures.BlockingTier(record.model)
+	record.model:SetAttribute("ProtectedByPreviousTower",blocking~=nil)
+	record.model:SetAttribute("BlockingTowerTier",blocking or 0)
+	local shield=record.model:FindFirstChild("ProtectionShield")
+	if shield and shield:IsA("Highlight") then shield.Enabled=blocking~=nil and record.humanoid.Health>0 end
 	tower.label.Text = string.format("%s • %s\n%s · %s  |  %d урона\n%d / %d", record.teamId, record.lane, profile.Mark, profile.Name,
 		Config.Damage*profile.DamageMultiplier, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
+	if blocking then tower.label.Text ..= "\nЩИТ · сначала вышка "..Config.Tiers[blocking].Mark end
 	tower.fill.Size = UDim2.fromScale(math.clamp(record.humanoid.Health / record.humanoid.MaxHealth, 0, 1), 1)
+end
+local function refreshProtection()
+	for _, tower in records do if not tower.logic.destroyed then health(tower) end end
 end
 local function destroy(tower: Tower)
 	if not Rules.destroy(tower.logic) then return end
 	local record = tower.structure
 	record.model:SetAttribute("IsDestroyed", true); mode(tower, "Destroyed")
+	local shield=record.model:FindFirstChild("ProtectionShield")
+	if shield and shield:IsA("Highlight") then shield.Enabled=false end
 	for _, item in record.model:GetDescendants() do
 		if item:IsA("BasePart") and item:GetAttribute("StructureCosmetic") ~= nil then
 			item.CanCollide = false; item.CanQuery = false; item.CanTouch = false
@@ -11933,6 +12042,7 @@ local function destroy(tower: Tower)
 		elseif item:IsA("PointLight") and item.Parent and item.Parent:GetAttribute("StructureCosmetic") ~= nil then item.Enabled = false end
 	end
 	tower.label.Text = record.teamId .. " • " .. record.lane .. "\nБАШНЯ РАЗРУШЕНА"; tower.fill.Size = UDim2.fromScale(0, 1)
+	refreshProtection()
 	Service.Event:Fire("Destroyed", record.model, tower.crystal.Position, tower.crystal.Position, record.teamId, record.lane, currentRound)
 end
 local function valid(tower: Tower, model: Model): boolean
@@ -11966,7 +12076,7 @@ function Service.Update(now: number)
 		if not model:IsDescendantOf(workspace) or tower.structure.humanoid.Parent ~= model or not tower.structure.root:IsDescendantOf(model) then
 			Rules.destroy(tower.logic); Structures.Remove(model)
 			for _, connection in tower.connections do connection:Disconnect() end
-			records[model] = nil; visuals[model] = nil; continue
+			records[model] = nil; visuals[model] = nil; refreshProtection(); continue
 		end
 		if tower.structure.humanoid.Health <= 0 then destroy(tower) end
 		if tower.logic.destroyed then continue end
@@ -12009,7 +12119,7 @@ local function register(model: Model)
 	visuals[model] = Reset.capture(model); model:SetAttribute("RoundId", currentRound)
 	local record = Structures.Register(model)
 	local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
-	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(210, 72)
+	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(230, 88)
 	board.StudsOffset = Vector3.new(0, 10+tier(model).Height, 0); board.MaxDistance = 105; board.AlwaysOnTop = true; board.Parent = record.root
 	local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
@@ -12037,6 +12147,7 @@ function Service.Reset(roundId: number)
 	for _, model in Factory.Build(map):GetChildren() do
 		if model:IsA("Model") and model:GetAttribute("ManagedTower") == true and not records[model] then register(model) end
 	end
+	refreshProtection()
 end
 function Service.Start(map: Folder)
 	if started then return end; started = true
@@ -12047,6 +12158,7 @@ function Service.Start(map: Folder)
 		if not model:IsA("Model") or model:GetAttribute("ManagedTower") ~= true then continue end
 		register(model)
 	end
+	refreshProtection()
 	Damage.Applied.Event:Connect(function(attacker: Model, victim: Model, amount: number, roundId: number?)
 		if amount <= 0 or roundId ~= currentRound then return end
 		local killed = records[victim]

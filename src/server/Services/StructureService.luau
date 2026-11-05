@@ -22,9 +22,22 @@ function Service.Remaining(teamId: string): number
 	for _, record in records do if record.kind == "Tower" and record.teamId == teamId and Service.Alive(record) then count += 1 end end
 	return count
 end
+function Service.BlockingTier(model: Model): number?
+	if model:GetAttribute("EntityKind") ~= "Tower" then return nil end
+	local tier = (model:GetAttribute("TowerTier") or 1) :: number
+	local blocked: number? = nil
+	for other, record in records do
+		local level = (other:GetAttribute("TowerTier") or 1) :: number
+		if record.kind == "Tower" and record.teamId == model:GetAttribute("TeamId") and record.lane == model:GetAttribute("Lane")
+			and level < tier and Service.Alive(record) then blocked = math.min(blocked or level, level) end
+	end
+	return blocked
+end
 function Service.CanReceive(model: Model): boolean
-	if model:GetAttribute("EntityKind") ~= "Base" then return true end
-	return Rules.canReceive(model:GetAttribute("EntityKind"), Service.Remaining(tostring(model:GetAttribute("TeamId"))))
+	local kind = model:GetAttribute("EntityKind")
+	if kind == "Tower" then return Rules.canReceive(kind,0,if Service.BlockingTier(model) then 1 else 0) end
+	if kind ~= "Base" then return true end
+	return Rules.canReceive(kind, Service.Remaining(tostring(model:GetAttribute("TeamId"))))
 end
 function Service.Remove(model: Model) records[model] = nil end
 return Service

@@ -123,13 +123,13 @@ local ok, failure = xpcall(function()
 		check("clones created before boundary", summoned and Clones.GetCount() > 0)
 		local gold = Economy.GetGold(blue)
 		local bounty = 0
-		for _, tower in Towers.GetAll() do
-			if tower.structure.teamId == "Red" then
+		for level=1,3 do for _, tower in Towers.GetAll() do
+			if tower.structure.teamId == "Red" and tower.structure.model:GetAttribute("TowerTier")==level then
 				check("tower lethal hit", Damage.Apply(model, tower.structure.humanoid, 9999) > 0)
 				bounty += 50
 				check("tower bounty exactly once", Economy.GetGold(blue) == gold + bounty and Damage.Apply(model, tower.structure.humanoid, 9999) == 0)
 			end
-		end
+		end end
 		local base = Bases.Get("Red"); assert(base)
 		task.wait(.35); local preparing = command(blue, "prepare"); local active = native.Get(blue)
 		check("ability prepared near finish", preparing.accepted == true and active ~= nil and active.q.active ~= nil)

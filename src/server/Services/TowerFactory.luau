@@ -27,6 +27,10 @@ function Factory.Build(map: Folder): Folder
 		model:SetAttribute("AttackInterval", Config.AttackInterval * profile.IntervalMultiplier)
 		model:SetAttribute("AttackRange", Config.Range)
 		model:SetAttribute("CrystalSize", 2.6 + (tier-1)*.35)
+		local shield=Instance.new("Highlight");shield.Name="ProtectionShield";shield.Adornee=model
+		shield.FillColor=Color3.fromRGB(150,190,235);shield.FillTransparency=.87
+		shield.OutlineColor=Color3.fromRGB(190,215,250);shield.OutlineTransparency=.35
+		shield.DepthMode=Enum.HighlightDepthMode.Occluded;shield.Enabled=tier>1;shield.Parent=model
 		local function part(partName: string, size: Vector3, offset: Vector3, color: Color3, hurtbox: boolean): Part
 			local item = Instance.new("Part"); item.Name = partName; item.Size = size; item.Position = origin + offset
 			item.Anchored = true; item.CanCollide = hurtbox; item.CanQuery = hurtbox; item.CanTouch = false

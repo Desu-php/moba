@@ -35,8 +35,12 @@ function Spawner.Spawn(teamId: string, lane: string, kind: string, slot: number)
 	assert(marker and marker:IsA("BasePart"), "Minion spawn missing")
 	local color = Color3.new(1, 1, 1)
 	for _, definition in Mode.Teams do if definition.Id == teamId then color = definition.Color end end
-	local position = marker.Position + Vector3.new(0, 0, (slot - 2) * Config.SpawnSpacing)
+	local direction=(route[2]-route[1])*Vector3.new(1,0,1)
+	local lateral=Vector3.new(-direction.Z,0,direction.X).Unit
+	local offset=((slot-1)%3-1)*Config.SpawnSpacing
+	local position = marker.Position + lateral*offset - direction.Unit*math.floor((slot-1)/3)*Config.SpawnSpacing
 	local model = Factory.Create(kind, teamId, color, position, stats); model.Parent = parent
+	model:SetAttribute("LaneOffset",offset)
 	AI.Register(model, teamId, kind, lane, route, stats)
 	return model
 end
