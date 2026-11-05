@@ -2,6 +2,8 @@
 local Run=game:GetService("RunService")
 local Shared=game.ReplicatedStorage:WaitForChild("Shared")
 local Data=require(Shared.Config.SasukeParticleData) :: any
+local Spells=require(script.Parent.SasukeSpellEffects)
+local Presentation=require(Shared.Abilities.SasukePresentation)
 local V={}
 local effects:{any}={}
 local held:{[Model]:Folder}={}
@@ -33,7 +35,12 @@ local function lightning(parent:Instance,a:Vector3,b:Vector3,color:Color3,seed:n
 end
 function V.Message(message:any)
  if message.kind~="Sasuke" or typeof(message.position)~="Vector3" then return end
+ if message.id=="AreaEnd" then Spells.Message(message);return end
  local camera=workspace.CurrentCamera;if camera and (camera.CFrame.Position-message.position).Magnitude>300 then return end
+ if message.id=="ChibakuDrop" then
+  for i=#effects,1,-1 do local e=effects[i];if e.id=="Chibaku" and e.caster==message.character then e.folder:Destroy();table.remove(effects,i) end end
+ end
+ if Spells.Message(message) then return end
  if #effects>=48 then effects[1].folder:Destroy();table.remove(effects,1) end
  local id=message.id;local radius=math.clamp(message.radius or 1,.1,125)
  if id=="Extinguish" then
@@ -96,6 +103,7 @@ function V.Message(message:any)
 end
 function V.Start()
  folder=Instance.new("Folder");folder.Name="LocalSasukeVFX";folder.Parent=workspace
+ Spells.Start(folder,models)
  local remote=game.ReplicatedStorage:WaitForChild("HeroAbility") :: RemoteEvent
  remote.OnClientEvent:Connect(V.Message)
  local function add(item:Instance) if item:IsA("Humanoid") and item.Parent and item.Parent:IsA("Model") then models[item.Parent]=true end end
@@ -103,12 +111,14 @@ function V.Start()
  workspace.DescendantAdded:Connect(add);workspace.DescendantRemoving:Connect(function(item) if item:IsA("Humanoid") and item.Parent and item.Parent:IsA("Model") then models[item.Parent]=nil end end)
  Run.RenderStepped:Connect(function()
   local now=workspace:GetServerTimeNow()
+  Spells.Update(now)
   for model in models do
    if not model.Parent then models[model]=nil;continue end
    if model:GetAttribute("HeroId")~="Sasuke" then continue end
+   Spells.Avatar(model,now)
    local hand=model:FindFirstChild("LeftHand") or model:FindFirstChild("RightHand")
    local variant=model:GetAttribute("ChidoriVariant")
-   if variant=="SusanooChidori" then local costume=model:FindFirstChild("HeroAppearance");hand=if costume then costume:FindFirstChild("Larm2") or hand else hand end
+   if variant=="SusanooChidori" then local costume=model:FindFirstChild("DisplayedHeroAppearance");hand=if costume then costume:FindFirstChild("Larm2") or hand else hand end
    local active=model:GetAttribute("ChidoriHeld")==true or ((model:GetAttribute("ChidoriStrikeUntil") or 0) :: number)>now
    if active and hand and hand:IsA("BasePart") then
     local f=held[model]
@@ -126,7 +136,8 @@ function V.Start()
      end
     end end
    elseif held[model] then held[model]:Destroy();held[model]=nil end
-   local appearance=model:FindFirstChild("HeroAppearance")
+   local appearance=model:FindFirstChild("DisplayedHeroAppearance")
+   local root=model:FindFirstChild("HumanoidRootPart")
    local attackAt=(model:GetAttribute("CombatLastAttackAt") or 0) :: number
    local swordHand=model:FindFirstChild("RightHand")
    if swordHand and swordHand:IsA("BasePart") and not swordTrails[model] then
@@ -143,16 +154,36 @@ function V.Start()
     local phase=(now-attackAt)/math.max(.001,ends-attackAt)
     sword.trail.Enabled=not active and ((model:GetAttribute("SusanooForm") or 0) :: number)<3 and phase>.12 and phase<.7 and now<ends
    end
-   if appearance then for _,p in appearance:GetChildren() do
+   if appearance and root and root:IsA("BasePart") then for _,p in appearance:GetChildren() do
+    if p:IsA("BasePart") and p:GetAttribute("CosmeticBody")=="RightHand" then
+     local offset=p:GetAttribute("CosmeticOffset");local handPart=model:FindFirstChild("RightHand")
+     if typeof(offset)=="CFrame" and handPart and handPart:IsA("BasePart") then
+      local weld=p:FindFirstChild("FormVisualWeld");if weld then weld:Destroy() end;p.Anchored=true
+      local casting=((model:GetAttribute("SasukeCastPoseUntil") or 0) :: number)>now and model:GetAttribute("SasukeCastPose")~="ChidoriKatana"
+      local grip=if casting then root.CFrame*CFrame.new(1,-.7,.8)*CFrame.Angles(0,math.pi/2,.12) else handPart.CFrame
+      p.CFrame=grip*offset
+     end
+    end
     if p:IsA("BasePart") and p:GetAttribute("GarudaWing") then
      local w=p:FindFirstChild("FormVisualWeld");local offset=p:GetAttribute("CosmeticOffset")
-     if w and w:IsA("Weld") and typeof(offset)=="CFrame" then w.C0=CFrame.new(0,-4,0)*CFrame.Angles(0,0,math.sin(now*7)*.35*(p:GetAttribute("GarudaWing") :: number))*CFrame.new(0,4,0)*offset end
+     if typeof(offset)=="CFrame" then
+      if w then w:Destroy() end;p.Anchored=true
+      p.CFrame=root.CFrame*CFrame.new(0,-4,0)*CFrame.Angles(0,0,math.sin(now*7)*.35*(p:GetAttribute("GarudaWing") :: number))*CFrame.new(0,4,0)*offset
+     end
     end
-    if p:IsA("BasePart") and p:GetAttribute("SusanooLimb")=="Right" then
+    if p:IsA("BasePart") and p:GetAttribute("SusanooChakra")==true then
     local w=p:FindFirstChild("FormVisualWeld");local offset=p:GetAttribute("CosmeticOffset")
-    if w and w:IsA("Weld") and typeof(offset)=="CFrame" then
-     local phase=math.clamp((now-attackAt)/1.1,0,1);local swing=math.sin(phase*math.pi)*1.1
-     w.C0=CFrame.new(0,10,0)*CFrame.Angles(-swing,0,-swing*.25)*CFrame.new(0,-10,0)*offset
+    if typeof(offset)=="CFrame" then
+     -- Animate the displayed cosmetic copy, never the server character assembly.
+     if w then w:Destroy() end;p.Anchored=true
+     local ends=(model:GetAttribute("CombatAttackEndsAt") or 0) :: number
+     local hit=(model:GetAttribute("CombatAttackHitAt") or 0) :: number
+     local duration=math.max(.001,ends-attackAt)
+     local phase=(now-attackAt)/duration;local swing=Presentation.susanooSwing(phase,(hit-attackAt)/duration)
+     local pivot=p:GetAttribute("SusanooPivot")
+     local side=if p:GetAttribute("SusanooLimb")=="Right" then 1 else -1
+     local angle=if side==1 then swing*1.25 else swing*.3
+     p.CFrame=root.CFrame*(if typeof(pivot)=="Vector3" then CFrame.new(pivot)*CFrame.Angles(angle,0,-side*swing*.2)*CFrame.new(-pivot)*offset else offset)
     end
    end end end
   end
@@ -179,6 +210,6 @@ function V.Start()
    end
   end
  end)
- require(script.Parent.RoundController).Watch(function() for _,e in effects do e.folder:Destroy() end;table.clear(effects) end)
+ require(script.Parent.RoundController).Watch(function() Spells.Clear();for _,e in effects do e.folder:Destroy() end;table.clear(effects) end)
 end
 return V

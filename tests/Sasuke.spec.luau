@@ -32,6 +32,16 @@ for key,family in F.Definitions do
 end
 local Poses=require("../src/shared/Combat/SasukeAttackPoses")
 local Combat=require("../src/shared/Config/CombatConfig")
+local Visual=require("../src/shared/Abilities/SasukePresentation")
+local CastPoses=require("../src/shared/Combat/SasukeCastPoses")
+assert(Visual.radius("SasukeFireball",D.Spells.SasukeFireball.radius)==300,"preview must use actual fireball splash")
+assert(Visual.radius("Kirin",D.Spells.Kirin.radius)==550 and Visual.Casts.Kirin==1.5)
+assert(Visual.susanooSwing(.6/1.1,.6/1.1)==1,"Susanoo arm peaks at authoritative hit phase")
+assert(Visual.susanooSwing(1,.6/1.1)==0,"arm returns after recovery")
+for i=1,32 do assert(Visual.flameRadius(12.5,i,32)+.7<=12.5,"flame cores stay inside damage boundary") end
+for id in Visual.Casts do for phase=0,20 do
+ for _,v in CastPoses.sample(id,phase/20,{}) do for _,angle in v do assert(angle==angle and math.abs(angle)<math.pi) end end
+end end
 local contact=Combat.Profiles.Sasuke.HitDelay/Combat.Profiles.Sasuke.AttackDuration
 local thrust=Poses.sample("Chidori",contact,1,contact)
 local impact=Poses.sample("Impact",0,1,contact)

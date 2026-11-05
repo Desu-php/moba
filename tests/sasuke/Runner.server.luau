@@ -43,6 +43,7 @@ local ok,err=xpcall(function()
  local h=Instance.new("Humanoid");h.RequiresNeck=false;h.MaxHealth=20000;h.Health=20000;h.Parent=target;target.PrimaryPart=tr
  target:SetAttribute("TeamId",if player:GetAttribute("TeamId")=="Blue" then "Red" else "Blue");target:SetAttribute("EntityKind","Minion");target:SetAttribute("RoundId",Match.GetState().roundId);target.Parent=workspace
  Fighters.GetOrCreate(target)
+ local visuals={};local visualConnection=Sasuke.Visual.Event:Connect(function(message) visuals[message.id]=message end)
  check("foreign hero ability rejected",not selfCast("Rasengan"))
  check("unprepared continuation rejected",not cast("ChidoriSenbon",tr.Position))
  local mana=Native.Get(player).pool.mana
@@ -69,7 +70,11 @@ local ok,err=xpcall(function()
  check("out of range does not spend mana",not cast("SasukeFireball",root.Position+Vector3.new(10000,0,0)))
  check("fireball launches",cast("SasukeFireball",tr.Position));task.wait(.5);check("shared fire cooldown",not cast("PhoenixFlowers",tr.Position))
  Dev.Execute(player,"refresh");check("Kirin preparation",selfCast("KirinPrepare"));check("early Kirin rejected",not cast("Kirin",tr.Position))
- task.wait(4);before=h.Health;check("Kirin ready",cast("Kirin",tr.Position));task.wait(1.7);check("Kirin hits marked area",h.Health<before-900)
+ task.wait(4);before=h.Health;check("Kirin ready",cast("Kirin",tr.Position))
+ check("Kirin warning uses damage centre radius and delay",visuals.KirinWarning.position==tr.Position and visuals.KirinWarning.radius==550/16 and visuals.KirinWarning.duration==1.5)
+ task.wait(.7);check("warning does not deal early damage",h.Health==before)
+ task.wait(1);check("Kirin hits marked area",h.Health<before-900)
+ check("impact matches warning geometry",visuals.Kirin.position==visuals.KirinWarning.position and visuals.Kirin.radius==visuals.KirinWarning.radius)
  Dev.Execute(player,"refresh");check("second charge",selfCast("Chidori"));task.wait(.9)
  before=h.Health;check("Senbon consumes held charge",cast("ChidoriSenbon",tr.Position) and model:GetAttribute("ChidoriHeld")==false);task.wait(.5)
  check("needles actually hit",h.Health<before)
@@ -83,6 +88,16 @@ local ok,err=xpcall(function()
  check("Garuda on",selfCast("Garuda") and model:GetAttribute("GarudaActive")==true)
  check("flight rejects attack spells",not selfCast("Chidori"));task.wait(.2)
  check("Garuda off without waiting for cooldown",selfCast("Garuda") and model:GetAttribute("GarudaActive")==false)
+ Dev.Execute(player,"refresh");selfCast("Sharingan");selfCast("Mangekyo")
+ local outside=target:Clone();outside.Name="OutsideFlameBoundary";outside.Parent=workspace
+ outside.HumanoidRootPart.CFrame=CFrame.new(tr.Position+Vector3.new(12.6,0,0));outside.Humanoid.Health=20000
+ before=h.Health;check("Amaterasu starts",cast("Amaterasu",tr.Position))
+ check("black flame message matches native radius",visuals.Amaterasu.radius==200/16 and visuals.Amaterasu.extra.areaSerial~=nil)
+ check("eye cast pose published",model:GetAttribute("SasukeCastPose")=="Amaterasu")
+ task.wait(.6);check("black flames damage inside only",h.Health<before and outside.Humanoid.Health==20000)
+ check("extinguish accepted",cast("Extinguish",tr.Position));before=h.Health
+ task.wait(.65);check("extinguish ends damage and matching visual area",h.Health==before and visuals.AreaEnd.extra.areaSerial==visuals.Amaterasu.extra.areaSerial)
+ outside:Destroy();visualConnection:Disconnect();selfCast("SasukeModeOff")
  Dev.Execute(player,"refresh");check("Aoda summon",cast("Aoda",root.Position+Vector3.new(8,0,0)));task.wait(.3)
  local aoda=nil;for _,m in workspace.HeroSummons:GetChildren() do if m:GetAttribute("NativeAoda") then aoda=m end end
  check("Aoda rank10 stats",aoda and aoda.Humanoid.MaxHealth==1500)

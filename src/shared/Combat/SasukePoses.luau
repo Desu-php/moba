@@ -4,9 +4,11 @@ local Data=require("../Config/SasukeVisualData")
 local Factory=require("../CreatorVisualFactory")
 local Attacks=require("./SasukeAttackPoses")
 local Combat=require("../Config/CombatConfig")
+local Casts=require("./SasukeCastPoses")
 local P={}
 local mapping:{[string]:string}={Torso="Waist",Head="Neck",["Right Arm"]="RightShoulder",["Left Arm"]="LeftShoulder",["Right Leg"]="RightHip",["Left Leg"]="LeftHip"}
 function P.sample(model:Model,key:string,now:number,progress:number,base:{[string]:{number}}):{[string]:{number}}
+ if string.sub(key,1,11)=="SasukeCast:" then return Casts.sample(string.sub(key,12),progress,base) end
  local ready=(model:GetAttribute("ChidoriReadyAt") or 0) :: number
  local held=model:GetAttribute("ChidoriHeld")==true
  if key=="ChidoriImpact" then return Attacks.sample("Impact",progress,1,.35) end

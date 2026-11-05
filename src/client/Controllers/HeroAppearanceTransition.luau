@@ -63,9 +63,16 @@ local function stage(state:State,folder:Folder)
    return
   end
   local fetched=true
-  local ready=pcall(function() Content:PreloadAsync({copy},function(_id,status)
-   if status~=Enum.AssetFetchStatus.Success then fetched=false end
-  end) end)
+  local ready=true
+  if folder:GetAttribute("AppearanceForm")=="Sasuke" then
+   -- Sasuke has a procedural face. A slow optional mesh must not hold an entire
+   -- mode transition (or mode exit) behind an obsolete costume for many seconds.
+   task.spawn(function() pcall(function() Content:PreloadAsync({copy}) end) end)
+  else
+   ready=pcall(function() Content:PreloadAsync({copy},function(_id,status)
+    if status~=Enum.AssetFetchStatus.Success then fetched=false end
+   end) end)
+  end
   if not current() or not ready or not fetched then copy:Destroy();return end
   local previous=state.shown
   alpha(copy,1);copy.Parent=state.model
@@ -103,6 +110,12 @@ local function bind(model:Model)
 end
 function Controller.Start()
  if started then return end;started=true
+ task.spawn(function()
+  local cache=Instance.new("Folder");local factory=require(Shared.CreatorVisualFactory)
+  local data=require(Shared.Config.SasukeVisualData)
+  for _,specs in {data.appearance,data.susanoo,data.garuda} do for _,spec in specs do factory.Part(spec :: any).Parent=cache end end
+  pcall(function() Content:PreloadAsync({cache}) end);cache:Destroy()
+ end)
  -- Warm every form's mesh/face IDs before the first transformation when possible.
  task.spawn(function()
   local cache=Instance.new("Folder")

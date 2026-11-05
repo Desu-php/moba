@@ -1,0 +1,67 @@
+[Anime Battlegrounds] Server ready
+Player:Move called, but player currently has no character.
+[Anime Battlegrounds] Client ready; left mouse button attacks
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+ContentId: rbxassetid://203785492 failed due to: Asset type does not match requested type
+[SasukeQA] PASS level and learning commands
+[SasukeQA] PASS Sasuke attributes
+[SasukeQA] PASS strength gives 22 health
+[SasukeQA] PASS intelligence gives 12 mana in HUD and actual resource pool
+[SasukeQA] PASS four independent learning lines
+[SasukeQA] PASS foreign hero ability rejected
+[SasukeQA] PASS unprepared continuation rejected
+[SasukeQA] PASS Chidori prepares
+[SasukeQA] PASS charge debits chakra
+[SasukeQA] PASS M1 accepted
+[SasukeQA] PASS agility scales server windup and cooldown
+[SasukeQA] PASS first contact is exactly Chidori damage
+[SasukeQA] PASS charge consumed and 3s stun
+[SasukeQA] PASS successful contact publishes attacker and victim animations
+[SasukeQA] PASS cooldown rejects recast
+[SasukeQA] PASS Sharingan
+[SasukeQA] PASS Rinnegan from rank5
+[SasukeQA] PASS modes drain chakra
+[SasukeQA] PASS ribs coexist with eyes
+[SasukeQA] PASS ribs reduce incoming damage
+[SasukeQA] PASS complete Susanoo starts
+[SasukeQA] PASS complete Susanoo profile and model
+[SasukeQA] PASS exit clears form and eyes
+[SasukeQA] PASS out of range does not spend mana
+[SasukeQA] PASS fireball launches
+[SasukeQA] PASS shared fire cooldown
+[SasukeQA] PASS Kirin preparation
+[SasukeQA] PASS early Kirin rejected
+[SasukeQA] PASS Kirin ready
+[SasukeQA] PASS Kirin warning uses damage centre radius and delay
+[SasukeQA] PASS warning does not deal early damage
+[SasukeQA] PASS Kirin hits marked area
+[SasukeQA] PASS impact matches warning geometry
+[SasukeQA] PASS second charge
+[SasukeQA] PASS Senbon consumes held charge
+[SasukeQA] PASS needles actually hit
+[SasukeQA] PASS eyes restart
+[SasukeQA] PASS Rinnegan restart
+[SasukeQA] PASS genjutsu sleeps target
+[SasukeQA] PASS wake attack adds exactly 50 pure damage
+[SasukeQA] PASS nine Chibaku spheres
+[SasukeQA] PASS sphere relocation
+[SasukeQA] PASS sphere drop command
+[SasukeQA] PASS drop hits once across overlaps
+[SasukeQA] PASS modes clear
+[SasukeQA] PASS Garuda on
+[SasukeQA] PASS flight rejects attack spells
+[SasukeQA] PASS Garuda off without waiting for cooldown
+[SasukeQA] PASS Amaterasu starts
+[SasukeQA] PASS black flame message matches native radius
+[SasukeQA] PASS eye cast pose published
+[SasukeQA] PASS black flames damage inside only
+[SasukeQA] PASS extinguish accepted
+[SasukeQA] PASS extinguish ends damage and matching visual area
+[SasukeQA] PASS Aoda summon
+[SasukeQA] PASS Aoda rank10 stats
+[SasukeQA] PASS Aoda independently attacks
+[SasukeQA] PASS death cleanup
+[SasukeQA] PASS effects and summons end on death
+[VisualProbe] PASS 7 checks; no visual errors
+[VisualProbe] Kirin impact radius; Kirin warning and creature; Susanoo blade and footprint; nine drop warnings; black flame boundary; flame cores inside radius; hovering spheres removed on drop

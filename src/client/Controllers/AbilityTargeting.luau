@@ -9,6 +9,7 @@ local Spells = require(Shared.Abilities.GamakichiSpells)
 local Kcm = require(Shared.Abilities.NarutoKcmGameplay)
 local Ranged = require(Shared.Abilities.NarutoRangedState)
 local Sasuke=require(Shared.Abilities.SasukeDefinitions)
+local SasukePresentation=require(Shared.Abilities.SasukePresentation)
 local Targeting = {}
 local folder: Folder? = nil
 local ring: {Part} = {}
@@ -82,7 +83,7 @@ function Targeting.Geometry(id: string): (BasePart?, number, number)
 		elseif id == "KcmDash" then Kcm.Dash.RangeWarcraft elseif id == "RikudoHY" or id == "RikudoHZ" then Ranged.RangeWarcraft else Definitions.Clones.RangeWarcraft
 	local radius = if id == "GamakichiChop" then Spells.Chopping.Radius elseif id == "GamakichiOil" then Spells.Oil.Radius
 		elseif id == "RikudoHY" or id == "RikudoHZ" then rangedRadius else 0
-	if Sasuke.Spells[id] then range=Sasuke.Spells[id].range;radius=Sasuke.Spells[id].radius;if id=="SasukeGenjutsu" and model and model:GetAttribute("SasukeMode")==3 then range=500 end end
+	if Sasuke.Spells[id] then range=Sasuke.Spells[id].range;radius=SasukePresentation.radius(id,Sasuke.Spells[id].radius);if id=="SasukeGenjutsu" and model and model:GetAttribute("SasukeMode")==3 then range=500 end end
 	return if root and root:IsA("BasePart") then root else nil, Units.toStuds(range), Units.toStuds(radius)
 end
 function Targeting.Evaluate(id: string, point: Vector2?): (any, string?, Vector3?)
@@ -159,6 +160,7 @@ function Targeting.Preview(id: string): string?
 	local target, reason, position = Targeting.Evaluate(id)
 	local root, range, radius = Targeting.Geometry(id)
 	local color = if reason then invalidColor else validColor
+ if not reason and Sasuke.Spells[id] then color=if id=="Kirin" or string.find(id,"Chidori") then Color3.fromRGB(126,216,255) elseif id=="SasukeFireball" or id=="PhoenixFlowers" then Color3.fromRGB(255,159,70) else Color3.fromRGB(191,128,255) end
 	Players.LocalPlayer:SetAttribute("AimTargetValid", reason == nil)
 	if root then
 		local floor = workspace:Raycast(root.Position,Vector3.new(0,-20,0),terrainParams())
@@ -180,15 +182,26 @@ function Targeting.Preview(id: string): string?
 		marker.Transparency = if position then .8 else 1
 		if position then marker.Size = Vector3.new(.06,math.max(1,radius*2),math.max(1,radius*2)); marker.CFrame = CFrame.new(position+Vector3.new(0,.08,0))*CFrame.Angles(0,0,math.pi/2); marker.Color = color end
 	end
+	local boundaryParams=if Sasuke.Spells[id] and radius>0 then terrainParams() else nil
 	for i,p in growthRing do
-		p.Transparency = if id == "RikudoHY" and position then .6 else 1
-		if id == "RikudoHY" and position then
+		local boundary=Sasuke.Spells[id]~=nil and radius>0 and id~="ChidoriEiso"
+		p.Transparency = if (id == "RikudoHY" or boundary) and position then .25 else 1
+		if (id == "RikudoHY" or boundary) and position then
 			local a,b = (i-1)*math.pi/16, i*math.pi/16
-			local first = position+Vector3.new(math.cos(a),0,math.sin(a))*Units.toStuds(hyMaximumRadius)
-			local last = position+Vector3.new(math.cos(b),0,math.sin(b))*Units.toStuds(hyMaximumRadius)
+			local size=if boundary then radius else Units.toStuds(hyMaximumRadius)
+			local first = position+Vector3.new(math.cos(a),0,math.sin(a))*size
+			local last = position+Vector3.new(math.cos(b),0,math.sin(b))*size
+			if boundary then local aHit=workspace:Raycast(first+Vector3.new(0,5,0),Vector3.new(0,-25,0),boundaryParams);local bHit=workspace:Raycast(last+Vector3.new(0,5,0),Vector3.new(0,-25,0),boundaryParams);if aHit then first=aHit.Position+Vector3.new(0,.1,0) end;if bHit then last=bHit.Position+Vector3.new(0,.1,0) end end
 			p.Size=Vector3.new(.1,.1,(last-first).Magnitude); p.CFrame=CFrame.lookAt((first+last)/2,last); p.Color=color
 		end
 	end
+ if id=="ChidoriEiso" and root and position and marker then
+  local delta=position-root.Position;local distance=math.min(range,delta.Magnitude)
+  if distance>.01 then
+   local finish=root.Position+delta.Unit*distance;local hit=workspace:Raycast(root.Position,finish-root.Position,terrainParams());if hit then finish=hit.Position end
+   marker.Shape=Enum.PartType.Block;marker.Size=Vector3.new(radius*2,.06,math.max(.1,(finish-root.Position).Magnitude));marker.CFrame=CFrame.lookAt((root.Position+finish)/2,finish);marker.Transparency=.78
+  end
+ elseif marker then marker.Shape=Enum.PartType.Cylinder end
 	if highlight then highlight.Adornee = if typeof(target) == "Instance" then target else nil; highlight.FillColor = color; highlight.OutlineColor = color end
 	return reason
 end

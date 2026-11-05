@@ -8,7 +8,7 @@ function A.Apply(model:Model)
  if not head or not head:IsA("BasePart") or not root or not root:IsA("BasePart") then return end
  local mode=(model:GetAttribute("SasukeMode") or 0) :: number;local form=(model:GetAttribute("SusanooForm") or 0) :: number
  local flying=model:GetAttribute("GarudaActive")==true
- local version="Sasuke-v1:"..mode..":"..form..":"..tostring(flying)
+ local version="Sasuke-v2:"..mode..":"..form..":"..tostring(flying)
  if model:GetAttribute("HeroAppearanceVersion")==version and model:FindFirstChild("HeroAppearance") then return end
  local previous=model:FindFirstChild("HeroAppearance")
  local folder=Instance.new("Folder");folder.Name="HeroAppearance"
@@ -49,18 +49,26 @@ function A.Apply(model:Model)
   end
  end
  if form==1 then
-  for side=-1,1,2 do for i=1,4 do
-   local rib=Instance.new("Part");rib.Name="SusanooRib";rib.Size=Vector3.new(.25,.25,3.5);rib.Color=Color3.fromRGB(140,60,230);rib.Material=Enum.Material.Neon;rib.Transparency=.3
-   attach(rib,root,CFrame.new(side*1.8,.2+i*.45,0)*CFrame.Angles(0,side*.25,0))
-  end end
+  for side=-1,1,2 do for i=1,4 do for segment=1,6 do
+   local a,b=(segment-1)*math.pi/7,segment*math.pi/7
+   local first=Vector3.new(side*math.sin(a)*2.2,.1+i*.48,math.cos(a)*1.9)
+   local last=Vector3.new(side*math.sin(b)*2.2,.1+i*.48,math.cos(b)*1.9)
+   local rib=Instance.new("Part");rib.Name="SusanooRib";rib.Size=Vector3.new(.18,.22,(last-first).Magnitude+.06);rib.Color=Color3.fromRGB(155,80,239);rib.Material=Enum.Material.Neon;rib.Transparency=.35
+   attach(rib,root,CFrame.lookAt((first+last)/2,last))
+  end end end
  elseif form>=2 then
   local scale=if form==2 then .15 else .23
   for _,spec in Data.susanoo do
    local lower=string.lower(spec.name)
    if string.find(lower,"wing") or (form==2 and string.find(lower,"leg")) then continue end
-   local p,m=Factory.Part(spec :: any);p.Size*=scale;m.Scale*=scale;m.Offset*=scale;p.Transparency=math.max(p.Transparency,.28)
+   local p,m=Factory.Part(spec :: any);p.Size*=scale;m.Scale*=scale;m.Offset*=scale;p.Transparency=math.max(p.Transparency,.42)
    local cf=Factory.Frame(spec.cf);local offset=CFrame.new(0,if form==2 then 4 else 14.5,0)*CFrame.Angles(0,math.pi/2,0)*(CFrame.new(cf.Position*scale)*cf.Rotation)
    p:SetAttribute("SusanooLimb",if string.find(lower,"rarm") then "Right" elseif string.find(lower,"larm") then "Left" else "Body")
+   if string.find(lower,"rarm") or string.find(lower,"larm") then
+    local side=if string.find(lower,"rarm") then 1 else -1
+    p:SetAttribute("SusanooPivot",Vector3.new(side*10.7*scale,(if form==2 then 4 else 14.5)-6*scale,5.5*scale))
+   end
+   p:SetAttribute("SusanooChakra",true)
    attach(p,root,offset)
   end
  end

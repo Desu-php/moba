@@ -94,6 +94,8 @@ local function active(rig: Rig, now: number): (string, number, number)
 		return attackKey("Punch1"), at, ends - at
 	end
 	local velocity = rig.root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+ local castAt=model:GetAttribute("SasukeCastPoseAt");local castUntil=model:GetAttribute("SasukeCastPoseUntil")
+ if typeof(castAt)=="number" and typeof(castUntil)=="number" and now<castUntil then return "SasukeCast:"..tostring(model:GetAttribute("SasukeCastPose")),castAt,castUntil-castAt end
 	return if velocity.Magnitude > 1.5 or model:GetAttribute("SummonMoving") == true then "Run" else "Idle", 0, 1
 end
 local function hasPublished(rig: Rig, key: string, at: number, duration: number): boolean

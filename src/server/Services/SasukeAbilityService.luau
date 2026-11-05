@@ -4,6 +4,7 @@ local Players=game:GetService("Players")
 local Run=game:GetService("RunService")
 local Shared=game.ReplicatedStorage:WaitForChild("Shared")
 local D=require(Shared.Abilities.SasukeDefinitions)
+local Presentation=require(Shared.Abilities.SasukePresentation)
 local Rules=require(Shared.Abilities.SasukeRules)
 local Units=require(Shared.Abilities.WorldUnits)
 local Stats=require(script.Parent.CharacterStatsService)
@@ -20,6 +21,7 @@ local shots:{any}={}
 local gravityAffected:{[Model]:boolean}={}
 local started=false
 local shotSerial=0
+local areaSerial=0
 local function clock():number return workspace:GetServerTimeNow() end
 local function root(model:Model):BasePart? local r=model:FindFirstChild("HumanoidRootPart");return if r and r:IsA("BasePart") then r else nil end
 local function valid(s:any):boolean return s.model==s.player.Character and s.model.Parent~=nil and Damage.CanAct(s.model) end
@@ -45,6 +47,7 @@ local function publish(s:any)
  for id in D.Spells do m:SetAttribute("Ready_"..id,s.ready[D.cooldownKey(id)] or 0) end
 end
 local function form(s:any,value:number,untilAt:number)
+ if s.form~=value then s.model:SetAttribute("SusanooFormAt",clock()) end
  s.form=value;s.formUntil=untilAt
  local stats=Stats.Get(s.player)
  Stats.SetLayer(s.model,"SasukeForm",if value==0 then nil else {health=if value==3 then 600 elseif value==4 then math.min(2000,200+200*s.beasts) else 0,armor=if value>=3 then 90 else 0,attack=if value>=3 then 300 elseif value==2 then .5*stats.Agility else .2*stats.Agility,speed=if value>=3 then Units.toStuds(100) else 0})
@@ -71,8 +74,9 @@ local function inArea(s:any,point:Vector3,radius:number,amount:number,stun:numbe
  end
 end
 local function area(s:any,id:string,point:Vector3,radius:number,total:number,duration:number,follow:boolean?)
- table.insert(areas,{s=s,id=id,point=point,radius=radius,damage=total/math.max(1,math.ceil(duration/.5)),ticks=math.max(1,math.ceil(duration/.5)),next=clock()+.5,follow=follow})
- emit(s,id,point,radius,duration,{follow=follow})
+ areaSerial+=1
+ table.insert(areas,{s=s,id=id,serial=areaSerial,point=point,radius=radius,damage=total/math.max(1,math.ceil(duration/.5)),ticks=math.max(1,math.ceil(duration/.5)),next=clock()+.5,follow=follow})
+ emit(s,id,point,radius,duration,{follow=follow,areaSerial=areaSerial})
 end
 local function terrain(s:any,ignore:Model?):RaycastParams
  local p=RaycastParams.new();local list:{Instance}={s.model}
@@ -166,7 +170,7 @@ function Service.TryCast(player:Player,id:string,_request:number,now:number,targ
   for model in actors do local tr=root(model);if tr then local offset=tr.Position-r.Position;local along=offset:Dot(dir)
    if along>=0 and along<=length and (offset-dir*along).Magnitude<=Units.toStuds(80) then hurt(s,model,380+3*agi,2) end end end
   emit(s,"Eiso",r.Position,Units.toStuds(80),.4,{finish=r.Position+dir*length})
- elseif id=="SasukeFireball" then projectile(s,id,point,55,Units.toStuds(300),35*rank+agi,(16*rank+agi)*3)
+ elseif id=="SasukeFireball" then projectile(s,id,point,55,Units.toStuds(Presentation.radius(id,d.radius)),35*rank+agi,(16*rank+agi)*3)
  elseif id=="PhoenixFlowers" then
   local aim=CFrame.lookAt(r.Position,point)
   for i=1,20 do local dir=(aim*CFrame.Angles(0,(i-10.5)*.018,0)).LookVector;projectile(s,id,r.Position+dir*math.min((point-r.Position).Magnitude,Units.toStuds(1000)),60,.7,30+10*rank+.2*agi) end
@@ -177,9 +181,9 @@ function Service.TryCast(player:Player,id:string,_request:number,now:number,targ
   later(s,1.5,function() inArea(s,point,radius,amount);emit(s,"Kirin",point,radius,.8) end)
  elseif id=="Amaterasu" or id=="AmaterasuWall" or id=="Enton" then
   area(s,"Amaterasu",point,radius,800+5*agi,10,id=="AmaterasuWall")
-  if id=="Enton" and s.form>=2 then inArea(s,point,radius,300+3*agi,1) end
+  if id=="Enton" and s.form>=2 then inArea(s,point,radius,300+3*agi,1);emit(s,"EntonPierce",point,radius,.45,{from=r.Position}) end
  elseif id=="Extinguish" then
-  for i=#areas,1,-1 do local a=areas[i];if a.id=="Amaterasu" and (a.point-point).Magnitude<=radius then a.cancelled=true;table.remove(areas,i) end end
+  for i=#areas,1,-1 do local a=areas[i];if a.id=="Amaterasu" and (a.point-point).Magnitude<=radius then emit(a.s,"AreaEnd",a.point,a.radius,.1,{areaSerial=a.serial});table.remove(areas,i) end end
   emit(s,"Extinguish",point,radius,.4)
  elseif id=="EntonPull" then
   for model in actors do local tr=root(model)
@@ -216,14 +220,18 @@ function Service.TryCast(player:Player,id:string,_request:number,now:number,targ
  elseif id=="Aoda" then
   local ok=require(script.Parent.SasukeSummonService).Spawn(s.model,player,rank,point)
   if not ok then pool.pool.mana+=cost;s.ready[key]=now;return false,"Нет места для призыва" end
+  emit(s,"Summon",point,3,.7)
  elseif id=="Garuda" then
   s.garuda=not s.garuda;local humanoid=s.model:FindFirstChildOfClass("Humanoid");if humanoid then s.groundHip=s.groundHip or humanoid.HipHeight;humanoid.HipHeight=s.groundHip+(if s.garuda then 4 else 0) end
   Stats.SetLayer(s.model,"SasukeFlight",if s.garuda then {health=0,armor=0,attack=0,speed=4.8} else nil)
+  emit(s,"Summon",r.Position,3,.7)
  elseif id=="SusanooTriple" or id=="IndraArrow" then
   s.used[id]=true;local amount=if id=="SusanooTriple" then 600+3*agi elseif s.beasts>=7 then 800+5*agi else 700+4*agi
   s.pendingUntil=now+1.5;emit(s,"KirinWarning",point,radius,1.5)
   later(s,1.5,function() projectile(s,id,point,Units.toStuds(750),radius,amount) end)
  end
+ local duration=Presentation.Casts[id]
+ if duration then s.model:SetAttribute("SasukeCastPose",id);s.model:SetAttribute("SasukeCastPoseAt",now);s.model:SetAttribute("SasukeCastPoseUntil",now+duration) end
  publish(s);return true,"Cast"
 end
 function Service.Reset()
@@ -263,7 +271,7 @@ function Service.Update(now:number)
  for target in gravityAffected do if not slowed[target] and target.Parent then target:SetAttribute("GravitySlowUntil",nil);Fighters.SetWalkSpeed(target,Fighters.GetWalkSpeed(target)) end end
  gravityAffected=slowed
  for i=#areas,1,-1 do local a=areas[i]
-  if not valid(a.s) or a.ticks<=0 then table.remove(areas,i);continue end
+  if not valid(a.s) or a.ticks<=0 then emit(a.s,"AreaEnd",a.point,a.radius,.1,{areaSerial=a.serial});table.remove(areas,i);continue end
   if now>=a.next then a.next+=.5;a.ticks-=1;if a.follow and root(a.s.model) then a.point=a.s.model:GetPivot().Position end;inArea(a.s,a.point,a.radius,a.damage) end
  end
  local dt=math.clamp(now-(Service :: any).lastUpdate,0,.1);(Service :: any).lastUpdate=now
