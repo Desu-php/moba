@@ -11,7 +11,7 @@ local definitions: {[string]:Family}={
   {key="E",id="ShadowClones",name="Призвать"},
   {key="X",id="CloneCommand",name="Атаковать"},{key="V",id="CloneCommand",name="За мной",command="Follow"},
   {key="B",id="CloneCommand",name="Стоять",command="Hold"}}},
- R={key="R",name="Гамакичи",icon="Gamakichi",hint="R → R — призвать. Жаба сама атакует и применяет способности. Z — вручную выбрать врага для масла, X — область ударов взрослой жабы. ЛКМ подтверждает цель.",entries={
+ R={key="R",name="Гамакичи",icon="Gamakichi",hint="R → R — призвать. Жаба самостоятельно сражается; без врагов рядом атакует вышку. E → V — отозвать, E → B — стоять. Z — вручную выбрать врага для масла, X — область ударов взрослой жабы. ЛКМ подтверждает цель.",entries={
   {key="R",id="Gamakichi",name="Призвать"},{key="Z",id="GamakichiOil",name="Масло"},{key="X",id="GamakichiChop",name="Удары мечом"}}},
  F={key="F",name="Техники формы",icon="KcmDash",hint="F → F — рывок KCM. Z / X — техники Рикудо. Выбор цели подтверждается ЛКМ.",entries={
   {key="F",id="KcmDash",name="Рывок"},{key="Z",id="RikudoHY",name="Биджудама RS"},{key="X",id="RikudoHZ",name="Биджу RS"}}},

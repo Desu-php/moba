@@ -67,7 +67,7 @@ function HUD.Start()
   commands.Visible=model~=nil and (((model:GetAttribute("NativeCloneCount") or 0) :: number)>0 or ((model:GetAttribute("GamakichiCount") or 0) :: number)>0)
   commands.Position=message.Position-UDim2.fromOffset(0,40)
   local order=tostring(if model then model:GetAttribute("SummonOrder") or "Follow" else "Follow")
-  commands.Text="E → X — атаковать · E → V — за мной · E → B — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Следование").."]"
+  commands.Text="E → X — атаковать · E → V — ко мне · E → B — стоять  ["..(if order=="Hold" then "Стоять" elseif order=="Command" then "Атака" else "Автобой").."]"
   local state=player:FindFirstChild("HeroState")
   local function number(name: string): number local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then value else 0 end
   local function shown(name: string,format: string): string local value=if state then state:GetAttribute(name) else nil; return if typeof(value)=="number" then string.format(format,value) else "—" end

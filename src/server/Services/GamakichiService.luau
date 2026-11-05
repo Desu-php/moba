@@ -1,5 +1,5 @@
 --!strict
--- Roblox entity/geometry adapter. Follow/assist + shared F command is our PC control policy.
+-- Autonomous combat summon: local enemies, then towers. Follow is an explicit recall.
 local Players=game:GetService("Players")
 local Shared=game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Domain=require(Shared.Abilities.GamakichiState)
@@ -15,6 +15,7 @@ local Navigation=require(script.Parent.CloneNavigation)
 local Collision=require(script.Parent.SummonCollision)
 local Autonomy=require(Shared.Abilities.CloneAutonomyPolicy)
 local Appearance=require(Shared.GamakichiAppearance)
+local Structures=require(script.Parent.StructureService)
 type Record={autoTarget: Model?,nextScan:number,returning:boolean,recallUntil:number,manualRequest:number,owner: Player, character: Model, model: Model, root: BasePart, humanoid: Humanoid,
  state: Domain.State, cast: Domain.Cast, commands: Commands.State, commandRequest: number, nextHit: number, hitAt: number?, target: Model?, spells: Spells.State, oilTarget: Model?, oilLife: any, center: Vector3?}
 local records: {[Player]: Record}={}
@@ -153,33 +154,48 @@ function Service.Update(now: number,delta: number)
   local ownerRoot=r.character:FindFirstChild("HumanoidRootPart")
   if not ownerRoot or not ownerRoot:IsA("BasePart") then continue end
   local ownerDistance=(ownerRoot.Position-r.root.Position).Magnitude
-  if ownerDistance>Autonomy.OwnerLeash then r.returning=true end
+  -- Only the explicit Follow order recalls the toad. Owner motion is not an AI goal.
   if r.returning and ownerDistance<Domain.Policy.FollowDistance+1 and now>=r.recallUntil then r.returning=false end
-  local function valid(candidate:Model?,range:number):boolean
+  local function valid(candidate:Model?,range:number,visible:boolean?):boolean
    if not candidate or not candidate.Parent or not Damage.CanDamage(r.model,candidate) or candidate:FindFirstChildOfClass("ForceField") then return false end
    local cr=candidate:FindFirstChild("HumanoidRootPart")
    return cr~=nil and cr:IsA("BasePart") and (cr.Position-r.root.Position).Magnitude<=range
-    and (cr.Position-ownerRoot.Position).Magnitude<=Autonomy.OwnerLeash
-    and Targets.Visible(r.model,candidate,r.root.Position,cr.Position)
+    and (visible==false or Targets.Visible(r.model,candidate,r.root.Position,cr.Position))
   end
   local target:Model?=nil
   if not r.returning and intent.targetId then
    for candidate in Fighters.GetAll() do if candidate:GetAttribute("AbilityEntityId")==intent.targetId and valid(candidate,Autonomy.PursueRadius) then target=candidate;break end end
   end
   if not target and not r.returning then
-   if not valid(r.autoTarget,Autonomy.PursueRadius) then r.autoTarget=nil end
-   if not r.autoTarget and now>=r.nextScan then
+   local current=r.autoTarget
+   local isTower=current~=nil and current:GetAttribute("EntityKind")=="Tower"
+   if not valid(current,if isTower then math.huge else Autonomy.PursueRadius,not isTower) then r.autoTarget=nil end
+   if now>=r.nextScan then
     r.nextScan=now+Autonomy.ScanInterval
-    for _,enemy in Targets.InCone(r.model,r.root.CFrame,Autonomy.AcquireRadius,-1,false,16) do
+    -- A nearby living enemy preempts siege; never waste oil/chopping on a building.
+    local unit:Model?=nil
+    for _,enemy in Targets.InCone(r.model,r.root.CFrame,Autonomy.AcquireRadius,-1,false,math.huge) do
      local candidate=enemy.Parent
-     if candidate and candidate:IsA("Model") and valid(candidate,Autonomy.AcquireRadius) then r.autoTarget=candidate;break end
+     if candidate and candidate:IsA("Model") and valid(candidate,Autonomy.AcquireRadius) then unit=candidate;break end
+    end
+    if r.autoTarget and r.autoTarget:GetAttribute("EntityKind")~="Tower" then
+     -- Retain a valid unit target until it dies/leaves pursuit range.
+    elseif unit then r.autoTarget=unit
+    else
+     local nearest:Model?=nil;local best=math.huge
+     for model,tower in Structures.GetAll() do
+      if tower.kind~="Tower" or not Structures.Alive(tower) or not valid(model,math.huge,false) then continue end
+      local distance=(tower.root.Position-r.root.Position).Magnitude
+      if distance<best or (distance==best and nearest~=nil and model.Name<nearest.Name) then nearest=model;best=distance end
+     end
+     r.autoTarget=nearest
     end
    end
    target=r.autoTarget
   end
-  r.model:SetAttribute("SummonBehavior",if target then "Attack" elseif r.returning then "Return" else "Follow")
+  r.model:SetAttribute("SummonBehavior",if target then (if target:GetAttribute("EntityKind")=="Tower" then "Siege" else "Attack") elseif r.returning then "Return" else "Guard")
   r.model:SetAttribute("SummonTarget",if target then target.Name else "")
-  if target and not r.hitAt then
+  if target and target:GetAttribute("EntityKind")~="Tower" and not r.hitAt then
    local tr=target:FindFirstChild("HumanoidRootPart") :: BasePart
    local distance=(tr.Position-r.root.Position).Magnitude
    local oilUntil=(target:GetAttribute("OilUntil") or 0) :: number
@@ -198,19 +214,27 @@ function Service.Update(now: number,delta: number)
     local hp=victim:FindFirstChildOfClass("Humanoid"); if hp then Damage.ApplyAttack(r.model,hp,r.cast.profile.rawDamage) end
    end
   end
-  local destination=if target then target:FindFirstChild("HumanoidRootPart") else r.character:FindFirstChild("HumanoidRootPart")
-  if not destination or not destination:IsA("BasePart") then Navigation.Stop(r.model); continue end
-  local distance=destination.Position-r.root.Position
-  local flat=distance*Vector3.new(1,0,1)
-  if flat.Magnitude>.001 then r.model:PivotTo(CFrame.lookAt(r.root.Position,r.root.Position+flat)) end
+  local destination=if target then target:FindFirstChild("HumanoidRootPart") elseif r.returning then ownerRoot else nil
+  if not destination or not destination:IsA("BasePart") then Navigation.Stop(r.model);continue end
   local stop=if target then Units.toStuds(100)+(r.root.Size.X+destination.Size.X)/2 else Domain.Policy.FollowDistance
-  if target and distance.Magnitude<=stop and now>=r.nextHit and not r.hitAt and Targets.Visible(r.model,target,r.root.Position,destination.Position) then
-   r.nextHit=now+Domain.Policy.AttackInterval; r.hitAt=now+Domain.Policy.DamagePoint; r.target=target; r.model:SetAttribute("SummonSwingAt",now)
+  local distance=destination.Position-r.root.Position
+  local inRange=target~=nil and distance.Magnitude<=stop and Targets.Visible(r.model,target,r.root.Position,destination.Position)
+  local function face(direction:Vector3)
+   local flat=direction*Vector3.new(1,0,1)
+   if flat.Magnitude>.01 then
+    local desired=CFrame.lookAt(r.root.Position,r.root.Position+flat)
+    r.model:PivotTo(r.root.CFrame:Lerp(desired,1-math.exp(-12*math.clamp(delta,0,.1))))
+   end
   end
-  if r.hitAt then Navigation.Stop(r.model)
+  if inRange and now>=r.nextHit and not r.hitAt then
+   r.nextHit=now+Domain.Policy.AttackInterval;r.hitAt=now+Domain.Policy.DamagePoint;r.target=target;r.model:SetAttribute("SummonSwingAt",now)
+  end
+  if r.hitAt or inRange then Navigation.Stop(r.model);face(distance)
   else
+   local before=r.root.Position
    local moving=Navigation.Step(r.model,r.character,target or r.character,destination,stop,now,delta,Units.toStuds(r.cast.profile.speed)*Oil.Movement(r.model,now))
    r.model:SetAttribute("SummonMoving",moving)
+   if moving then face(r.root.Position-before) end
   end
  end
 end

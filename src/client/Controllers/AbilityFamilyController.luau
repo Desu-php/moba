@@ -180,7 +180,7 @@ function Module.Start(panel:Frame)
    local entry=hoveredEntry
    local name=if entry then labelName(entry) else def.Name
    local binding=if entry and opened then opened.." → "..entry.key else def.KeyLabel
-   local description=if entry and entry.command=="Follow" then "Возвращает всех боевых клонов и Гамакичи к Наруто. После возвращения они снова самостоятельно ищут врагов рядом с владельцем." elseif entry and entry.command=="Hold" then "Оставляет всех боевых клонов и Гамакичи на текущих позициях без автоматических атак. E → V возобновляет следование; E → X задаёт цель." else ((Descriptions :: {[string]:string})[id] or "")
+   local description=if entry and entry.command=="Follow" then "Возвращает всех боевых клонов и Гамакичи к Наруто. После возвращения клоны снова ищут врагов рядом с владельцем, а Гамакичи самостоятельно сражается и атакует вышки." elseif entry and entry.command=="Hold" then "Оставляет всех боевых клонов и Гамакичи на текущих позициях без автоматических атак. E → V отзывает их к Наруто и возобновляет автобой; E → X задаёт цель." else ((Descriptions :: {[string]:string})[id] or "")
    tipText.Text=name.." ["..binding.."]\n"..resource.."\n"..(Controller.AbilityUnavailable(id) or (if Controller.Remaining(id)>0 then "КД "..math.ceil(Controller.Remaining(id)).." с" else "Готово")).."\n\n"..description
   end
  end)

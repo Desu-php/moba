@@ -10,3 +10,5 @@ sourcemap.json
 # Generated builds and verification tools; source places elsewhere stay visible.
 /build/
 /.tools/
+*.blend1
+assets/gamakichi/*.fbm/

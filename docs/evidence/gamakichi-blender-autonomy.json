@@ -1,0 +1,32 @@
+{
+  "laneChecks": [
+    "5 grass to lane reaches destination",
+    "5 grass to lane body stays clear",
+    "5 lane to grass reaches destination",
+    "5 lane to grass body stays clear",
+    "5 diagonal lip reaches destination",
+    "5 diagonal lip body stays clear",
+    "7 grass to lane reaches destination",
+    "7 grass to lane body stays clear",
+    "7 lane to grass reaches destination",
+    "7 lane to grass body stays clear",
+    "7 diagonal lip reaches destination",
+    "7 diagonal lip body stays clear",
+    "solid wall is not stepped through"
+  ],
+  "navigation": "PASS",
+  "autonomy": "PASS",
+  "checks": [
+    "Blender mesh replaces primitive model",
+    "complete 16-bone rig",
+    "tower chosen independently of distant owner",
+    "tower receives summon basic damage",
+    "tower never receives unit spells",
+    "nearby unit preempts tower",
+    "faces enemy instead of Naruto",
+    "returns to tower after enemy dies",
+    "Hold stops movement and attacks",
+    "explicit recall ends and autonomy resumes",
+    "autonomous oil and chopping remain functional"
+  ]
+}
