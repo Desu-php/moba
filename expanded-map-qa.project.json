@@ -1,0 +1,10 @@
+{
+ "name": "Expanded-Map-QA",
+ "tree": {
+  "$className": "DataModel",
+  "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+  "ServerScriptService": { "Server": { "$path": "src/server" }, "ExpandedMapQA": { "$path": "tests/minions/ExpandedMap.server.luau" } },
+  "StarterPlayer": { "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false }, "StarterPlayerScripts": { "Client": { "$path": "src/client" } } },
+  "Workspace": { "$attributes": { "DeveloperSoloMode": true } }
+ }
+}

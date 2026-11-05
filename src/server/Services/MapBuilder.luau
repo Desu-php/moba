@@ -49,7 +49,14 @@ function MapBuilder.Build(): Folder
 	local ground = folder(map, "Ground"); local lanes = folder(map, "Lanes")
 	local bases = folder(map, "Bases"); local spawns = folder(map, "SpawnPoints")
 	local waypoints = folder(map, "Waypoints"); local decorations = folder(map, "Decorations")
-	part(ground, "Arena", Config.GroundSize, Vector3.zero, Color3.fromRGB(48, 70, 61)).Material = Enum.Material.Grass
+	part(ground, "Arena", Config.GroundSize, Vector3.zero, Color3.fromRGB(82, 100, 66)).Material = Enum.Material.Grass
+	local battlefield=part(ground,"ScorchedFront",Vector3.new(610,.06,130),Vector3.new(0,1.035,-270),Color3.fromRGB(134,122,98))
+	battlefield.Material=Enum.Material.Ground;battlefield.CanCollide=false;battlefield.CanQuery=false
+	-- Visible perimeter ridges stop characters from falling off the generated arena.
+	for side=-1,1,2 do
+		part(ground,"NorthSouthRidge"..side,Vector3.new(Config.GroundSize.X+12,18,8),Vector3.new(0,3,side*(Config.GroundSize.Z/2+4)),Color3.fromRGB(101,109,86)).Material=Enum.Material.Rock
+		part(ground,"EastWestRidge"..side,Vector3.new(8,18,Config.GroundSize.Z),Vector3.new(side*(Config.GroundSize.X/2+4),3,0),Color3.fromRGB(101,109,86)).Material=Enum.Material.Rock
+	end
 	local routes = Config.Routes :: { [string]: { Vector3 } }
 	for _, name in Config.LaneOrder do
 		local lane = folder(lanes, name); local points = folder(waypoints, name)
@@ -65,6 +72,16 @@ function MapBuilder.Build(): Folder
 				road.CFrame = CFrame.lookAt(road.Position, road.Position + delta)
 				road.Material = Enum.Material.Ground
 			end
+		end
+	end
+	local paths=folder(map,"JunglePaths")
+	for name,route in Config.Paths do
+		local container=folder(paths,name)
+		for i=1,#route-1 do
+			local a,b=route[i],route[i+1];local delta=b-a
+			local road=part(container,"Path"..i,Vector3.new(18,.08,delta.Magnitude+18),(a+b)/2-Vector3.new(0,2.88,0),Color3.fromRGB(109,107,77))
+			road.CFrame=CFrame.lookAt(road.Position,road.Position+delta);road.Material=Enum.Material.Ground
+			road.CanCollide=false;road.CanQuery=false
 		end
 	end
 	local settings = Config.Teams :: { [string]: { Base: Vector3, Hero: Vector3, Reverse: boolean } }

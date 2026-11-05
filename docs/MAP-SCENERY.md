@@ -1,89 +1,59 @@
-# Shinobi battlefield scenery
+# Поле войны шиноби — расширенная карта
 
-Version2 adds one presentation-only bedrock mass under the distant scenery,
-removing the floating-house/tree silhouette found in actual Studio captures.
-The total is326 parts. Its top is0.05stud below the existing ground surface to
-avoid z-fighting. It remains noncollidable/nonqueryable: this is a backdrop, not
-an expansion of the340x250 playable arena or new village navigation space.
+Генератор карты v2, оформление v3. Игровое поле выросло с 340 × 250 до
+820 × 620 studs: в 2,4 раза по ширине и почти в 6 раз по площади.
+Это авторская MOBA-компоновка по мотивам войны шиноби, а не буквальная
+реконструкция географии аниме или масштаба Dota.
 
-Presentation-only pass over the generated map: tall forest belts and layered rock
-ridges frame the arena; plaster houses, tiled roofs and a timber Alliance gate
-sit behind Blue. Red has an ash-coloured stone enclosure, pale root ribs and red
-seals. A shallow visual river crosses under three timber bridges. Existing roads
-use an earth palette. All geometry is original Roblox primitives; no external
-assets, animation IDs, textures or plugins are required.
+Три линии имеют 11–13 опорных точек, изгибы и ширину 28 studs.
+Четыре лесных маршрута шириной 18 studs соединяют линии и лагеря.
+Между соседними вышками 75–117 studs; радиус огня остаётся 28.
+Таким образом, между зонами огня остаётся минимум 19 studs свободного пространства.
+По три вышки на каждой линии: I → II → III, усиление к базе и защита
+следующей вышки до разрушения предыдущей сохранены.
 
-`MapSceneryPlan` is a deterministic pure layout, with a hard 900-part budget.
-`MapScenery.Ensure` materializes a versioned `Map.ShinobiScenery` folder. It skips
-authored maps, reuses the current version, and replaces only its own generated
-folder on version changes. Construction happens off-tree and cleans up on failure.
-No timers, tasks, particles, lights, Terrain edits or global Lighting changes.
-All new parts are anchored, noncolliding, nontouching, nonqueryable and do not cast
-shadows. The floor, routes, obstacles, structures, spawns and camps retain their
-positions and collision. The river is an opaque thin visual surface above the
-existing floor: it does not swim, slow, drown, or change pathfinding. Bridges are
-visual overlays above the existing collidable road. Tall decor's rotated bounding
-boxes stay outside the 340 x 250 playable ground; internal decoration stays below
-four studs above Origin. Existing neon base cores remain unchanged.
+## Области
 
-## Focused checks
+- Лагерь Альянса: палатки, запасы, ворота, знамёна и указатели линий.
+- Северное выжженное поле: пять кратеров и скальные гряды.
+- Лесные участки с проходами для перемещений между линиями и четырьмя лагерями.
+- Извилистая мелкая река и три широкие переправы.
+- Восточная область корней и силуэт Древа за границей поля.
 
-Run `luau tests/MapScenery.spec.luau`, compile the changed Luau files, and build
-`default.project.json` with Rojo. The pure test checks deterministic generation,
-independent results, names, budget, tall silhouette clearance and all landmarks.
-It does not claim Roblox engine, rendering or camera coverage.
+Визуальный ориентир — официальный обзор
+[финальной стадии войны шиноби](https://naruto-official.com/en/news/01_1342):
+Альянс, разрушение поля Десятихвостым и Древо. Все модели здесь собраны
+из собственных Roblox-примитивов; это стилизованная игровая версия.
 
-Local verification on 2026-11-02: the layout test passed with 325 parts;
-`luau-analyze` passed for the pure module/test; `luau-compile` passed for all
-four changed/new Luau files. Roblox-aware `luau-lsp analyze` passed for the three
-production modules using solver V2, the production sourcemap and Roblox definitions.
-Rojo built `build/map-scenery.rbxlx`. `git diff --check` passed.
+## Геометрия и движение
 
-## Integrator MCP QA (Studio owner only)
+`MapSceneryPlan` задаёт дороги и проверяемый план оформления. `MapConfig`
+переводит те же точки в серверные маршруты, поэтому дороги и пути крипов совпадают.
+Лесные стволы, камни, палатки и ящики имеют столкновения. Кроны, кратеры,
+река и дальний фон декоративные; их геометрия не мешает прицеливанию и навигации.
+Лес не перекрывает коридоры линий, переходы и зоны возврата нейтралов.
+Сплошной пол под рекой исключает провалы; вода не замедляет и не включает плавание.
+Видимые скальные борта ограничивают игровое поле. Освещение изменяется только
+для генерируемой карты; пользовательские карты с AuthoredSurvivalMap сохраняются.
 
-Use the normal generated-map place. Start one normal match, check Output for
-errors, then run the following on the server (adjust service root only if needed):
+При осаде крипы сразу выбирают следующую доступную вышку своей линии,
+но до подхода к ней следуют изгибам маршрута. Ближние противники сохраняют
+приоритет. Физические столкновения, боевые позиции и обход стоящих союзников
+сохранены.
 
-```lua
-local map = workspace.Map
-local builder = require(game.ServerScriptService.Server.Services.MapBuilder)
-local decor = map.ShinobiScenery
-local count = #decor:GetChildren()
-assert(count == decor:GetAttribute("PartCount") and count <= 900)
-assert(builder.Build() == map and map.ShinobiScenery == decor)
-assert(#decor:GetChildren() == count)
-for _, part in decor:GetChildren() do
-    assert(part:IsA("BasePart") and part.Anchored)
-    assert(not part.CanCollide and not part.CanTouch and not part.CanQuery)
-end
-print("[MapSceneryEngine] ALL PASS: flags and repeated Build", count)
-```
+## Проверки 5 ноября 2026
 
-For regeneration QA in a disposable edit/test session, set decor's SceneryVersion
-to 0, call Build again and check there is exactly one ShinobiScenery with the same
-part count. Set AuthoredSurvivalMap=true on a disposable map and check Ensure does
-not add scenery. Do not mutate the live match for these checks.
+- Полный `scripts/check.ps1 -Mode Full`: сборки, чистые тесты, Roblox-aware типы.
+- `MapScenery.spec.luau`: 883 детали плана, детерминизм, проходы, зоны лагерей,
+  дистанции между вышками и доступность вышек с линии. Ещё 7 деталей — указатели.
+- `lane-advance-qa.project.json`: 38 проверок; группы по 9 крипов на всех шести
+  направлениях выбирают следующую вышку за 0,6 с и доходят всей группой.
+  Лимит перехода увеличен с 18 до 35 с для новой длины линий.
+- `expanded-map-qa.project.json`: 18 крипов стартуют с обычных точек спавна.
+  Все шесть групп достигают боя у реки за 44,2 с; максимальное отклонение
+  от центра своей линии 6,85 studs, максимальная высота корня 36,25.
+- В Studio проверены общий вид и перспектива вдоль линии.
 
-Camera positions below are absolute world coordinates (Origin is 0,32,0). Use
-`workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(...), Vector3.new(...))`
-on the client. Capture each frame and return to the player camera after QA.
-
-| View | Camera | Look at | Review |
-| --- | --- | --- | --- |
-| Whole battlefield | (0,295,180) | (0,32,0) | Three clean lanes, forest rim, river and bridges |
-| Alliance settlement | (-235,105,100) | (-153,38,0) | Four roofs, timber gate, banners, core visible |
-| Enemy enclosure | (235,105,-100) | (153,38,0) | Pale ribs, ash walls, red seals, core visible |
-| North bridge | (35,96,-45) | (0,34,-84) | Deck seams, no flicker, no covered lane |
-| South forest/ridge | (-65,130,220) | (-20,48,135) | Staggered tall trees, layered silhouette |
-
-With the ordinary PC camera, walk each lane in both directions and cross the
-river away from bridges. Fight at each bridge, existing rock and all four camps;
-check targeting, damage/LOS and clone movement remain clear. Watch minions traverse
-all three routes and attack towers. Check no canopy fills the camera at the map
-edge and no seams flicker during movement. Existing rocks remain gameplay
-obstacles; new decoration must never act as one. Assess at 1920x1080 and a smaller
-desktop window. No full unrelated gameplay gate is required for this visual slice.
-
-If visual QA finds occlusion, move the offending silhouette farther out; keep the
-spatial clearance test. Studio visual/runtime checks are pending until performed
-by the integrator; do not treat these instructions as evidence of a pass.
+Данные: `docs/evidence/expanded-shinobi-map.json`.
+Это локальные проверки маршрутов и боя; длительная балансировка нового масштаба
+и полноценная миникарта в этот проход не входят.

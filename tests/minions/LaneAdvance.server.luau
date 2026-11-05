@@ -67,7 +67,7 @@ local ok,err=xpcall(function()
   end
   workspace:SetAttribute("LaneAdvanceMetrics",game.HttpService:JSONEncode(metrics))
   for _,g in groups do check(g.name.." immediately selects tier "..(stage+1),metrics[g.name.." stage "..stage.." assigned"]==#g.units) end
-  local deadline=os.clock()+18
+  local deadline=os.clock()+35
   repeat
    task.wait(.1)
    local all=true

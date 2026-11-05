@@ -68,7 +68,7 @@ local ok,err=xpcall(function()
  for level=1,3 do map.Towers[enemyTeam.."_Mid"..(if level==1 then "" else "_T"..level)].Humanoid.Health=8 end
  local unit=require(S.MinionSpawnerService).Spawn(tostring(c:GetAttribute("TeamId")),"Mid","Melee",1);assert(unit)
  local npc=AI.GetAll()[unit];local sign=if enemyTeam=="Red" then 1 else -1
- npc.root.CFrame=CFrame.new(sign*16,36,0);npc.humanoid.MaxHealth=10000;npc.humanoid.Health=10000
+ npc.root.CFrame=CFrame.new(map.Towers[enemyTeam.."_Mid"].HumanoidRootPart.Position+Vector3.new(-sign*12,0,0));npc.humanoid.MaxHealth=10000;npc.humanoid.Health=10000
  npc.waypoint=4;npc.spawnedAt=0;npc.nextAttack=0
  AI.SetRunning(true)
  waitFor(function() return map.Towers[enemyTeam.."_Mid_T3"].Humanoid.Health<=0 end,35,"minion clears three tiers")

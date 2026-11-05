@@ -2787,10 +2787,10 @@ return table.freeze({
 	Stats = { MaxHealth = 180, Damage = 10, AttackCooldown = 1.4, AttackRange = 5.5, DetectionRange = 14, WalkSpeed = 12 },
 	-- Mirrored across the map centre; outside the three lane corridors and rocks.
 	Camps = {
-		{ Id = "NorthWest", Offset = Vector3.new(-32, 4, -44) },
-		{ Id = "SouthEast", Offset = Vector3.new(32, 4, 44) },
-		{ Id = "SouthWest", Offset = Vector3.new(-32, 4, 44) },
-		{ Id = "NorthEast", Offset = Vector3.new(32, 4, -44) },
+		{ Id = "NorthWest", Offset = Vector3.new(-110, 4, -138) },
+		{ Id = "SouthEast", Offset = Vector3.new(110, 4, 138) },
+		{ Id = "SouthWest", Offset = Vector3.new(-110, 4, 138) },
+		{ Id = "NorthEast", Offset = Vector3.new(110, 4, -138) },
 	},
 })
 ]]></string>
@@ -2818,21 +2818,25 @@ return table.freeze({
           <Properties>
             <string name="Name">MapConfig</string>
             <string name="Source"><![CDATA[--!strict
--- Coordinates are relative to Origin; routes run from Blue toward Red.
+local Plan = require(script.Parent.Parent.Game.MapSceneryPlan)
+local function vectors(source: { [string]: { {number} } }): { [string]: {Vector3} }
+	local result: { [string]: {Vector3} }={}
+	for name, points in source do
+		local route={}
+		for _,p in points do table.insert(route,Vector3.new(p[1],4,p[2])) end
+		result[name]=route
+	end
+	return result
+end
 return table.freeze({
-	Generated = true, Version = 1, Origin = Vector3.new(0, 32, 0),
-	GroundSize = Vector3.new(340, 2, 250), LaneWidth = 24,
-	Teams = {
-		Blue = { Base = Vector3.new(-140, 4, 0), Hero = Vector3.new(-155, 1.5, 14), Reverse = false },
-		Red = { Base = Vector3.new(140, 4, 0), Hero = Vector3.new(155, 1.5, -14), Reverse = true },
+	Generated=true,Version=2,Origin=Vector3.new(0,32,0),
+	GroundSize=Vector3.new(Plan.Width,2,Plan.Depth),LaneWidth=Plan.LaneWidth,
+	Teams={
+		Blue={Base=Vector3.new(-360,4,0),Hero=Vector3.new(-377,1.5,14),Reverse=false},
+		Red={Base=Vector3.new(360,4,0),Hero=Vector3.new(377,1.5,-14),Reverse=true},
 	},
-	LaneOrder = { "Top", "Mid", "Bottom" },
-	Routes = {
-		Top = { Vector3.new(-124, 4, -12), Vector3.new(-106, 4, -84), Vector3.new(0, 4, -84), Vector3.new(106, 4, -84), Vector3.new(124, 4, -12) },
-		Mid = { Vector3.new(-122, 4, 0), Vector3.new(-64, 4, 0), Vector3.new(0, 4, 0), Vector3.new(64, 4, 0), Vector3.new(122, 4, 0) },
-		Bottom = { Vector3.new(-124, 4, 12), Vector3.new(-106, 4, 84), Vector3.new(0, 4, 84), Vector3.new(106, 4, 84), Vector3.new(124, 4, 12) },
-	},
-	Obstacles = { Vector3.new(-60, 5, -43), Vector3.new(60, 5, -43), Vector3.new(-60, 5, 43), Vector3.new(60, 5, 43) },
+	LaneOrder={"Top","Mid","Bottom"},Routes=vectors(Plan.Routes),Paths=vectors(Plan.Paths),
+	Obstacles={} :: {Vector3},
 })
 ]]></string>
           </Properties>
@@ -2911,14 +2915,14 @@ return {
 	},
 	Positions = {
 		Blue = {
-			Top = { { -34, 4, -99 }, { -76, 4, -99 }, { -126, 4, -57 } },
-			Mid = { { -34, 4, 15 }, { -76, 4, 15 }, { -116, 4, 15 } },
-			Bottom = { { -34, 4, 99 }, { -76, 4, 99 }, { -126, 4, 57 } },
+			Top = { { -102, 4, -214 }, { -218, 4, -230 }, { -292, 4, -150 } },
+			Mid = { { -124, 4, 47 }, { -229, 4, 29 }, { -303, 4, 17 } },
+			Bottom = { { -102, 4, 214 }, { -218, 4, 230 }, { -292, 4, 150 } },
 		},
 		Red = {
-			Top = { { 34, 4, -99 }, { 76, 4, -99 }, { 126, 4, -57 } },
-			Mid = { { 34, 4, 15 }, { 76, 4, 15 }, { 116, 4, 15 } },
-			Bottom = { { 34, 4, 99 }, { 76, 4, 99 }, { 126, 4, 57 } },
+			Top = { { 102, 4, -214 }, { 218, 4, -230 }, { 292, 4, -150 } },
+			Mid = { { 124, 4, -47 }, { 229, 4, -29 }, { 303, 4, -17 } },
+			Bottom = { { 102, 4, 214 }, { 218, 4, 230 }, { 292, 4, 150 } },
 		},
 	},
 	Visual = { ProjectileDuration = 0.16, RuinFlashLifetime = 0.65, MaxEffects = 24, ViewDistance = 220 },
@@ -5301,92 +5305,133 @@ return Rules
           <Properties>
             <string name="Name">MapSceneryPlan</string>
             <string name="Source"><![CDATA[--!strict
--- Pure, deterministic presentation plan. Coordinates are relative to MapConfig.Origin.
--- Tall silhouettes stay outside the playable rectangle; the interior stays low.
-local Plan = { Version = 2, PartBudget = 900 }
+-- War-inspired MOBA layout, not a literal reconstruction of canonical geography.
+local Plan = { Version = 3, PartBudget = 1400, Width = 820, Depth = 620, LaneWidth = 28 }
+export type Point = { number }
 export type Piece = {
-	name: string, x: number, y: number, z: number,
-	sx: number, sy: number, sz: number, yaw: number,
-	palette: string, shape: string, material: string,
+	name: string, x: number, y: number, z: number, sx: number, sy: number, sz: number,
+	yaw: number, palette: string, shape: string, material: string, solid: boolean, pitch: number?,
 }
+Plan.Routes = {
+	Top = { {-330,-28}, {-300,-84}, {-276,-158}, {-230,-210}, {-156,-218}, {-86,-192}, {0,-204}, {86,-192}, {156,-218}, {230,-210}, {276,-158}, {300,-84}, {330,-28} },
+	Mid = { {-330,0}, {-268,0}, {-202,24}, {-124,30}, {-64,8}, {0,0}, {64,-8}, {124,-30}, {202,-24}, {268,0}, {330,0} },
+	Bottom = { {-330,28}, {-300,84}, {-276,158}, {-230,210}, {-156,218}, {-86,192}, {0,204}, {86,192}, {156,218}, {230,210}, {276,158}, {300,84}, {330,28} },
+} :: { [string]: { Point } }
+Plan.Paths = {
+	West = { {-156,-218}, {-164,-166}, {-160,-112}, {-144,-52}, {-124,30}, {-146,86}, {-160,144}, {-156,218} },
+	East = { {156,-218}, {160,-144}, {146,-86}, {124,-30}, {144,52}, {160,112}, {164,166}, {156,218} },
+	North = { {-160,-112}, {-112,-126}, {-52,-112}, {16,-100}, {84,-112}, {160,-144} },
+	South = { {-160,144}, {-84,112}, {-16,100}, {52,112}, {112,126}, {160,112} },
+} :: { [string]: { Point } }
+Plan.Camps = { {-110,-138}, {110,138}, {-110,138}, {110,-138} }
+function Plan.Distance(x: number, z: number, route: { Point }): number
+	local best=math.huge
+	for i=1,#route-1 do
+		local a,b=route[i],route[i+1];local dx,dz=b[1]-a[1],b[2]-a[2]
+		local t=math.clamp(((x-a[1])*dx+(z-a[2])*dz)/(dx*dx+dz*dz),0,1)
+		best=math.min(best,math.sqrt((x-a[1]-dx*t)^2+(z-a[2]-dz*t)^2))
+	end
+	return best
+end
+function Plan.Clear(x: number,z: number,radius: number): boolean
+	for _,route in Plan.Routes do if Plan.Distance(x,z,route)<Plan.LaneWidth/2+radius+5 then return false end end
+	for _,route in Plan.Paths do if Plan.Distance(x,z,route)<10+radius+3 then return false end end
+	for _,p in Plan.Camps do if (x-p[1])^2+(z-p[2])^2<(32+radius)^2 then return false end end
+	return math.abs(x)<290
+end
 function Plan.Build(): { Piece }
-	local pieces: { Piece } = {}
-	local function add(name: string, x: number, y: number, z: number, sx: number, sy: number, sz: number,
-		palette: string, shape: string?, yaw: number?, material: string?)
-		table.insert(pieces, { name = name, x = x, y = y, z = z, sx = sx, sy = sy, sz = sz,
-			palette = palette, shape = shape or "Block", yaw = yaw or 0, material = material or "Slate" })
+	local pieces: { Piece }={}
+	local function add(name: string,x: number,y: number,z: number,sx: number,sy: number,sz: number,palette: string,shape: string?,yaw: number?,material: string?,solid: boolean?)
+		table.insert(pieces,{name=name,x=x,y=y,z=z,sx=sx,sy=sy,sz=sz,palette=palette,shape=shape or "Block",yaw=yaw or 0,material=material or "Slate",solid=solid==true})
 	end
-	-- Presentation-only rock mass supports the distant village/forest silhouettes.
-	-- Its top meets the existing arena surface; it never changes collision/navmesh.
-	add("BackdropBedrock", 0, -19.05, 0, 460, 40, 420, "DarkRock", nil, nil, "Rock")
-	local function tree(id: string, x: number, z: number, index: number)
-		local h = 22 + (index % 4) * 3
-		local enemy = x > 20
-		add(id .. "Trunk", x, 1 + h / 2, z, 3.6, h, 3.6, if enemy then "Ash" else "Bark", nil, nil, "Wood")
-		add(id .. "Crown", x, h + 2, z, 19, 13, 18, if enemy then "DarkLeaf" else "Leaf", "Ball", index * 17, "Grass")
-		add(id .. "CrownTip", x + 3, h + 8, z + 1, 12, 9, 12, if enemy then "DarkLeaf" else "LightLeaf", "Ball", nil, "Grass")
-		if enemy then
-			add(id .. "Root", x - 3, 3, z, 10, 3, 4, "Ash", nil, 25, "Wood")
+	add("BackdropBedrock",0,-19.05,0,1010,40,810,"DarkRock",nil,nil,"Rock")
+	local function branch(name: string,x: number,y: number,z: number,bx: number,by: number,bz: number,width: number,palette: string)
+		local dx,dy,dz=bx-x,by-y,bz-z;local horizontal=math.sqrt(dx*dx+dz*dz)
+		add(name,(x+bx)/2,(y+by)/2,(z+bz)/2,width,math.sqrt(horizontal^2+dy^2),width,palette,"Cylinder",math.deg(math.atan2(dx,dz)),"Wood")
+		pieces[#pieces].pitch=math.deg(math.atan2(horizontal,dy))
+	end
+	local function tree(id: string,x: number,z: number,index: number,inside: boolean?)
+		local h=20+index%4*3;local burnt=x>40
+		add(id.."Trunk",x,1+h/2,z,3.8,h,3.8,if burnt then "Ash" else "Bark","Cylinder",nil,"Wood",inside)
+		if not burnt or index%3~=0 then
+			add(id.."Crown",x,h+1,z,18,12,17,if burnt then "DarkLeaf" else "Leaf","Ball",index*17,"Grass")
+			add(id.."CrownTip",x+2,h+7,z,12,9,12,if burnt then "DarkLeaf" else "LightLeaf","Ball",nil,"Grass")
+		else add(id.."BrokenBranch",x+3,h-3,z,11,2,2,"Ash",nil,32,"Wood") end
+	end
+	for side=-1,1,2 do
+		for i=0,26 do tree("Forest"..side.."_"..i,-390+i*30,side*(327+i%2*14),i) end
+		for i=0,15 do
+			local x=-410+i*54;local h=35+i%4*13
+			add("Ridge"..side.."_"..i,x,h/2-3,side*370,78,h,64,if side<0 then "SandRock" else "Rock","Ball",i%3*13,"Rock")
+			add("RidgeCap"..side.."_"..i,x-8,h*.68,side*370,48,h*.55,38,if side<0 then "SandRock" else "Moss","Ball",i%3*13,"Rock")
 		end
 	end
-	-- Two staggered forest belts beyond the playable ground; no canopy over lanes.
-	for side = -1, 1, 2 do
-		for i = 0, 16 do
-			local x = -176 + i * 22
-			tree("Forest" .. side .. "_" .. i, x, side * (146 + (i % 2) * 9), i)
+	-- Jungle islands leave a broad, tested corridor around every road and camp.
+	for ix=-8,8 do for iz=-9,9 do
+		local x=ix*32+(iz%2)*8;local z=iz*30
+		if math.abs(z)>48 and z>-238 and Plan.Clear(x,z,12) then
+			tree("Jungle"..ix.."_"..iz,x,z,math.abs(ix*7+iz),true)
+			add("FernBed"..ix.."_"..iz,x,1.08,z,17,.1,15,"Moss","Ball",ix*21,"Grass")
+			if (ix+iz)%3==0 then add("Outcrop"..ix.."_"..iz,x+3,5,z+3,12,8,10,"Rock","Ball",ix*13,"Rock",true) end
 		end
-		for i = 0, 8 do tree("Edge" .. side .. "_" .. i, side * 202, -112 + i * 28, i + 1) end
-		for i = 0, 10 do
-			local height = 18 + (i % 3) * 7
-			add("Ridge" .. side .. "_" .. i, -180 + i * 36, height / 2 - 2, side * 180,
-				42, height, 27, if i > 5 then "DarkRock" else "Rock", nil, (i % 3 - 1) * 12, "Rock")
-			add("RidgeCap" .. side .. "_" .. i, -180 + i * 36, height - 3, side * 180,
-				34, 4, 23, if i > 5 then "Ash" else "Moss", nil, (i % 3 - 1) * 12, "Grass")
-		end
-	end
-	-- Alliance settlement: plaster houses, tiled overhangs, timber gate and banners.
-	for i = 0, 3 do
-		local z = -81 + i * 54
-		add("VillageHouse" .. i, -191, 6, z, 18, 10, 20, "Plaster")
-		add("VillageRoof" .. i, -191, 12, z, 23, 3, 25, "Roof", nil, nil, "Slate")
-		add("VillageRoofTier" .. i, -191, 14, z, 17, 2, 19, "Roof")
-		add("VillageDoor" .. i, -181.8, 4.2, z, 0.3, 6, 4, "Bark", nil, nil, "Wood")
-		for window = -1, 1, 2 do
-			add("VillageWindow" .. i .. "_" .. window, -181.7, 7, z + window * 6, 0.3, 3, 3, "Paper")
+	end end
+	-- Traversable scorched battlefield: visual crater rims cannot trap units.
+	for i=0,4 do
+		local x=-176+i*88;local z=-270+(i%2)*8
+		add("CraterFloor"..i,x,1.04,z,56,.08,42,"Scorch","Ball",nil,"Ground")
+		for j=0,11 do
+			local a=j*math.pi/6
+			add("CraterRim"..i.."_"..j,x+math.cos(a)*28,1.7,z+math.sin(a)*21,9,2.5,7,"SandRock","Ball",j*30,"Rock")
 		end
 	end
-	for side = -1, 1, 2 do
-		add("AllianceGatePost" .. side, -178, 8, side * 20, 4, 14, 4, "Bark", nil, nil, "Wood")
-		add("AllianceBanner" .. side, -175.7, 11, side * 20, 0.4, 7, 3, "Alliance", nil, nil, "Fabric")
-		add("AllianceBannerPlate" .. side, -175.4, 12.5, side * 20, 0.3, 1.3, 2.4, "Paper")
+	local river: {Point}={{-18,-310},{0,-204},{18,-100},{0,0},{-18,100},{0,204},{18,310}}
+	for i=1,#river-1 do
+		local a,b=river[i],river[i+1];local dx,dz=b[1]-a[1],b[2]-a[2]
+		add("River"..i,(a[1]+b[1])/2,1.055,(a[2]+b[2])/2,21,.08,math.sqrt(dx*dx+dz*dz)+2,"Water",nil,math.deg(math.atan2(dx,dz)),"Glass")
 	end
-	add("AllianceGateLintel", -178, 16, 0, 6, 3, 46, "Roof", nil, nil, "Wood")
-	-- Enemy side: stone enclosure and pale, crooked root ribs, with red seals.
-	for i = 0, 6 do
-		local z = -90 + i * 30
-		add("EnemyWall" .. i, 191, 5, z, 14, 8 + i % 3, 24, "DarkRock", nil, (i % 2) * 8, "Rock")
-		add("EnemyRoot" .. i, 179 + i % 2 * 3, 10, z, 4, 18, 5, "Bone", nil, (i % 3 - 1) * 16, "Wood")
-		add("EnemySeal" .. i, 176.8 + i % 2 * 3, 10, z, 0.4, 4, 2, "Enemy", nil, nil, "Fabric")
-	end
-	add("EnemyGateRib", 182, 21, 0, 8, 5, 50, "Ash", nil, nil, "Wood")
-	-- A shallow visual stream overlays the existing solid floor, never Terrain water.
-	add("River", 0, 1.035, 0, 11, 0.05, 246, "Water", nil, nil, "Glass")
-	for _, z in { -84, 0, 84 } do
-		add("BridgeDeck" .. z, 0, 1.28, z, 28, 0.08, 25, "Bark", nil, nil, "WoodPlanks")
-		for side = -1, 1, 2 do
-			add("BridgeEdge" .. z .. "_" .. side, 0, 1.7, z + side * 13.7, 28, 0.7, 0.8, "Rock")
+	for _,z in {-204,0,204} do
+		add("BridgeDeck"..z,0,1.28,z,42,.08,33,"Bark",nil,nil,"WoodPlanks")
+		for side=-1,1,2 do
+			add("BridgeEdge"..z.."_"..side,0,1.8,z+side*17.5,43,1,.9,"Rock")
+			for _,x in {-21,21} do add("BridgePost"..z.."_"..side.."_"..x,x,3.2,z+side*18,2,4,2,"Rock") end
 		end
-		for i = -5, 5 do
-			add("BridgeBoard" .. z .. "_" .. i, i * 2.4, 1.34, z, 0.12, 0.04, 24.8, "Ash", nil, nil, "Wood")
-		end
+		for i=-8,8 do add("BridgeBoard"..z.."_"..i,i*2.4,1.35,z,.12,.04,32.8,"Ash",nil,nil,"Wood") end
 	end
-	-- Low moss around existing rocks; no tall decoration in camp leash areas.
-	for _, x in { -60, 60 } do
-		for _, z in { -43, 43 } do
-			add("RockMoss" .. x .. "_" .. z, x, 1.3, z, 18, 0.4, 15, "Moss", "Ball", nil, "Grass")
+	-- Allied supply camp, command gates and cloth banners.
+	for side=-1,1,2 do
+		for i=0,2 do
+			local x=-380+i*18;local z=side*(90+i%2*34)
+			add("CampTent"..side..i,x,5,z,23,8,22,"Canvas",nil,nil,"Fabric",true)
+			add("CampRoof"..side..i,x,11,z,28,5,27,"Roof","Ball",nil,"Fabric")
+			add("CampDoor"..side..i,x+11.6,4.2,z,.2,6,7,"DarkRock")
+			add("Supplies"..side..i,x+15,3,z+15,5,4,5,"Bark",nil,nil,"WoodPlanks",true)
 		end
+		add("AllianceGatePost"..side,-392,12,side*23,5,22,5,"Bark",nil,nil,"Wood")
+		add("AllianceBanner"..side,-388.9,15,side*23,.3,12,5,"Alliance",nil,nil,"Fabric")
+		add("AllianceBannerPlate"..side,-388.6,17,side*23,.2,3,3,"Paper")
 	end
-	assert(#pieces <= Plan.PartBudget, "Map scenery exceeds part budget")
+	add("AllianceGateLintel",-392,25,0,8,4,55,"Roof",nil,nil,"Wood")
+	for i=0,6 do
+		local z=-126+i*42
+		add("EnemyWall"..i,390,6,z,12,10,29,"DarkRock",nil,i%2*8,"Rock")
+		add("EnemyRoot"..i,400,15,z,7,28,8,"Bone","Cylinder",i*11,"Wood")
+		add("EnemySeal"..i,383.8,8,z,.3,7,4,"Enemy",nil,nil,"Fabric")
+	end
+	add("EnemyGateRib",392,32,0,10,6,58,"Ash",nil,nil,"Wood")
+	add("DivineTreeTrunk",452,51,0,40,100,42,"Bone","Cylinder",nil,"Wood")
+	branch("DivineUpperTrunk",452,82,0,460,133,5,26,"Bone")
+	for i=0,9 do
+		local a=i*math.pi/5
+		local dx,dz=math.cos(a),math.sin(a)
+		branch("DivineBark"..i,452+dx*17,10,dz*17,454+dx*14,91,dz*14,7,"Ash")
+		branch("DivineRoot"..i,452+dx*15,20,dz*15,452+dx*42,5,dz*42,13,"Bone")
+		branch("DivineRootTip"..i,452+dx*42,5,dz*42,452+dx*65,1,dz*65,7,"Bone")
+		branch("DivineBranch"..i,452+dx*12,78+i%3*6,dz*12,452+dx*52,115+i%3*6,dz*52,10,"Bone")
+		branch("DivineTwig"..i,452+dx*52,115+i%3*6,dz*52,452+dx*68,128+i%3*6,dz*68,5,"Ash")
+		add("DivineCrown"..i,452+dx*55,129+i%3*6,dz*55,58,21,42,"DarkLeaf","Ball",-i*36,"Grass")
+	end
+	add("DivineBud",460,150,5,27,37,27,"Enemy","Ball",nil,"Grass")
+	assert(#pieces<=Plan.PartBudget,"Map scenery exceeds part budget")
 	return pieces
 end
 return table.freeze(Plan)
@@ -8831,7 +8876,14 @@ function MapBuilder.Build(): Folder
 	local ground = folder(map, "Ground"); local lanes = folder(map, "Lanes")
 	local bases = folder(map, "Bases"); local spawns = folder(map, "SpawnPoints")
 	local waypoints = folder(map, "Waypoints"); local decorations = folder(map, "Decorations")
-	part(ground, "Arena", Config.GroundSize, Vector3.zero, Color3.fromRGB(48, 70, 61)).Material = Enum.Material.Grass
+	part(ground, "Arena", Config.GroundSize, Vector3.zero, Color3.fromRGB(82, 100, 66)).Material = Enum.Material.Grass
+	local battlefield=part(ground,"ScorchedFront",Vector3.new(610,.06,130),Vector3.new(0,1.035,-270),Color3.fromRGB(134,122,98))
+	battlefield.Material=Enum.Material.Ground;battlefield.CanCollide=false;battlefield.CanQuery=false
+	-- Visible perimeter ridges stop characters from falling off the generated arena.
+	for side=-1,1,2 do
+		part(ground,"NorthSouthRidge"..side,Vector3.new(Config.GroundSize.X+12,18,8),Vector3.new(0,3,side*(Config.GroundSize.Z/2+4)),Color3.fromRGB(101,109,86)).Material=Enum.Material.Rock
+		part(ground,"EastWestRidge"..side,Vector3.new(8,18,Config.GroundSize.Z),Vector3.new(side*(Config.GroundSize.X/2+4),3,0),Color3.fromRGB(101,109,86)).Material=Enum.Material.Rock
+	end
 	local routes = Config.Routes :: { [string]: { Vector3 } }
 	for _, name in Config.LaneOrder do
 		local lane = folder(lanes, name); local points = folder(waypoints, name)
@@ -8847,6 +8899,16 @@ function MapBuilder.Build(): Folder
 				road.CFrame = CFrame.lookAt(road.Position, road.Position + delta)
 				road.Material = Enum.Material.Ground
 			end
+		end
+	end
+	local paths=folder(map,"JunglePaths")
+	for name,route in Config.Paths do
+		local container=folder(paths,name)
+		for i=1,#route-1 do
+			local a,b=route[i],route[i+1];local delta=b-a
+			local road=part(container,"Path"..i,Vector3.new(18,.08,delta.Magnitude+18),(a+b)/2-Vector3.new(0,2.88,0),Color3.fromRGB(109,107,77))
+			road.CFrame=CFrame.lookAt(road.Position,road.Position+delta);road.Material=Enum.Material.Ground
+			road.CanCollide=false;road.CanQuery=false
 		end
 	end
 	local settings = Config.Teams :: { [string]: { Base: Vector3, Hero: Vector3, Reverse: boolean } }
@@ -8914,6 +8976,7 @@ local palette = {
 	DarkRock = Color3.fromRGB(64, 65, 73), Moss = Color3.fromRGB(78, 104, 66), Plaster = Color3.fromRGB(211, 190, 146),
 	Roof = Color3.fromRGB(68, 108, 91), Paper = Color3.fromRGB(226, 219, 185), Alliance = Color3.fromRGB(61, 94, 146),
 	Enemy = Color3.fromRGB(148, 43, 52), Bone = Color3.fromRGB(163, 167, 144), Water = Color3.fromRGB(64, 131, 143),
+	SandRock = Color3.fromRGB(153, 132, 103), Scorch = Color3.fromRGB(71, 65, 58), Canvas = Color3.fromRGB(194, 182, 135),
 }
 function MapScenery.Ensure(map: Folder)
 	-- Authored maps own their appearance. Only decorate this generator's layout.
@@ -8930,24 +8993,53 @@ function MapScenery.Ensure(map: Folder)
 			local item = Instance.new("Part")
 			item.Name = piece.name
 			item.Anchored = true
-			item.CanCollide = false
+			item.CanCollide = piece.solid
 			item.CanTouch = false
-			item.CanQuery = false
+			item.CanQuery = piece.solid
 			item.CastShadow = false -- Canopies cannot darken combat or hide targeting telegraphs.
 			item.Size = Vector3.new(piece.sx, piece.sy, piece.sz)
 			item.CFrame = CFrame.new(Config.Origin + Vector3.new(piece.x, piece.y, piece.z)) * CFrame.Angles(0, math.rad(piece.yaw), 0)
+			if piece.pitch then item.CFrame*=CFrame.Angles(math.rad(piece.pitch),0,0) end
 			item.Color = (palette :: { [string]: Color3 })[piece.palette]
 			item.Material = (Enum.Material :: any)[piece.material]
 			item.Shape = if piece.shape == "Ball" then Enum.PartType.Ball else Enum.PartType.Block
+			if piece.shape == "Cylinder" then
+				item.Shape=Enum.PartType.Cylinder
+				item.Size=Vector3.new(piece.sy,piece.sx,piece.sz)
+				item.CFrame*=CFrame.Angles(0,0,math.pi/2)
+			end
 			item.TopSurface = Enum.SurfaceType.Smooth
 			item.BottomSurface = Enum.SurfaceType.Smooth
 			item.Parent = root
 		end
 	end)
 	if not ok then root:Destroy(); error(failure) end
+	local function sign(name: string,position: Vector3,label: string,color: Color3)
+		local marker=Instance.new("Part");marker.Name=name;marker.Anchored=true
+		marker.Size=Vector3.new(2,9,2);marker.Position=Config.Origin+position
+		marker.CanCollide=false;marker.CanQuery=false;marker.CanTouch=false
+		marker.Material=Enum.Material.Wood;marker.Color=palette.Bark;marker.Parent=root
+		local gui=Instance.new("BillboardGui");gui.Name="Wayfinding";gui.Size=UDim2.fromOffset(240,44)
+		gui.StudsOffsetWorldSpace=Vector3.new(0,5,0);gui.MaxDistance=115;gui.AlwaysOnTop=false;gui.Parent=marker
+		local text=Instance.new("TextLabel");text.Size=UDim2.fromScale(1,1);text.BackgroundColor3=Color3.fromRGB(26,33,29)
+		text.BackgroundTransparency=.15;text.BorderSizePixel=0;text.Text=label;text.TextColor3=color
+		text.Font=Enum.Font.GothamBold;text.TextSize=16;text.TextWrapped=true;text.Parent=gui
+	end
+	sign("AllianceCampSign",Vector3.new(-368,5,-46),"ЛАГЕРЬ АЛЬЯНСА",Color3.fromRGB(164,211,247))
+	sign("WarFrontSign",Vector3.new(-45,5,-238),"ВЫЖЖЕННОЕ ПОЛЕ",Color3.fromRGB(230,204,150))
+	sign("DivineRootsSign",Vector3.new(369,5,46),"КОРНИ ДРЕВА",Color3.fromRGB(233,175,166))
+	for _,side in {-1,1} do
+		sign("TopSign"..side,Vector3.new(side*320,5,-52),"ВЕРХНЯЯ ЛИНИЯ",Color3.fromRGB(231,222,186))
+		sign("BottomSign"..side,Vector3.new(side*320,5,52),"НИЖНЯЯ ЛИНИЯ",Color3.fromRGB(231,222,186))
+	end
 	root:SetAttribute("PartCount", #root:GetChildren())
 	if old then old:Destroy() end
 	root.Parent = map
+	local lighting=game:GetService("Lighting")
+	lighting.ClockTime=14.5;lighting.Brightness=2.5
+	lighting.Ambient=Color3.fromRGB(140,143,137);lighting.OutdoorAmbient=Color3.fromRGB(164,168,155)
+	lighting.ExposureCompensation=.25
+	lighting.FogColor=Color3.fromRGB(184,201,199);lighting.FogStart=650;lighting.FogEnd=1800
 end
 return MapScenery
 ]]></string>
@@ -9485,6 +9577,31 @@ local function move(npc: Minion, goal: Vector3, now: number)
 		elseif now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal
 	npc.humanoid:MoveTo(steer(npc,destination))
 end
+-- Project onto the lane polyline. Between distant towers keep every bend;
+-- a global assault objective must never turn into a shortcut through the jungle.
+local function laneGoal(npc: Minion, objective: Vector3?): Vector3?
+	local function project(position: Vector3): (number, number)
+		local best=math.huge;local index=1;local fraction=0
+		for i=1,#npc.route-1 do
+			local a=npc.route[i];local delta=flat(npc.route[i+1]-a)
+			local t=math.clamp(flat(position-a):Dot(delta)/delta:Dot(delta),0,1)
+			local distance=flat(position-a-delta*t).Magnitude
+			if distance<best then best=distance;index=i;fraction=t end
+		end
+		return index,fraction
+	end
+	local segment,t=project(npc.root.Position)
+	if objective then
+		local targetSegment=project(objective)
+		if targetSegment<=segment then return nil end
+	end
+	local index=segment+1
+	if t>.97 then index+=1 end
+	if index>#npc.route then return nil end
+	if npc.waypoint~=index then npc.waypoint=index;npc.recoveries=0;npc.model:SetAttribute("Waypoint",index) end
+	local point=npc.route[index];local direction=flat(point-npc.route[index-1]).Unit
+	return point+Vector3.new(-direction.Z,0,direction.X)*((npc.model:GetAttribute("LaneOffset") or 0) :: number)
+end
 function AI.Update(now: number)
 	-- Corpse cleanup also runs after the match has stopped.
 	local remove = {}
@@ -9510,6 +9627,13 @@ function AI.Update(now: number)
 			if target:GetAttribute("EntityKind")=="Tower" and target:GetAttribute("Lane")==npc.lane then npc.laneAssault=true end
 			local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart
 			local position=targetRoot.Position
+			if target:GetAttribute("EntityKind")=="Tower" and target:GetAttribute("Lane")==npc.lane and flat(position-npc.root.Position).Magnitude>30 then
+				local routeGoal=laneGoal(npc,position)
+				if routeGoal then
+					npc.combatTarget=nil;npc.combatOffset=nil
+					move(npc,routeGoal,now);continue
+				end
+			end
 			goal = combatGoal(npc,target,position)
 			if (position - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, position) and not crowded(npc) then
 				setMode(npc, "Attacking"); npc.humanoid:MoveTo(npc.root.Position); npc.progressAt = now
@@ -9532,24 +9656,7 @@ function AI.Update(now: number)
 			end
 		else
 			npc.combatTarget=nil;npc.combatOffset=nil
-			local waypoint = npc.route[npc.waypoint]
-			local function formation(point: Vector3): Vector3
-				local previous=npc.route[math.max(1,npc.waypoint-1)]
-				local direction=flat(point-previous)
-				if direction.Magnitude<.01 then direction=flat(npc.route[2]-npc.route[1]) end
-				return point+Vector3.new(-direction.Z,0,direction.X).Unit*((model:GetAttribute("LaneOffset") or 0) :: number)
-			end
-			local function passed(point: Vector3): boolean
-				if flat(formation(point)-npc.root.Position).Magnitude<=Config.WaypointRadius then return true end
-				if npc.waypoint<=1 then return false end
-				local previous=npc.route[npc.waypoint-1];local segment=flat(point-previous)
-				return segment.Magnitude>.01 and flat(npc.root.Position-previous):Dot(segment.Unit)>=segment.Magnitude
-			end
-			while waypoint and passed(waypoint) do
-				npc.waypoint += 1; npc.recoveries = 0; model:SetAttribute("Waypoint", npc.waypoint)
-				waypoint = npc.route[npc.waypoint]
-			end
-			goal = if waypoint then formation(waypoint) else baseGoal(npc)
+			goal = laneGoal(npc,nil) or baseGoal(npc)
 		end
 		if goal then move(npc, goal, now)
 		else npc.humanoid:MoveTo(npc.root.Position);npc.progressAt=now end

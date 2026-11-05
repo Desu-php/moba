@@ -295,6 +295,31 @@ local function move(npc: Minion, goal: Vector3, now: number)
 		elseif now < npc.recoveryUntil and npc.recoveryGoal then npc.recoveryGoal else goal
 	npc.humanoid:MoveTo(steer(npc,destination))
 end
+-- Project onto the lane polyline. Between distant towers keep every bend;
+-- a global assault objective must never turn into a shortcut through the jungle.
+local function laneGoal(npc: Minion, objective: Vector3?): Vector3?
+	local function project(position: Vector3): (number, number)
+		local best=math.huge;local index=1;local fraction=0
+		for i=1,#npc.route-1 do
+			local a=npc.route[i];local delta=flat(npc.route[i+1]-a)
+			local t=math.clamp(flat(position-a):Dot(delta)/delta:Dot(delta),0,1)
+			local distance=flat(position-a-delta*t).Magnitude
+			if distance<best then best=distance;index=i;fraction=t end
+		end
+		return index,fraction
+	end
+	local segment,t=project(npc.root.Position)
+	if objective then
+		local targetSegment=project(objective)
+		if targetSegment<=segment then return nil end
+	end
+	local index=segment+1
+	if t>.97 then index+=1 end
+	if index>#npc.route then return nil end
+	if npc.waypoint~=index then npc.waypoint=index;npc.recoveries=0;npc.model:SetAttribute("Waypoint",index) end
+	local point=npc.route[index];local direction=flat(point-npc.route[index-1]).Unit
+	return point+Vector3.new(-direction.Z,0,direction.X)*((npc.model:GetAttribute("LaneOffset") or 0) :: number)
+end
 function AI.Update(now: number)
 	-- Corpse cleanup also runs after the match has stopped.
 	local remove = {}
@@ -320,6 +345,13 @@ function AI.Update(now: number)
 			if target:GetAttribute("EntityKind")=="Tower" and target:GetAttribute("Lane")==npc.lane then npc.laneAssault=true end
 			local targetRoot = target:FindFirstChild("HumanoidRootPart") :: BasePart
 			local position=targetRoot.Position
+			if target:GetAttribute("EntityKind")=="Tower" and target:GetAttribute("Lane")==npc.lane and flat(position-npc.root.Position).Magnitude>30 then
+				local routeGoal=laneGoal(npc,position)
+				if routeGoal then
+					npc.combatTarget=nil;npc.combatOffset=nil
+					move(npc,routeGoal,now);continue
+				end
+			end
 			goal = combatGoal(npc,target,position)
 			if (position - npc.root.Position).Magnitude <= npc.stats.AttackRange and visible(npc, target, position) and not crowded(npc) then
 				setMode(npc, "Attacking"); npc.humanoid:MoveTo(npc.root.Position); npc.progressAt = now
@@ -342,24 +374,7 @@ function AI.Update(now: number)
 			end
 		else
 			npc.combatTarget=nil;npc.combatOffset=nil
-			local waypoint = npc.route[npc.waypoint]
-			local function formation(point: Vector3): Vector3
-				local previous=npc.route[math.max(1,npc.waypoint-1)]
-				local direction=flat(point-previous)
-				if direction.Magnitude<.01 then direction=flat(npc.route[2]-npc.route[1]) end
-				return point+Vector3.new(-direction.Z,0,direction.X).Unit*((model:GetAttribute("LaneOffset") or 0) :: number)
-			end
-			local function passed(point: Vector3): boolean
-				if flat(formation(point)-npc.root.Position).Magnitude<=Config.WaypointRadius then return true end
-				if npc.waypoint<=1 then return false end
-				local previous=npc.route[npc.waypoint-1];local segment=flat(point-previous)
-				return segment.Magnitude>.01 and flat(npc.root.Position-previous):Dot(segment.Unit)>=segment.Magnitude
-			end
-			while waypoint and passed(waypoint) do
-				npc.waypoint += 1; npc.recoveries = 0; model:SetAttribute("Waypoint", npc.waypoint)
-				waypoint = npc.route[npc.waypoint]
-			end
-			goal = if waypoint then formation(waypoint) else baseGoal(npc)
+			goal = laneGoal(npc,nil) or baseGoal(npc)
 		end
 		if goal then move(npc, goal, now)
 		else npc.humanoid:MoveTo(npc.root.Position);npc.progressAt=now end

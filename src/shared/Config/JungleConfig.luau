@@ -6,9 +6,9 @@ return table.freeze({
 	Stats = { MaxHealth = 180, Damage = 10, AttackCooldown = 1.4, AttackRange = 5.5, DetectionRange = 14, WalkSpeed = 12 },
 	-- Mirrored across the map centre; outside the three lane corridors and rocks.
 	Camps = {
-		{ Id = "NorthWest", Offset = Vector3.new(-32, 4, -44) },
-		{ Id = "SouthEast", Offset = Vector3.new(32, 4, 44) },
-		{ Id = "SouthWest", Offset = Vector3.new(-32, 4, 44) },
-		{ Id = "NorthEast", Offset = Vector3.new(32, 4, -44) },
+		{ Id = "NorthWest", Offset = Vector3.new(-110, 4, -138) },
+		{ Id = "SouthEast", Offset = Vector3.new(110, 4, 138) },
+		{ Id = "SouthWest", Offset = Vector3.new(-110, 4, 138) },
+		{ Id = "NorthEast", Offset = Vector3.new(110, 4, -138) },
 	},
 })
