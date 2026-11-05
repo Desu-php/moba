@@ -49,7 +49,7 @@ local function npc(team: string, lane: string, kind: string, position: Vector3):
 	local record = AI.GetAll()[model]; record.root.CFrame = CFrame.new(position); record.root.Anchored = true; return record
 end
 local function tower(team: string, lane: string): Towers.Tower
-	for _, record in Towers.GetAll() do if record.structure.teamId == team and record.structure.lane == lane then return record end end
+	for _, record in Towers.GetAll() do if record.structure.teamId == team and record.structure.lane == lane and record.structure.model:GetAttribute("TowerTier")==1 then return record end end
 	error("Tower missing")
 end
 local function cast(player: Player, id: string)
@@ -72,9 +72,9 @@ local ok, failure = xpcall(function()
 	local originalCount = #container:GetChildren()
 	local userGeometry = Instance.new("Folder"); userGeometry.Name = "TowerTestUserGeometry"; userGeometry.Parent = map
 	Builder.Build(); Towers.Start(map); Match.Start()
-	check("exactly six towers without duplicate Build or Start", originalCount == 6 and #container:GetChildren() == 6)
+	check("exactly eighteen towers without duplicate Build or Start", originalCount == 18 and #container:GetChildren() == 18)
 	check("unknown map content preserved", userGeometry.Parent == map); userGeometry:Destroy()
-	check("three towers per team", Structures.Remaining("Blue") == 3 and Structures.Remaining("Red") == 3)
+	check("nine towers per team", Structures.Remaining("Blue") == 9 and Structures.Remaining("Red") == 9)
 	local sentry = tower("Red", "Mid"); local position = sentry.structure.root.Position
 	local base = Bases.Get("Red"); assert(base)
 	check("allied damage blocked", Damage.Apply(enemyModel, sentry.structure.humanoid, 50) == 0)
@@ -96,7 +96,7 @@ local ok, failure = xpcall(function()
 	untilTrue(function() return victim.humanoid.Health < 100 end, 3, "No tower shot")
 	check("tower shot deals eighteen", victim.humanoid.Health == 82)
 	local snapshot = command(first, "inspect"); local observer = command(second, "inspect")
-	check("both clients show structure health and roster HUD", snapshot.towerLabels == 6 and observer.towerLabels == 6 and snapshot.portraitSlots == 10 and observer.portraitSlots == 10 and snapshot.hero and snapshot.abilities)
+	check("both clients show structure health and roster HUD", snapshot.towerLabels == 18 and observer.towerLabels == 18 and snapshot.portraitSlots == 10 and observer.portraitSlots == 10 and snapshot.hero and snapshot.abilities)
 	check("bounded cosmetic effects", snapshot.safeEffects and observer.safeEffects and snapshot.effectCount <= Config.Visual.MaxEffects)
 	check("shot events reach both clients", snapshot.shots > 0 and observer.shots > 0)
 	arrange(first, position + Vector3.new(-8, 0, -6)); arrange(second, position + Vector3.new(0, 0, -8))
@@ -168,7 +168,7 @@ local ok, failure = xpcall(function()
 	untilTrue(function() return (melee.root.Position - moveFrom).Magnitude > 6 end, 5, "Minion stuck at ruin")
 	check("minion destroys tower and continues route", melee.target ~= top.structure.model)
 	clearNPCs(); AI.SetRunning(false)
-	check("two towers still shield core", Structures.Remaining("Red") == 2 and Damage.Apply(model, base.humanoid, 100) == 0)
+	check("eight towers still shield core", Structures.Remaining("Red") == 8 and Damage.Apply(model, base.humanoid, 100) == 0)
 	local profile = Progression.Get(first); assert(profile)
 	local kills, deaths, assists, minionKills = profile.TotalKills, profile.TotalDeaths, profile.Assists, profile.TotalMinionKills
 	local gold, enemyGold = Economy.GetGold(first), Economy.GetGold(second)
@@ -185,13 +185,19 @@ local ok, failure = xpcall(function()
 	check("repeated destruction gives no gold", Economy.GetGold(first) == gold + 50)
 	check("no KDA minion reward or life ledger for tower", profile.TotalKills == kills and profile.TotalDeaths == deaths and profile.Assists == assists and profile.TotalMinionKills == minionKills and sentry.structure.model:GetAttribute("LifeId") == nil)
 	check("ruin cannot block or be hit", not sentry.structure.root.CanCollide and not sentry.structure.root.CanQuery)
-	check("last tower still protects base", Structures.Remaining("Red") == 1 and Damage.Apply(model, base.humanoid, 9999) == 0)
+	check("seven towers still protect base", Structures.Remaining("Red") == 7 and Damage.Apply(model, base.humanoid, 9999) == 0)
 	local bottom = tower("Red", "Bottom"); local minionModel = victim.model
 	-- The only connected attacker-team player is temporarily dead; minion last hit must still pay them.
 	gold = Economy.GetGold(first); humanoid.Health = 0
 	Damage.Apply(minionModel, bottom.structure.humanoid, 9999); task.wait(0.2)
 	check("dead connected teammate receives tower gold", Economy.GetGold(first) == gold + 50)
-	check("third tower opens base", Structures.Remaining("Red") == 0 and Structures.CanReceive(base.model))
+	check("inner tiers still protect base", Structures.Remaining("Red") == 6 and not Structures.CanReceive(base.model))
+	for _, record in Towers.GetAll() do
+		if record.structure.teamId=="Red" and record.structure.humanoid.Health>0 then
+			check("remaining tier destroyed", Damage.Apply(minionModel,record.structure.humanoid,9999)>0)
+		end
+	end
+	check("ninth tower opens base", Structures.Remaining("Red") == 0 and Structures.CanReceive(base.model))
 	check("base damage opens for minions", Damage.Apply(minionModel, base.humanoid, 12) == 12)
 	untilTrue(function() return first.Character ~= nil and first.Character ~= model end, 12, "Respawn failed")
 	task.wait(0.5); model, humanoid, _root = body(first); arrange(first, Vector3.new(0, 36, 0))

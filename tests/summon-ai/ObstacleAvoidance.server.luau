@@ -49,8 +49,10 @@ local ok,err=xpcall(function()
  tower.Size=Vector3.new(4,10,24);tower.Position=Vector3.new(900,38,900)
  route("adult wide wall",7,Vector3.new(880,35.15,900),Vector3.new(920,35.15,900),15)
  for _,width in {2,5,7} do
-  route(width.." real mid tower",width,Vector3.new(-90,35.15,15),Vector3.new(-50,35.15,15),15)
-  route(width.." real tower from road",width,Vector3.new(-90,35.15,0),Vector3.new(-50,35.15,22),15)
+  local towerPosition=workspace.Map.Towers.Blue_Mid.HumanoidRootPart.Position
+  local center=Vector3.new(towerPosition.X,35.15,towerPosition.Z)
+  route(width.." real mid tower",width,center+Vector3.new(-20,0,0),center+Vector3.new(20,0,0),15)
+  route(width.." real tower from road",width,center+Vector3.new(-20,0,-15),center+Vector3.new(20,0,7),15)
  end
  owner:Destroy();scene:Destroy()
  workspace:SetAttribute("ObstacleAvoidanceStatus","PASS")

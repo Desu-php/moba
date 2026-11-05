@@ -2901,9 +2901,23 @@ return {
 	UpdateInterval = 0.1, AggroDuration = 3, TeamGold = 50,
 	TargetPriority = priority,
 	AllowSummons = true, -- Source clones are damageable illusions; DamageService excludes legacy cosmetics.
+	-- Ordered from the river/front line toward the defending team's base.
+	Tiers = {
+		{ Name = "Внешняя", Mark = "I", HealthMultiplier = 1, DamageMultiplier = 1, IntervalMultiplier = 1, Height = 0 },
+		{ Name = "Внутренняя", Mark = "II", HealthMultiplier = 1.75, DamageMultiplier = 1.5, IntervalMultiplier = 1.1/1.2, Height = 2 },
+		{ Name = "Базовая", Mark = "III", HealthMultiplier = 2.75, DamageMultiplier = 2, IntervalMultiplier = 1/1.2, Height = 4 },
+	},
 	Positions = {
-		Blue = { Top = { -70, 4, -99 }, Mid = { -70, 4, 15 }, Bottom = { -70, 4, 99 } },
-		Red = { Top = { 70, 4, -99 }, Mid = { 70, 4, 15 }, Bottom = { 70, 4, 99 } },
+		Blue = {
+			Top = { { -34, 4, -99 }, { -76, 4, -99 }, { -126, 4, -57 } },
+			Mid = { { -34, 4, 15 }, { -76, 4, 15 }, { -116, 4, 15 } },
+			Bottom = { { -34, 4, 99 }, { -76, 4, 99 }, { -126, 4, 57 } },
+		},
+		Red = {
+			Top = { { 34, 4, -99 }, { 76, 4, -99 }, { 126, 4, -57 } },
+			Mid = { { 34, 4, 15 }, { 76, 4, 15 }, { 116, 4, 15 } },
+			Bottom = { { 34, 4, 99 }, { 76, 4, 99 }, { 126, 4, 57 } },
+		},
 	},
 	Visual = { ProjectileDuration = 0.16, RuinFlashLifetime = 0.65, MaxEffects = 24, ViewDistance = 220 },
 }
@@ -8993,7 +9007,7 @@ function MatchService.Publish()
 			item:SetAttribute("Active", team.active); item:SetAttribute("Health", base.humanoid.Health)
 			item:SetAttribute("MaxHealth", base.humanoid.MaxHealth)
 			local remaining = Structures.Remaining(id)
-			item:SetAttribute("TowersRemaining", remaining); item:SetAttribute("TowersTotal", #MapConfig.LaneOrder)
+			item:SetAttribute("TowersRemaining", remaining); item:SetAttribute("TowersTotal", #MapConfig.LaneOrder * #TowerConfig.Tiers)
 			item:SetAttribute("BaseProtected", remaining > 0); base.model:SetAttribute("ProtectedByTowers", remaining > 0)
 		end
 	end
@@ -11771,19 +11785,25 @@ function Factory.Build(map: Folder): Folder
 	local existing = map:FindFirstChild("Towers")
 	assert(not existing or existing:IsA("Folder"), "Map.Towers must be a Folder")
 	local container = existing or Instance.new("Folder"); container.Name = "Towers"; container.Parent = map
-	local layouts = Config.Positions :: { [string]: { [string]: { number } } }
-	for _, team in Mode.Teams do for _, lane in Map.LaneOrder do
-		local name = team.Id .. "_" .. lane
+	local layouts = Config.Positions :: { [string]: { [string]: { { number } } } }
+	for _, team in Mode.Teams do for _, lane in Map.LaneOrder do for tier, profile in Config.Tiers do
+		local name = team.Id .. "_" .. lane .. (if tier == 1 then "" else "_T" .. tier)
 		local previous = container:FindFirstChild(name)
 		if previous then
 			assert(previous:IsA("Model") and previous:GetAttribute("ManagedTower") == true, "Unknown object occupies tower slot " .. name)
 			continue
 		end
-		local coordinates = layouts[team.Id] and layouts[team.Id][lane]; assert(coordinates, "Tower layout missing: " .. name)
+		local positions = layouts[team.Id] and layouts[team.Id][lane]
+		local coordinates = positions and positions[tier]; assert(coordinates, "Tower layout missing: " .. name)
 		local origin = Map.Origin + Vector3.new(coordinates[1], coordinates[2], coordinates[3])
 		local model = Instance.new("Model"); model.Name = name
 		model:SetAttribute("ManagedTower", true); model:SetAttribute("EntityKind", "Tower"); model:SetAttribute("TeamId", team.Id)
 		model:SetAttribute("Lane", lane); model:SetAttribute("IsDestroyed", false); model:SetAttribute("TowerState", "Idle")
+		model:SetAttribute("TowerTier", tier); model:SetAttribute("TowerTitle", profile.Name)
+		model:SetAttribute("AttackDamage", Config.Damage * profile.DamageMultiplier)
+		model:SetAttribute("AttackInterval", Config.AttackInterval * profile.IntervalMultiplier)
+		model:SetAttribute("AttackRange", Config.Range)
+		model:SetAttribute("CrystalSize", 2.6 + (tier-1)*.35)
 		local function part(partName: string, size: Vector3, offset: Vector3, color: Color3, hurtbox: boolean): Part
 			local item = Instance.new("Part"); item.Name = partName; item.Size = size; item.Position = origin + offset
 			item.Anchored = true; item.CanCollide = hurtbox; item.CanQuery = hurtbox; item.CanTouch = false
@@ -11792,19 +11812,25 @@ function Factory.Build(map: Folder): Folder
 		end
 		local root = part("HumanoidRootPart", Vector3.new(5, 6, 5), Vector3.zero, Color3.fromRGB(55, 64, 78), true)
 		model.PrimaryPart = root
-		part("Plinth", Vector3.new(8, 1, 8), Vector3.new(0, -2.5, 0), Color3.fromRGB(36, 43, 54), false)
-		part("Capital", Vector3.new(7, 1, 7), Vector3.new(0, 3.5, 0), team.Color, false)
+		part("Plinth", Vector3.new(8+tier-1, 1, 8+tier-1), Vector3.new(0, -2.5, 0), Color3.fromRGB(36, 43, 54), false)
+		if profile.Height > 0 then
+			part("UpperPillar", Vector3.new(5, profile.Height, 5), Vector3.new(0, 3+profile.Height/2, 0), Color3.fromRGB(55, 64, 78), false)
+		end
+		part("Capital", Vector3.new(7+tier-1, 1, 7+tier-1), Vector3.new(0, 3.5+profile.Height, 0), team.Color, false)
+		for level = 1, tier do
+			part("RankBand"..level, Vector3.new(5.3,.25,5.3), Vector3.new(0,1.4+(level-1)*1.5,0), Color3.fromRGB(230,192,98), false).Material=Enum.Material.Neon
+		end
 		for _, side in { -1, 1 } do
 			part("TeamStripe", Vector3.new(0.22, 4, 2), Vector3.new(side * 2.6, 0, 0), team.Color, false).Material = Enum.Material.Neon
-			part("Fin", Vector3.new(0.6, 4, 0.6), Vector3.new(side * 2.5, 5, 0), team.Color, false)
+			part("Fin", Vector3.new(0.6, 4, 0.6), Vector3.new(side * 2.5, 5+profile.Height, 0), team.Color, false)
 		end
-		local crystal = part("Crystal", Vector3.new(2.6, 2.6, 2.6), Vector3.new(0, 6.3, 0), team.Color, false)
+		local crystal = part("Crystal", Vector3.one*(2.6+(tier-1)*.35), Vector3.new(0, 6.3+profile.Height, 0), team.Color, false)
 		crystal.Material = Enum.Material.Neon; crystal.CFrame *= CFrame.Angles(0, math.pi / 4, math.pi / 4)
 		local light = Instance.new("PointLight"); light.Color = team.Color; light.Brightness = 0.8; light.Range = 12; light.Parent = crystal
 		local humanoid = Instance.new("Humanoid"); humanoid.RequiresNeck = false; humanoid.BreakJointsOnDeath = false
-		humanoid.MaxHealth = Config.Health; humanoid.Health = Config.Health; humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		humanoid.MaxHealth = Config.Health*profile.HealthMultiplier; humanoid.Health = humanoid.MaxHealth; humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 		humanoid.Parent = model; model.Parent = container
-	end end
+	end end end
 	return container :: Folder
 end
 return Factory
@@ -11879,6 +11905,9 @@ local function idFor(model: Model): number
 	serial += 1; ids[model] = serial; models[serial] = model; return serial
 end
 function Service.GetAll(): { [Model]: Tower } return records end
+local function tier(model: Model)
+	return Config.Tiers[math.clamp(math.floor((model:GetAttribute("TowerTier") or 1) :: number),1,#Config.Tiers)]
+end
 local function mode(tower: Tower, value: string)
 	tower.structure.model:SetAttribute("TowerState", value)
 	tower.structure.model:SetAttribute("ChargeEndsAt", if tower.logic.shot then tower.logic.contactAt else 0)
@@ -11887,7 +11916,9 @@ local function health(tower: Tower)
 	local record = tower.structure
 	record.model:SetAttribute("CurrentHealth", record.humanoid.Health)
 	record.model:SetAttribute("MaxHealth", record.humanoid.MaxHealth)
-	tower.label.Text = string.format("%s • %s\n%d / %d", record.teamId, record.lane, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
+	local profile = tier(record.model)
+	tower.label.Text = string.format("%s • %s\n%s · %s  |  %d урона\n%d / %d", record.teamId, record.lane, profile.Mark, profile.Name,
+		Config.Damage*profile.DamageMultiplier, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
 	tower.fill.Size = UDim2.fromScale(math.clamp(record.humanoid.Health / record.humanoid.MaxHealth, 0, 1), 1)
 end
 local function destroy(tower: Tower)
@@ -11950,7 +11981,7 @@ function Service.Update(now: number)
 				mode(tower, "Attacking"); model:SetAttribute("LastShotAt", now)
 				if humanoid and root and root:IsA("BasePart") then
 					local position = root.Position
-					Damage.Apply(model, humanoid, Config.Damage)
+					Damage.Apply(model, humanoid, Config.Damage*tier(model).DamageMultiplier)
 					Service.Event:Fire("Shot", model, tower.crystal.Position, position, tower.structure.teamId, tower.structure.lane, currentRound)
 				end
 			elseif not tower.logic.shot then mode(tower, "Idle") end
@@ -11963,7 +11994,7 @@ function Service.Update(now: number)
 		end
 		local target = Rules.choose(tower.logic, samples, now, Config.TargetPriority, Config.AllowSummons)
 		tower.logic.target = target
-		if target and Rules.begin(tower.logic, target, now, Config.Windup, Config.AttackInterval) then mode(tower, "Charging")
+		if target and Rules.begin(tower.logic, target, now, Config.Windup, Config.AttackInterval*tier(model).IntervalMultiplier) then mode(tower, "Charging")
 		elseif now >= ((model:GetAttribute("LastShotAt") or 0) :: number) + Config.Visual.ProjectileDuration then mode(tower, "Idle") end
 	end
 end
@@ -11978,8 +12009,8 @@ local function register(model: Model)
 	visuals[model] = Reset.capture(model); model:SetAttribute("RoundId", currentRound)
 	local record = Structures.Register(model)
 	local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
-	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(170, 54)
-	board.StudsOffset = Vector3.new(0, 10, 0); board.MaxDistance = 170; board.AlwaysOnTop = true; board.Parent = record.root
+	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(210, 72)
+	board.StudsOffset = Vector3.new(0, 10+tier(model).Height, 0); board.MaxDistance = 105; board.AlwaysOnTop = true; board.Parent = record.root
 	local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
 	local track = Instance.new("Frame"); track.Size = UDim2.new(1, 0, 0, 5); track.Position = UDim2.new(0, 0, 1, -5)
@@ -11996,7 +12027,7 @@ function Service.Reset(roundId: number)
 	for model, tower in records do
 		for _, connection in tower.connections do connection:Disconnect() end; table.clear(tower.connections)
 		visuals[model].restore(); Structures.Remove(model)
-		Reset.humanoid(model, Config.Health)
+		Reset.humanoid(model, Config.Health*tier(model).HealthMultiplier)
 		model:SetAttribute("RoundId", roundId); model:SetAttribute("IsDestroyed", false)
 		model:SetAttribute("LastShotAt", 0); model:SetAttribute("CombatDisabled", false)
 		tower.structure = Structures.Register(model); tower.logic = Rules.new()
@@ -15655,7 +15686,7 @@ function Controller.Start()
 				local charging = model:GetAttribute("TowerState") == "Charging"
 				local chargeEnd = (model:GetAttribute("ChargeEndsAt") or 0) :: number
 				local progress = if charging then math.clamp(1 - (chargeEnd - now) / Config.Windup, 0, 1) else 0
-				crystal.Size = Vector3.one * (2.6 + progress * 1.5)
+				crystal.Size = Vector3.one * (((model:GetAttribute("CrystalSize") or 2.6) :: number) + progress * 1.5)
 				if light then light.Brightness = 0.8 + progress * 5 end
 			end
 		end)

@@ -68,8 +68,23 @@ check("departed not rewarded", not Rules.recipient("Blue", "Blue", false, true, 
 check("eliminated not rewarded", not Rules.recipient("Blue", "Blue", true, true, true))
 check("inactive not rewarded", not Rules.recipient("Blue", "Blue", true, false, false))
 check("both structures recognized", Structures.isStructure("Base") and Structures.isStructure("Tower") and not Structures.isStructure("Summon"))
-check("three towers protect base", not Structures.canReceive("Base", 3))
+check("nine towers protect base", not Structures.canReceive("Base", 9))
 check("last tower protects base", not Structures.canReceive("Base", 1))
 check("zero towers opens base", Structures.canReceive("Base", 0))
 check("tower not shielded by other towers", Structures.canReceive("Tower", 3))
+check("three tiers per lane", #Config.Tiers == 3)
+for _, lanes in Config.Positions :: { [string]: { [string]: { { number } } } } do
+	for _, positions in lanes do
+		check("lane has three tower positions", #positions == #Config.Tiers)
+		for index = 2, #positions do
+			check("successive towers approach their base", math.abs(positions[index][1]) > math.abs(positions[index-1][1]))
+		end
+	end
+end
+for index = 2, #Config.Tiers do
+	local current, previous = Config.Tiers[index], Config.Tiers[index-1]
+	check("successive tier has more health", current.HealthMultiplier > previous.HealthMultiplier)
+	check("successive tier has more damage", current.DamageMultiplier > previous.DamageMultiplier)
+	check("successive tier shoots faster", current.IntervalMultiplier < previous.IntervalMultiplier)
+end
 print("ALL PASS: " .. count .. " tower rules checks")

@@ -49,7 +49,7 @@ function Controller.Start()
 				local charging = model:GetAttribute("TowerState") == "Charging"
 				local chargeEnd = (model:GetAttribute("ChargeEndsAt") or 0) :: number
 				local progress = if charging then math.clamp(1 - (chargeEnd - now) / Config.Windup, 0, 1) else 0
-				crystal.Size = Vector3.one * (2.6 + progress * 1.5)
+				crystal.Size = Vector3.one * (((model:GetAttribute("CrystalSize") or 2.6) :: number) + progress * 1.5)
 				if light then light.Brightness = 0.8 + progress * 5 end
 			end
 		end)

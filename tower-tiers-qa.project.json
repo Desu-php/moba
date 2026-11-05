@@ -1,0 +1,16 @@
+{
+  "name": "Tower-Tiers-QA",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+    "ServerScriptService": {
+      "Server": { "$path": "src/server" },
+      "TowerTiersQA": { "$path": "tests/towers/Tiers.server.luau" }
+    },
+    "StarterPlayer": {
+      "$properties": { "GameSettingsAvatar": "R15", "LoadCharacterAppearance": false },
+      "StarterPlayerScripts": { "Client": { "$path": "src/client" } }
+    },
+    "Workspace": { "$attributes": { "DeveloperSoloMode": true } }
+  }
+}

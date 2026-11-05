@@ -52,7 +52,7 @@ function MatchService.Publish()
 			item:SetAttribute("Active", team.active); item:SetAttribute("Health", base.humanoid.Health)
 			item:SetAttribute("MaxHealth", base.humanoid.MaxHealth)
 			local remaining = Structures.Remaining(id)
-			item:SetAttribute("TowersRemaining", remaining); item:SetAttribute("TowersTotal", #MapConfig.LaneOrder)
+			item:SetAttribute("TowersRemaining", remaining); item:SetAttribute("TowersTotal", #MapConfig.LaneOrder * #TowerConfig.Tiers)
 			item:SetAttribute("BaseProtected", remaining > 0); base.model:SetAttribute("ProtectedByTowers", remaining > 0)
 		end
 	end

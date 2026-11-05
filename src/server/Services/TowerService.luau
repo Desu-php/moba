@@ -26,6 +26,9 @@ local function idFor(model: Model): number
 	serial += 1; ids[model] = serial; models[serial] = model; return serial
 end
 function Service.GetAll(): { [Model]: Tower } return records end
+local function tier(model: Model)
+	return Config.Tiers[math.clamp(math.floor((model:GetAttribute("TowerTier") or 1) :: number),1,#Config.Tiers)]
+end
 local function mode(tower: Tower, value: string)
 	tower.structure.model:SetAttribute("TowerState", value)
 	tower.structure.model:SetAttribute("ChargeEndsAt", if tower.logic.shot then tower.logic.contactAt else 0)
@@ -34,7 +37,9 @@ local function health(tower: Tower)
 	local record = tower.structure
 	record.model:SetAttribute("CurrentHealth", record.humanoid.Health)
 	record.model:SetAttribute("MaxHealth", record.humanoid.MaxHealth)
-	tower.label.Text = string.format("%s • %s\n%d / %d", record.teamId, record.lane, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
+	local profile = tier(record.model)
+	tower.label.Text = string.format("%s • %s\n%s · %s  |  %d урона\n%d / %d", record.teamId, record.lane, profile.Mark, profile.Name,
+		Config.Damage*profile.DamageMultiplier, math.ceil(record.humanoid.Health), record.humanoid.MaxHealth)
 	tower.fill.Size = UDim2.fromScale(math.clamp(record.humanoid.Health / record.humanoid.MaxHealth, 0, 1), 1)
 end
 local function destroy(tower: Tower)
@@ -97,7 +102,7 @@ function Service.Update(now: number)
 				mode(tower, "Attacking"); model:SetAttribute("LastShotAt", now)
 				if humanoid and root and root:IsA("BasePart") then
 					local position = root.Position
-					Damage.Apply(model, humanoid, Config.Damage)
+					Damage.Apply(model, humanoid, Config.Damage*tier(model).DamageMultiplier)
 					Service.Event:Fire("Shot", model, tower.crystal.Position, position, tower.structure.teamId, tower.structure.lane, currentRound)
 				end
 			elseif not tower.logic.shot then mode(tower, "Idle") end
@@ -110,7 +115,7 @@ function Service.Update(now: number)
 		end
 		local target = Rules.choose(tower.logic, samples, now, Config.TargetPriority, Config.AllowSummons)
 		tower.logic.target = target
-		if target and Rules.begin(tower.logic, target, now, Config.Windup, Config.AttackInterval) then mode(tower, "Charging")
+		if target and Rules.begin(tower.logic, target, now, Config.Windup, Config.AttackInterval*tier(model).IntervalMultiplier) then mode(tower, "Charging")
 		elseif now >= ((model:GetAttribute("LastShotAt") or 0) :: number) + Config.Visual.ProjectileDuration then mode(tower, "Idle") end
 	end
 end
@@ -125,8 +130,8 @@ local function register(model: Model)
 	visuals[model] = Reset.capture(model); model:SetAttribute("RoundId", currentRound)
 	local record = Structures.Register(model)
 	local crystal = model:FindFirstChild("Crystal"); assert(crystal and crystal:IsA("BasePart"))
-	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(170, 54)
-	board.StudsOffset = Vector3.new(0, 10, 0); board.MaxDistance = 170; board.AlwaysOnTop = true; board.Parent = record.root
+	local board = Instance.new("BillboardGui"); board.Name = "TowerHealth"; board.Size = UDim2.fromOffset(210, 72)
+	board.StudsOffset = Vector3.new(0, 10+tier(model).Height, 0); board.MaxDistance = 105; board.AlwaysOnTop = true; board.Parent = record.root
 	local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 1, -8); label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.new(1, 1, 1); label.TextStrokeTransparency = 0.25; label.Parent = board
 	local track = Instance.new("Frame"); track.Size = UDim2.new(1, 0, 0, 5); track.Position = UDim2.new(0, 0, 1, -5)
@@ -143,7 +148,7 @@ function Service.Reset(roundId: number)
 	for model, tower in records do
 		for _, connection in tower.connections do connection:Disconnect() end; table.clear(tower.connections)
 		visuals[model].restore(); Structures.Remove(model)
-		Reset.humanoid(model, Config.Health)
+		Reset.humanoid(model, Config.Health*tier(model).HealthMultiplier)
 		model:SetAttribute("RoundId", roundId); model:SetAttribute("IsDestroyed", false)
 		model:SetAttribute("LastShotAt", 0); model:SetAttribute("CombatDisabled", false)
 		tower.structure = Structures.Register(model); tower.logic = Rules.new()

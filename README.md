@@ -48,7 +48,7 @@ Rojo7.7.1, Luau0.744, luau-lsp1.70.1. Из корня checkout:
 rojo serve default.project.json
 ```
 
-Подключите Rojo к собственной QA-сцене, сохраняя пользовательскую сцену. Альтернатива — открыть собранный build/anime-battlegrounds.rbxlx. Для локального матча используйте Server & Clients,2 клиента. Разрушьте три башни, затем открывшийся трон; после результата следующий раунд не начинается.
+Подключите Rojo к собственной QA-сцене, сохраняя пользовательскую сцену. Альтернатива — открыть собранный build/anime-battlegrounds.rbxlx. Для локального матча используйте Server & Clients,2 клиента. У каждой команды девять башен: по три на линию, с усилением к базе. Разрушьте все девять, затем открывшийся трон; после результата следующий раунд не начинается. Характеристики и проверки: [три уровня башен](docs/TOWER-TIERS.md).
 
 ```powershell
 ./scripts/check.ps1 -Mode Fast -LuauDirectory '<Luau directory>' -LuauLspDirectory '<luau-lsp directory>' -RojoPath '<rojo.exe>'

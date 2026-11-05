@@ -77,14 +77,14 @@ local ok, failure = xpcall(function()
 		state.nextWaveAt = workspace:GetServerTimeNow() + 10000
 		state.startedAt = workspace:GetServerTimeNow() + 10000; Rewards.Reset(); AI.Reset()
 		Match.Start(); Teams.Start(state, map); Bases.Start(map); Towers.Start(map); Spawner.Start(map); Ability.Start(); Combat.Start()
-		check("six tower health subscriptions round " .. round, connections() == 6)
+		check("eighteen tower health subscriptions round " .. round, connections() == 18)
 		local remotes = 0; for _, child in Storage:GetDescendants() do if child:IsA("RemoteEvent") then remotes += 1 end end
 		check("no duplicate remotes", remotes == baselineRemotes)
 		check("unmanaged map content preserved", keep.Parent == map)
 		local descendants = #map:GetDescendants()
 		if not mapCount then mapCount = descendants end
 		check("map objects do not grow", descendants == mapCount)
-		check("six living towers and shielded cores", Structures.Remaining("Blue") == 3 and Structures.Remaining("Red") == 3)
+		check("eighteen living towers and shielded cores", Structures.Remaining("Blue") == 9 and Structures.Remaining("Red") == 9)
 		for _, base in Bases.GetAll() do check("core restored", base.humanoid.Health == base.humanoid.MaxHealth and not base.destroyed and base.root.CanCollide) end
 		for _, player in { blue, red } do
 			local profile = Progression.Get(player); assert(profile)

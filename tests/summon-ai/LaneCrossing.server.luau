@@ -30,13 +30,13 @@ local ok,err=xpcall(function()
  end
  for _,width in {5,7} do
   local size=Vector3.new(width,if width==7 then 4.2 else 3,width)
-  cross(width.." grass to lane",size,Vector3.new(-30,35.15,24),Vector3.new(-30,36,0))
-  cross(width.." lane to grass",size,Vector3.new(-30,35.4,0),Vector3.new(-30,36,24))
-  cross(width.." diagonal lip",size,Vector3.new(-43,35.15,24),Vector3.new(-27,36,0))
+  cross(width.." grass to lane",size,Vector3.new(0,35.15,24),Vector3.new(0,36,0))
+  cross(width.." lane to grass",size,Vector3.new(0,35.4,0),Vector3.new(0,36,24))
+  cross(width.." diagonal lip",size,Vector3.new(-13,35.15,24),Vector3.new(3,36,0))
  end
  -- Tall obstacles must not be treated as tiny steps.
- local wall=Instance.new("Part");wall.Name="LaneQA_Wall";wall.Size=Vector3.new(60,8,1);wall.Anchored=true;wall.Position=Vector3.new(-30,37,18);wall.Parent=workspace
- local m,r,h=rig("LaneQA_WallToad",Vector3.new(-30,35.15,24),Vector3.new(7,4.2,7));Nav.Register(m,r,h);owner:PivotTo(CFrame.new(-30,36,0))
+ local wall=Instance.new("Part");wall.Name="LaneQA_Wall";wall.Size=Vector3.new(60,8,1);wall.Anchored=true;wall.Position=Vector3.new(0,37,18);wall.Parent=workspace
+ local m,r,h=rig("LaneQA_WallToad",Vector3.new(0,35.15,24),Vector3.new(7,4.2,7));Nav.Register(m,r,h);owner:PivotTo(CFrame.new(0,36,0))
  local now=workspace:GetServerTimeNow();for i=1,60 do Nav.Settle(m,owner,1/30);Nav.Step(m,owner,owner,target,4,now+i/30,1/30,16) end
  check("solid wall is not stepped through",r.Position.Z>18+3.5)
  Nav.Remove(m);m:Destroy();wall:Destroy();owner:Destroy()
