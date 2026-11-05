@@ -28,6 +28,12 @@ function Stats.Get(player: Player): Logic.Stats
   local m=Layers.sum(modifiers[model]); values.MaxHealth+=m.health; values.Defense+=m.armor
   values.WalkSpeed+=m.speed; values.AttackDamageBonus+=m.attack
  end
+ if model then
+  if ((model:GetAttribute("SasukeKatanaUntil") or 0) :: number)>workspace:GetServerTimeNow() then
+   values.AttackDamageBonus+=(10*values.AttackDamageMultiplier+values.AttackDamageBonus)*.6
+  end
+  if model:GetAttribute("GarudaActive")==true then values.WalkSpeed*=1.3 end
+ end
  return values
 end
 function Stats.GetForModel(model: Model): Logic.Stats?

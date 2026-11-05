@@ -35,7 +35,7 @@ local function lightning(parent:Instance,a:Vector3,b:Vector3,color:Color3,seed:n
 end
 function V.Message(message:any)
  if message.kind~="Sasuke" or typeof(message.position)~="Vector3" then return end
- if message.id=="AreaEnd" then Spells.Message(message);return end
+ if message.id=="AreaEnd" or message.id=="FireEnd" then Spells.Message(message);return end
  local camera=workspace.CurrentCamera;if camera and (camera.CFrame.Position-message.position).Magnitude>300 then return end
  if message.id=="ChibakuDrop" then
   for i=#effects,1,-1 do local e=effects[i];if e.id=="Chibaku" and e.caster==message.character then e.folder:Destroy();table.remove(effects,i) end end
@@ -83,7 +83,7 @@ function V.Message(message:any)
   lightning(f,origin+Vector3.new(0,65,0),origin,Color3.fromRGB(160,218,255),os.clock())
   local p=part(f,"LightningDome",Color3.fromRGB(150,210,255),Vector3.one*radius*2,CFrame.new(origin));p.Shape=Enum.PartType.Ball;p.Transparency=.7;table.insert(parts,p)
  elseif id=="Chibaku" then
-  for _,point in message.extra.points do local p=part(f,"GravityCore",Color3.fromRGB(25,20,37),Vector3.one*3,CFrame.new(point+Vector3.new(0,18,0)));p.Shape=Enum.PartType.Ball;table.insert(parts,p) end
+  for _,point in message.extra.points do local p=part(f,"GravityCore",Color3.fromRGB(25,20,37),Vector3.one*3,CFrame.new(point));p.Shape=Enum.PartType.Ball;table.insert(parts,p) end
  elseif id=="ChibakuDrop" then
   for _,point in message.extra.points do local p=part(f,"FallingCore",Color3.fromRGB(63,55,71),Vector3.one*4,CFrame.new(point+Vector3.new(0,18,0)));p.Shape=Enum.PartType.Ball;table.insert(parts,p) end
  elseif id=="ChibakuMove" then
@@ -204,6 +204,7 @@ function V.Start()
    for j,p in e.parts do
     if e.id=="Projectile" and e.extra then p.Position=e.point:Lerp(e.extra.finish,math.clamp(progress,0,1))
     elseif e.id=="Chibaku" and e.moveAt then p.Position=e.moveFrom[j]:Lerp(e.movePoints[j]+Vector3.new(0,18,0),math.clamp((now-e.moveAt)/math.max(.01,e.moveDuration),0,1))
+    elseif e.id=="Chibaku" then p.Position=e.extra.points[j]+Vector3.new(0,18*math.clamp((now-e.at)/(e.extra.rise or 2),0,1),0)
     elseif e.id=="ChibakuDrop" then p.Position=e.extra.points[j]+Vector3.new(0,18*(1-progress),0)
     elseif e.id=="Amaterasu" or e.id=="Fire" then if j>1 then p.Size=Vector3.new(.5,1.5+math.sin(now*13+j)^2*2,.5) end
     elseif e.id~="Chibaku" and e.id~="ChibakuMove" then p.Transparency=math.max(p.Transparency,progress) end

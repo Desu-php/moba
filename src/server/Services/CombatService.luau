@@ -75,9 +75,9 @@ local function announceStart(fighter: Fighters.Fighter)
     if wakeOnly then fighter.wakeOnlyAttackId=attack.id end
     for _,hp in candidates do
         local target=hp.Parent
-        if target and target:IsA("Model") and Damage.CanDamage(fighter.character,target) then Damage.AttackAttempt:Fire(fighter.character,target) end
+        if target and target:IsA("Model") and Damage.CanDamage(fighter.character,target) then Damage.NotifyAttackAttempt(fighter.character,target) end
     end
-    if not wakeOnly then CombatService.AttackStarted:Fire(fighter) end
+    if not wakeOnly then CombatService.AttackStarted:Fire(fighter,model) end
 	remote:FireAllClients({ kind = "Started", snapshot = Fighters.Snapshot(fighter), attack = attack })
 	if Debug.LogCombat then
 		print(string.format("[Combat] %s M1-%d request=%d", fighter.character.Name, attack.step, attack.requestId))

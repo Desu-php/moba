@@ -71,11 +71,11 @@ end
 function Targeting.Geometry(id: string): (BasePart?, number, number)
 	local player = Players.LocalPlayer
 	local model = player.Character
-	if id == "GamakichiOil" or id == "GamakichiChop" then
+	if id == "GamakichiOil" or id == "GamakichiChop" or id=="AodaBind" then
 		model = nil
 		local summons = workspace:FindFirstChild("HeroSummons")
 		if summons then for _, child in summons:GetChildren() do
-			if child:IsA("Model") and child:GetAttribute("NativeGamakichi") == true and child:GetAttribute("SummonOwner") == player.UserId then model = child; break end
+			if child:IsA("Model") and (if id=="AodaBind" then child:GetAttribute("NativeAoda") else child:GetAttribute("NativeGamakichi")) == true and child:GetAttribute("SummonOwner") == player.UserId then model = child; break end
 		end end
 	end
 	local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
@@ -107,12 +107,16 @@ function Targeting.Evaluate(id: string, point: Vector2?): (any, string?, Vector3
 		local ownTeam = Players.LocalPlayer:GetAttribute("TeamId")
 		if not hp or hp.Health <= 0 or not root or not root:IsA("BasePart") or targetModel:FindFirstChildOfClass("ForceField")
 			or targetModel:GetAttribute("CombatDisabled") == true or targetModel:GetAttribute("IsDestroyed") == true
-			or (ownTeam ~= nil and targetModel:GetAttribute("TeamId") == ownTeam) then return nil, "Недоступная цель", hit.Position end
+			or (id~="AodaBind" and ownTeam ~= nil and targetModel:GetAttribute("TeamId") == ownTeam) then return nil, "Недоступная цель", hit.Position end
 		local kind = targetModel:GetAttribute("EntityKind")
 		if id ~= "CloneCommand" and kind ~= "Hero" and kind ~= "Minion" and kind ~= "Summon" then return nil, "Выберите бойца", hit.Position end
 		position = root.Position
 	end
 	if (position-origin.Position).Magnitude > range then return nil, "Слишком далеко", position end
+ local character=Players.LocalPlayer.Character
+ if id=="Amenotejikara" and typeof(target)=="Vector3" and character and ((character:GetAttribute("AmenotejikaraSelectingUntil") or 0) :: number)<=workspace:GetServerTimeNow() then
+  local delta=position-origin.Position;if delta.Magnitude>Units.toStuds(900) then position=origin.Position+delta.Unit*Units.toStuds(900);target=position end
+ end
 	-- Only these techniques use server terrain visibility checks. Clone orders,
 	-- Sleep and ranged ultimates must not acquire a new client-only LOS restriction.
 	if id == "KcmDash" or id == "GamakichiOil" or id == "GamakichiChop" then
@@ -184,7 +188,7 @@ function Targeting.Preview(id: string): string?
 	end
 	local boundaryParams=if Sasuke.Spells[id] and radius>0 then terrainParams() else nil
 	for i,p in growthRing do
-		local boundary=Sasuke.Spells[id]~=nil and radius>0 and id~="ChidoriEiso"
+		local boundary=Sasuke.Spells[id]~=nil and radius>0 and id~="ChidoriEiso" and id~="Enton"
 		p.Transparency = if (id == "RikudoHY" or boundary) and position then .25 else 1
 		if (id == "RikudoHY" or boundary) and position then
 			local a,b = (i-1)*math.pi/16, i*math.pi/16
@@ -195,7 +199,28 @@ function Targeting.Preview(id: string): string?
 			p.Size=Vector3.new(.1,.1,(last-first).Magnitude); p.CFrame=CFrame.lookAt((first+last)/2,last); p.Color=color
 		end
 	end
- if id=="ChidoriEiso" and root and position and marker then
+ if (id=="SasukeFireball" or id=="PhoenixFlowers" or id=="EntonMagatama") and root and position and marker then
+  marker.Transparency=1
+  local delta=(position-root.Position)*Vector3.new(1,0,1)
+  if delta.Magnitude>.01 then
+   local dir=delta.Unit;local side=dir:Cross(Vector3.yAxis)
+   for i,p in growthRing do
+    local function edge(index:number):Vector3
+     local half=index<=16;local t=if half then index/16 else (32-index)/16
+     local along=if id=="SasukeFireball" then 1125*t else 1000*t
+     local width=0
+     if id=="SasukeFireball" then
+      for _,circle in {{100,100},{300,300},{675,450}} do width=math.max(width,math.sqrt(math.max(0,circle[2]^2-(along-circle[1])^2))) end
+     else local angle=math.rad(if id=="PhoenixFlowers" then 25 else 50);width=math.sin(angle)*along;along*=math.cos(angle) end
+     local pos=root.Position+dir*Units.toStuds(along)+side*Units.toStuds(width*(if half then 1 else -1))
+     local hit=workspace:Raycast(pos+Vector3.yAxis*5,-Vector3.yAxis*25,terrainParams())
+     return if hit then hit.Position+Vector3.yAxis*.1 else pos-Vector3.yAxis*2.5
+    end
+    local a,b=edge(i-1),edge(i)
+    p.Transparency=.4;p.Color=color;p.Size=Vector3.new(.1,.1,math.max(.01,(b-a).Magnitude));p.CFrame=CFrame.lookAt((a+b)/2,b)
+   end
+  end
+ elseif id=="Enton" and root and position and marker then
   local delta=position-root.Position;local distance=math.min(range,delta.Magnitude)
   if distance>.01 then
    local finish=root.Position+delta.Unit*distance;local hit=workspace:Raycast(root.Position,finish-root.Position,terrainParams());if hit then finish=hit.Position end

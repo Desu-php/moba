@@ -12,3 +12,8 @@ sourcemap.json
 /.tools/
 *.blend1
 assets/gamakichi/*.fbm/
+assets/aoda/*.fbm/
+
+# Local rollback copies from the Sasuke Studio editing session.
+/docs/evidence/sasuke-*-before-*.json
+/docs/evidence/sasuke-*-studio-backup-*.json

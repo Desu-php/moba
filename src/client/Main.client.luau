@@ -17,5 +17,6 @@ if not (game:GetService("RunService"):IsStudio() and workspace:GetAttribute("Com
 	require(script.Parent.Controllers.TowerVFXController).Start()
 	require(script.Parent.Controllers.MinionMotionController).Start()
  require(script.Parent.Controllers.GamakichiVisualController).Start()
+ require(script.Parent.Controllers.AodaVisualController).Start()
 end
 print("[Anime Battlegrounds] Client ready; left mouse button attacks")

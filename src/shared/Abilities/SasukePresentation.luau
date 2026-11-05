@@ -1,14 +1,14 @@
 --!strict
 -- Presentation timings are independent of cooldowns and never authorize damage.
 local P={}
-P.Casts={Amaterasu=.55,AmaterasuWall=.55,Enton=.55,EntonPull=.6,Extinguish=.4,
- SasukeFireball=.6,PhoenixFlowers=.7,KirinPrepare=.9,KirinBoost=.7,Kirin=1.5,
+P.Casts={Amaterasu=.55,AmaterasuWall=.55,Enton=.6,EntonMagatama=1,EntonPull=2.8,Extinguish=.4,
+ SasukeFireball=4,PhoenixFlowers=4,KirinPrepare=.9,KirinBoost=.7,Kirin=2.5,
  Sharingan=.35,Mangekyo=.45,SusanooRibs=.6,Susanoo=.9,CompleteSusanoo=3,
- ChidoriSenbon=.45,ChidoriEiso=.45,ChidoriNagashi=.6,ChidoriKatana=.5,
+ ChidoriSenbon=.45,ChidoriEiso=1.25,ChidoriNagashi=.6,ChidoriKatana=.5,
  SasukeGenjutsu=.55,Amenotejikara=.35,ChibakuTensei=3,ChibakuMove=.5,ChibakuDrop=.9,Aoda=.7,Garuda=.6} :: {[string]:number}
 function P.radius(id:string,sourceRadius:number):number
- -- Runtime fireball splash has always been 300 WC; preview must match it.
- return if id=="SasukeFireball" then 300 else sourceRadius
+ -- The expanding fire front reaches its full reference radius.
+ return sourceRadius
 end
 function P.susanooSwing(phase:number,contact:number):number
  if phase<0 or phase>=1 then return 0 end

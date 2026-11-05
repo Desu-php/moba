@@ -18,6 +18,7 @@ function R.reason(id:string,s:State):string?
  if id=="KirinPrepare" and s.kirinUntil>s.now then return "Гроза уже подготовлена" end
  if (id=="ChibakuMove" or id=="ChibakuDrop") and s.spheres==0 then return "Сначала создайте сферы" end
  if id=="PerfectSusanoo" and (s.form<3 or s.beasts<1) then return "Завершённое Сусаноо и чакра хвостатого" end
+ if id=="EntonMagatama" and s.form<2 then return "Нужно активное Сусаноо" end
  if id=="SusanooChidori" and s.form<3 then return "Нужно завершённое Сусаноо" end
  if (id=="SusanooTriple" or id=="IndraArrow") and s.form<4 then return "Нужно Биджу Сусаноо" end
  return nil

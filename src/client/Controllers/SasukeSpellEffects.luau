@@ -2,7 +2,8 @@
 -- Server messages supply centres, radii, endpoints and timestamps. No client damage.
 local Shared=game.ReplicatedStorage:WaitForChild("Shared")
 local Rules=require(Shared.Abilities.SasukePresentation)
-local Data=require(Shared.Config.SasukeParticleData) :: any
+local Flame=require(script.Parent.SasukeFlameFX)
+local FireCast=require(script.Parent.SasukeFireCastFX)
 local Combat=require(Shared.Config.CombatConfig)
 local FX={}
 local active:{any}={}
@@ -14,7 +15,7 @@ local blue=Color3.fromRGB(125,214,255)
 local fire=Color3.fromRGB(255,117,27)
 local handled={Amaterasu=true,Fire=true,KirinPrepare=true,KirinWarning=true,Kirin=true,Transform=true,
  Katana=true,Nagashi=true,Genjutsu=true,Teleport=true,EntonPull=true,Eiso=true,Projectile=true,Impact=true,
- ChibakuDrop=true,ChibakuImpact=true,Extinguish=true,AreaEnd=true,EntonPierce=true,Summon=true}
+ ChibakuDrop=true,ChibakuImpact=true,Extinguish=true,AreaEnd=true,EntonPierce=true,Summon=true,EntonGather=true,SusanooWave=true,EntonCombo=true,EntonComboWarning=true,AmaterasuWarning=true}
 local function make(f:Instance,name:string,size:Vector3,cf:CFrame,color:Color3,alpha:number?):Part
  local p=Instance.new("Part");p.Name=name;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
  p.Size=size;p.CFrame=cf;p.Color=color;p.Material=Enum.Material.Neon;p.Transparency=alpha or 0;p.Parent=f;return p
@@ -53,17 +54,6 @@ local function bolt(f:Instance,a:Vector3,b:Vector3,color:Color3,width:number,see
   line(f,"LightningArc",last,nextPoint,color,width,.15);last=nextPoint
  end
 end
-local function ember(p:Part,black:boolean)
- local specs=Data[if black then "Amaterasu" else "Chidori"]
- local texture=if specs and specs[1] then specs[1].texture else ""
- if texture=="" then return end
- local e=Instance.new("ParticleEmitter");e.Name="FlameTexture";e.Texture=texture
- e.Color=ColorSequence.new(if black then Color3.fromRGB(8,5,14) else fire)
- e.LightEmission=if black then 0 else .65;e.Lifetime=NumberRange.new(.25,.55);e.Speed=NumberRange.new(1,3)
- e.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.4),NumberSequenceKeypoint.new(.4,1.5),NumberSequenceKeypoint.new(1,0)})
- e.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.15),NumberSequenceKeypoint.new(1,1)})
- e.Rate=8;e.SpreadAngle=Vector2.new(15,15);e.Parent=p
-end
 local function dragon(e:any)
  e.dragon={}
  local body=Color3.fromRGB(37,116,187)
@@ -99,6 +89,7 @@ local function dragon(e:any)
 end
 function FX.Start(folder:Folder,models:{[Model]:boolean}) parent=folder;actors=models end
 function FX.Clear()
+ FireCast.Clear()
  for _,e in active do e.folder:Destroy() end;table.clear(active)
  for _,e in avatars do e.folder:Destroy() end;table.clear(avatars)
 end
@@ -150,6 +141,19 @@ function FX.Avatar(model:Model,now:number)
  end
 end
 function FX.Message(m:any):boolean
+ if FireCast.Message(m,parent) then return true end
+ if m.id=="KirinCancel" or m.id=="EntonCancel" then
+  for i=#active,1,-1 do local e=active[i]
+   if e.caster==m.character and (e.id=="KirinWarning" or e.id=="Kirin" or e.id=="EntonGather" or e.id=="EntonComboWarning" or e.id=="EntonCombo") then e.folder:Destroy();table.remove(active,i) end
+  end
+  return true
+ end
+ if m.id=="AreaMove" then
+  for _,e in active do if e.extra.areaSerial==m.extra.areaSerial then
+   e.moveFrom=m.position;e.moveGoal=m.extra.goal;e.moveAt=m.at;e.moveDuration=math.max(.01,m.duration)
+  end end
+  return true
+ end
  if not handled[m.id] then return false end
  if m.id=="AreaEnd" then
   for i=#active,1,-1 do local e=active[i];if m.extra and e.extra and e.extra.areaSerial==m.extra.areaSerial then e.folder:Destroy();table.remove(active,i) end end
@@ -166,21 +170,33 @@ function FX.Message(m:any):boolean
  if #active>=64 then active[1].folder:Destroy();table.remove(active,1) end
  table.insert(active,e)
  local r=e.radius;local ground=floor(e.point,e.caster)
- if e.id=="Amaterasu" or e.id=="Fire" then
-  local black=e.id=="Amaterasu";local tint=if black then violet else fire
+ if e.id=="Amaterasu" or e.id=="Fire" or e.id=="EntonCombo" then
+  local black=e.id~="Fire";local tint=if black then violet else fire
   ring(e,e.point,r,tint)
   local patch=make(f,"ScorchedArea",Vector3.new(.03,r*1.9,r*1.9),CFrame.new(ground)*CFrame.Angles(0,0,math.pi/2),Color3.fromRGB(14,9,20),.65);patch.Shape=Enum.PartType.Cylinder
-  for i=1,32 do local angle=i*2.399;local distance=Rules.flameRadius(math.max(1,r-2.2),i,32)
+  local count=math.clamp(math.floor(r*r*.22),8,24)
+  for i=1,count do local angle=i*2.399;local distance=Rules.flameRadius(math.max(.1,r-1.6),i,count)
    local base=floor(e.point+Vector3.new(math.cos(angle),0,math.sin(angle))*distance,e.caster)
-   local height=1.5+(i%5)*.45
-   local edge=ball(f,"FlameEdge",Vector3.new(.9,height,.7),base+Vector3.new(0,height*.45,0),tint,if black then .72 else .45)
-   local core=ball(f,"BlackFlame",Vector3.new(.7,height,.5),base+Vector3.new(0,height*.45,-.03),if black then Color3.fromRGB(5,3,8) else Color3.fromRGB(255,196,63),.05)
-   core.Transparency=1;edge.Transparency=1
-   local flame=Instance.new("Fire");flame.Name="LivingFlame";flame.Color=if black then Color3.new(0,0,0) else fire
-   flame.SecondaryColor=if black then Color3.fromRGB(27,5,38) else Color3.fromRGB(255,213,92)
-   flame.Size=4;flame.Heat=6;flame.Parent=core
-   table.insert(e.flames,{base=base,height=height,core=core,edge=edge})
-   if i%8==0 then ember(core,black) end
+   local scale=math.min(2.2,math.max(.65,r*.22))*(.8+(i%4)*.12)
+   local core=make(f,"FlameSource",Vector3.one*.15,CFrame.new(base),tint,1)
+   Flame.Attach(core,scale,black,false)
+   if i%8==0 then Flame.Light(core,scale,black) end
+   table.insert(e.flames,{base=base,core=core,scale=scale})
+  end
+ elseif e.id=="SusanooWave" then
+  e.moveFrom=e.point;e.moveGoal=e.extra.finish;e.moveAt=e.at;e.moveDuration=e.duration
+  ring(e,e.point,r,violet)
+  local dir=e.extra.finish-e.point;local cf=CFrame.lookAt(e.point,e.point+dir)
+  for i=1,13 do local x=(i-7)/6
+   local offset=cf:VectorToWorldSpace(Vector3.new(x*r,2+5*(1-x*x),-3*(1-x*x)))
+   local p=ball(f,"ShockCrest",Vector3.new(2,5,1),e.point+offset,violet,.65);table.insert(e.parts,p)
+  end
+ elseif e.id=="EntonComboWarning" or e.id=="AmaterasuWarning" then
+  ring(e,e.point,r,violet)
+ elseif e.id=="EntonGather" then
+  ring(e,e.point,r,violet)
+  for i=1,12 do local a=i*math.pi/6
+   table.insert(e.parts,ball(f,"GravityStream",Vector3.new(.25,.25,2),e.point+Vector3.new(math.cos(a)*r,1,math.sin(a)*r),violet,.35))
   end
  elseif e.id=="KirinWarning" then
   ring(e,e.point,r,blue);dragon(e)
@@ -188,37 +204,55 @@ function FX.Message(m:any):boolean
    table.insert(e.clouds,ball(f,"StormCloud",Vector3.new(13,3,10),e.point+Vector3.new(math.cos(a)*r*.45,35+i%3,math.sin(a)*r*.45),Color3.fromRGB(38,51,72),.58))
   end
  elseif e.id=="Kirin" or e.id=="ChibakuImpact" or e.id=="Impact" then
-  local tint=if e.id=="Kirin" then blue elseif e.id=="ChibakuImpact" then violet elseif e.extra.spell=="SasukeFireball" or e.extra.spell=="PhoenixFlowers" then fire else blue
+  local tint=if e.id=="Kirin" then blue elseif e.id=="ChibakuImpact" or (e.extra.spell=="EntonMagatama" or e.extra.spell=="EntonWeapon" or e.extra.spell=="EntonArrow") then violet elseif e.extra.spell=="SasukeFireball" or e.extra.spell=="PhoenixFlowers" then fire else blue
   ring(e,e.point,r,tint)
   if e.id=="Kirin" then bolt(f,e.point+Vector3.new(0,45,0),e.point,Color3.fromRGB(221,249,255),.8,3) end
-  for i=1,8 do local a=i*math.pi/4
+  local fireImpact=e.id=="Impact" and ((e.extra.spell=="EntonMagatama" or e.extra.spell=="EntonWeapon" or e.extra.spell=="EntonArrow") or e.extra.spell=="SasukeFireball" or e.extra.spell=="PhoenixFlowers")
+  for i=1,if fireImpact then 0 else 8 do local a=i*math.pi/4
    bolt(f,e.point,e.point+Vector3.new(math.cos(a),.03,math.sin(a))*math.max(.1,r-.8),tint,.13,i)
   end
   e.flash=ball(f,"ImpactCore",Vector3.one*math.min(4,r),e.point,tint,.25)
-  local light=Instance.new("PointLight");light.Range=math.min(24,r*2);light.Brightness=3;light.Color=tint;light.Parent=e.flash
+  if fireImpact then
+   e.flash.Transparency=1;Flame.Burst(e.flash,math.clamp(r*.45,1,3.5),(e.extra.spell=="EntonMagatama" or e.extra.spell=="EntonWeapon" or e.extra.spell=="EntonArrow"))
+  else
+   local light=Instance.new("PointLight");light.Range=math.min(24,r*2);light.Brightness=3;light.Color=tint;light.Parent=e.flash
+  end
  elseif e.id=="KirinPrepare" then
-  e.rising=ball(f,"SkyFire",Vector3.one*1.8,e.point+Vector3.new(0,2,0),fire,.1);ember(e.rising,false)
+  e.rising=ball(f,"SkyFire",Vector3.one*1.8,e.point+Vector3.new(0,2,0),fire,1);Flame.Attach(e.rising,1.7,false,true);Flame.Light(e.rising,1.7,false)
   for i=1,4 do table.insert(e.clouds,ball(f,"GatheringCloud",Vector3.new(8,2,6),e.point+Vector3.new(math.sin(i*2)*7,24,math.cos(i*2)*7),Color3.fromRGB(45,54,73),.7)) end
  elseif e.id=="Projectile" then
-  local fiery=e.extra.spell=="SasukeFireball" or e.extra.spell=="PhoenixFlowers"
-  local size=if e.extra.spell=="SasukeFireball" then 3.4 elseif fiery then 1 else .22
+  local black=(e.extra.spell=="EntonMagatama" or e.extra.spell=="EntonWeapon" or e.extra.spell=="EntonArrow")
+  local fiery=black or e.extra.spell=="SasukeFireball" or e.extra.spell=="PhoenixFlowers"
+  local size=if e.extra.spell=="EntonArrow" then 2 elseif e.extra.spell=="EntonWeapon" then 1.5 elseif e.extra.spell=="SasukeFireball" then 3.4 elseif fiery then 1 else .22
   e.body=ball(f,if fiery then "FireballCore" else "LightningNeedle",Vector3.one*size,e.point,if fiery then Color3.fromRGB(255,222,117) else blue,.05)
   e.shell=ball(f,"ProjectileShell",Vector3.one*size*1.3,e.point,if fiery then fire else blue,.5)
   e.tail=line(f,"ProjectileTail",e.point,e.point+Vector3.new(0,0,1),if fiery then fire else blue,if fiery then size*.45 else .12,.55)
-  if fiery then ember(e.body,false) end
+  if fiery then
+   e.fiery=true;e.flameSize=size
+   e.body.Transparency=1;e.shell.Transparency=1;e.tail.Transparency=1
+   e.body.Size=Vector3.one*size*.35
+   local delta=e.extra.finish-e.point
+   if delta.Magnitude>.01 then e.body.CFrame=CFrame.lookAt(e.point,e.extra.finish) end
+   local layers=Flame.Attach(e.body,size*.8,black,true)
+   for _,v in layers do v:Emit(if v.Name=="FlameTongues" then 12 else 4) end
+   e.fireLight=Flame.Light(e.body,size,black)
+   if e.extra.spell=="EntonArrow" or e.extra.spell=="EntonWeapon" then
+    e.weapon=make(f,"BlackFlameShaft",Vector3.new(.4,.4,if e.extra.spell=="EntonArrow" then 8 else 5),CFrame.new(e.point),Color3.fromRGB(17,7,25),.1)
+    e.tip=make(f,"FlameArrowHead",Vector3.new(2,.6,3),CFrame.new(e.point),violet,.3)
+    local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.Wedge;mesh.Parent=e.tip
+    Flame.Attach(e.weapon,.7,true,false)
+   end
+  end
  elseif e.id=="ChibakuDrop" then
   for _,point in e.extra.points do ring(e,point,r,Color3.fromRGB(235,117,150));table.insert(e.parts,ball(f,"FallingCore",Vector3.one*4,point+Vector3.new(0,18,0),Color3.fromRGB(53,46,65),.05)) end
  elseif e.id=="Eiso" then
   bolt(f,e.point,e.extra.finish,blue,.22,1)
-  -- Rails show the actual capsule width; no misleading circular splash.
-  local dir=e.extra.finish-e.point
-  if dir.Magnitude>.01 then local side=CFrame.lookAt(e.point,e.extra.finish).RightVector*r
-   line(f,"WidthRail",e.point+side,e.extra.finish+side,blue,.06,.6);line(f,"WidthRail",e.point-side,e.extra.finish-side,blue,.06,.6)
-  end
+  line(f,"LightningSpear",e.point,e.extra.finish,Color3.fromRGB(230,250,255),.12,.1)
  elseif e.id=="Katana" then
   for i=1,6 do table.insert(e.parts,make(f,"SwordLightning",Vector3.new(.045,.045,.7),CFrame.new(e.point),blue,.1)) end
  elseif e.id=="EntonPierce" then
-  line(f,"BlackFlameLance",e.extra.from,e.point,Color3.fromRGB(16,7,27),.65,.05)
+  local lance=line(f,"BlackFlameLance",e.extra.from,e.point,Color3.fromRGB(16,7,27),.65,.25)
+  Flame.Attach(lance,.7,true,false)
   line(f,"VioletLanceEdge",e.extra.from,e.point,violet,.85,.75)
  elseif e.id=="Summon" then
   for i=1,9 do local a=i*2.399
@@ -232,6 +266,7 @@ function FX.Message(m:any):boolean
    else
     local p=make(f,"BlackFlameSpike",Vector3.new(.7,4,.7),CFrame.new(ground+Vector3.new(math.cos(a)*4,1.8,math.sin(a)*4))*CFrame.Angles(math.cos(a)*.4,0,math.sin(a)*.4),Color3.fromRGB(19,8,29),.05)
     local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.Wedge;mesh.Parent=p
+    Flame.Attach(p,.8,true,false)
    end
   end
  elseif e.id=="Transform" then
@@ -241,7 +276,7 @@ function FX.Message(m:any):boolean
    table.insert(e.parts,p)
   end
  elseif e.id=="Genjutsu" then
-  e.eye=ball(f,"Sharingan",Vector3.new(2,.15,2),e.point+Vector3.new(0,3.5,0),Color3.fromRGB(203,37,55),.25)
+  e.eye=ball(f,"Sharingan",Vector3.new(2,.15,2),e.point+Vector3.new(0,3.5,0),if e.extra.rinnegan then violet else Color3.fromRGB(203,37,55),.25)
   for i=1,3 do local a=i*math.pi*2/3
    ball(f,"Tomoe",Vector3.one*.25,e.eye.Position+Vector3.new(math.cos(a)*.55,.1,math.sin(a)*.55),Color3.fromRGB(10,6,13))
   end
@@ -251,30 +286,44 @@ function FX.Message(m:any):boolean
  return true
 end
 function FX.Update(now:number)
+ FireCast.Update(now)
  for model,e in avatars do if not model.Parent then e.folder:Destroy();avatars[model]=nil end end
  for i=#active,1,-1 do local e=active[i];local t=math.clamp((now-e.at)/e.duration,0,1)
   local h=if e.caster and e.caster.Parent then e.caster:FindFirstChildOfClass("Humanoid") else nil
   if t>=1 or not e.folder.Parent or (e.caster and (not e.caster.Parent or (h and h.Health<=0))) then e.folder:Destroy();table.remove(active,i);continue end
-  if e.extra.follow and e.caster then
-   local point=e.caster:GetPivot().Position;local delta=point-e.point
+  local tracked=if e.id=="KirinWarning" and e.extra.target and e.extra.target.Parent then e.extra.target:FindFirstChild("HumanoidRootPart") else nil
+  if (e.extra.follow and e.caster) or e.moveGoal or tracked then
+   local point=if tracked then tracked.Position elseif e.moveGoal then e.moveFrom:Lerp(e.moveGoal,math.clamp((now-e.moveAt)/e.moveDuration,0,1)) else e.caster:GetPivot().Position;local delta=point-e.point
    for _,p in e.folder:GetChildren() do if p:IsA("BasePart") then p.CFrame+=delta end end
    for _,v in e.flames do v.base+=delta end;e.point=point;e.folder:SetAttribute("ServerCentre",point)
   end
-  if e.id=="Amaterasu" or e.id=="Fire" then
-   for j,v in e.flames do local height=v.height*(.85+.15*math.sin(now*8+j))
-    local sway=math.sin(now*5+j)*.18;v.core.Size=Vector3.new(.7,height,.5);v.edge.Size=Vector3.new(.9,height+.15,.7)
-    local cf=CFrame.new(v.base+Vector3.new(0,.15,0))*CFrame.Angles(sway,0,sway*.5)
-    v.core.CFrame=cf;v.edge.CFrame=cf+Vector3.new(0,0,.03)
+  if e.id=="Amaterasu" or e.id=="Fire" or e.id=="EntonCombo" then
+   for j,v in e.flames do
+    v.core.Position=v.base+Vector3.new(math.sin(now*3+j)*.12,0,math.cos(now*4+j)*.12)
+    local light=v.core:FindFirstChildOfClass("PointLight")
+    if light then light.Brightness=(if e.id=="Amaterasu" then .4 else 1.5)*(.85+.15*math.sin(now*17+j)) end
    end
   elseif e.id=="KirinWarning" then
    local height=26*(1-t^3)+3
    for _,v in e.dragon do v.part.CFrame=CFrame.new(e.point+Vector3.new(0,height,0))*e.dragonFacing*CFrame.new(v.offset)*(v.rotation or CFrame.identity) end
    for j,p in e.clouds do p.Transparency=.58+math.sin(now*10+j)*.08 end
+  elseif e.id=="EntonGather" then
+   for j,p in e.parts do local a=j*math.pi/6;local radial=e.radius*(1-t)
+    local pos=e.point+Vector3.new(math.cos(a)*radial,1,math.sin(a)*radial);p.CFrame=CFrame.lookAt(pos,e.point);p.Transparency=.3+.5*t
+   end
   elseif e.id=="KirinPrepare" then
-   e.rising.Position=e.point+Vector3.new(0,2+25*math.min(1,t*3),0);e.rising.Transparency=math.clamp((t-.4)/.6,0,1)
+   local pos=e.point+Vector3.new(0,2+25*math.min(1,t*3),0)
+   e.rising.CFrame=CFrame.lookAt(pos,pos+Vector3.yAxis);e.rising.Transparency=1
+   for _,v in e.rising:GetChildren() do
+    if v:IsA("ParticleEmitter") then v.Enabled=t<.65
+    elseif v:IsA("PointLight") then v.Brightness=1.5*(1-t) end
+   end
   elseif e.id=="Projectile" then
+   local delay=e.extra.delay or 0;t=math.clamp((now-e.at-delay)/math.max(.01,e.duration-delay),0,1)
    local delta=e.extra.finish-e.point;local pos=e.point+delta*t;local dir=if delta.Magnitude>.01 then delta.Unit else Vector3.zAxis
-   e.body.Position=pos;e.shell.Position=pos
+   e.body.CFrame=CFrame.lookAt(pos,pos+dir);e.shell.Position=pos
+   if e.weapon then e.weapon.CFrame=e.body.CFrame;e.tip.CFrame=e.body.CFrame*CFrame.new(0,0,-e.weapon.Size.Z/2) end
+   if e.fiery then e.fireLight.Brightness=1.5+math.sin(now*23)*.25 end
    local tail=pos-dir*math.min(5,delta.Magnitude*t+1);e.tail.Size=Vector3.new(e.tail.Size.X,e.tail.Size.Y,math.max(.1,(pos-tail).Magnitude));e.tail.CFrame=CFrame.lookAt((pos+tail)/2,pos)
   elseif e.id=="Katana" then
    local hand=e.caster:FindFirstChild("RightHand")
@@ -287,6 +336,7 @@ function FX.Update(now:number)
   elseif e.id=="Summon" then
    for j,p in e.parts do local a=j*2.399;p.Position=e.point+Vector3.new(math.cos(a)*(2+t*2),j%3*.5+t*1.5,math.sin(a)*(2+t*2));p.Size=Vector3.one*(2+t*2);p.Transparency=.35+.65*t end
   else
+   if e.flash then local light=e.flash:FindFirstChildOfClass("PointLight");if light then light.Brightness=3*(1-t)^2 end end
    for _,p in e.folder:GetChildren() do if p:IsA("BasePart") and p.Name~="DamageBoundary" then p.Transparency=math.max(p.Transparency,t) end end
   end
  end

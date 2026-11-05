@@ -1,6 +1,6 @@
 --!strict
 -- Wakeable status, independent from rigid stun. No guessed native invulnerability.
-export type Status = { untilAt: number, active: boolean }
+export type Status = { untilAt: number, active: boolean, wakeSlowDuration: number? }
 local Sleep = {}
 function Sleep.isActive(s: Status?, now: number): boolean
  return s~=nil and s.active and now==now and math.abs(now)<math.huge

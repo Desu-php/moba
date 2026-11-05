@@ -48,7 +48,7 @@ function Controller.ClearCooldownCorrections()
 end
 local function sasukeContinuation(id:string):boolean
  local m=Players.LocalPlayer.Character;if not m or m:GetAttribute("HeroId")~="Sasuke" then return false end
- return (id=="Garuda" and m:GetAttribute("GarudaActive")==true) or (id=="Sharingan" and ((m:GetAttribute("SasukeMode") or 0) :: number)>0) or (id=="SusanooRibs" and m:GetAttribute("SusanooForm")==1) or (id=="Amenotejikara" and ((m:GetAttribute("AmenotejikaraSelectingUntil") or 0) :: number)>workspace:GetServerTimeNow())
+ return (id=="Amaterasu" and ((m:GetAttribute("AmaterasuControlUntil") or 0) :: number)>workspace:GetServerTimeNow()) or (id=="Garuda" and m:GetAttribute("GarudaActive")==true) or (id=="Sharingan" and ((m:GetAttribute("SasukeMode") or 0) :: number)>0) or (id=="SusanooRibs" and m:GetAttribute("SusanooForm")==1) or (id=="Amenotejikara" and ((m:GetAttribute("AmenotejikaraSelectingUntil") or 0) :: number)>workspace:GetServerTimeNow())
 end
 function Controller.Remaining(id: string): number
  if sasukeContinuation(id) then return 0 end
@@ -80,6 +80,7 @@ function Controller.Unavailable(summonOrder: boolean?): string?
 	return nil
 end
 function Controller.Cost(id: string): number
+ if id=="Amaterasu" and sasukeContinuation(id) then return 0 end
  if sasukeContinuation(id) then return 0 end
  if Sasuke.Spells[id] then local state=Players.LocalPlayer:FindFirstChild("HeroState");return Sasuke.cost(id,if state then (state:GetAttribute("Rank_"..Sasuke.Spells[id].line) or 0) :: number else 0) end
  if id=="MeditationCast" then id="SageMode" end
@@ -94,6 +95,7 @@ function Controller.AbilityUnavailable(id: string): string?
   local function n(key:string):number return (m:GetAttribute(key) or 0) :: number end
   local reason=SasukeRules.reason(id,{rank=(state:GetAttribute("Rank_"..Sasuke.Spells[id].line) or 0) :: number,mode=n("SasukeMode"),held=m:GetAttribute("ChidoriHeld")==true,readyAt=n("ChidoriReadyAt"),now=workspace:GetServerTimeNow(),form=n("SusanooForm"),kirinAt=n("KirinReadyAt"),kirinUntil=n("KirinUntil"),spheres=n("ChibakuCount"),beasts=n("SasukeBijuu"),garuda=m:GetAttribute("GarudaActive")==true})
   if reason then return reason end
+  if n("SasukeFireUntil")>workspace:GetServerTimeNow() and id~="SasukeModeOff" then return "Техника огня: движение прервёт её" end
   if id=="ChakraAbsorb" then return "На поле пока нет источников чакры хвостатых" end
   if n("Mana")<Controller.Cost(id) and id~="SasukeModeOff" then return "Недостаточно чакры" end
   return nil
@@ -291,7 +293,7 @@ function Controller.GetMessage(): string
 end
 function Controller.GetFormStatus(): string
  local model=Players.LocalPlayer.Character; if not model then return "" end
- if model:GetAttribute("HeroId")=="Sasuke" then return if model:GetAttribute("ChidoriHeld")==true then "Чидори в руке • первое попадание ЛКМ расходует заряд" else "" end
+ if model:GetAttribute("HeroId")=="Sasuke" then return if ((model:GetAttribute("SasukeFireUntil") or 0) :: number)>workspace:GetServerTimeNow() then "Огненная техника • движение прерывает" elseif ((model:GetAttribute("AmaterasuControlUntil") or 0) :: number)>workspace:GetServerTimeNow() then "Управление Аматерасу • F → F и новая цель" elseif model:GetAttribute("ChidoriHeld")==true then "Чидори в руке • первое попадание ЛКМ расходует заряд" else "" end
  local chakra=model:GetAttribute("KuramaChakra"); if typeof(chakra)~="number" then return "" end
  local now=workspace:GetServerTimeNow()
  local layers={}

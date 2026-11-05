@@ -21,6 +21,7 @@ export type Fighter = {
 	sleep: Sleep.Status?, logic: State.Fighter, profile: Config.AttackProfile, profileId: string,
 	attackLifeId: any?, attackRoundId: any?, attackProfileId: string?, revision: number, connections: { RBXScriptConnection }, movement: Movement?, networkLease: NetworkLease?,
 	wakeOnlyAttackId: number?,
+	castLockUntil: number?,
 }
 
 local FighterStateService = { Changed = Instance.new("BindableEvent") }
@@ -31,6 +32,7 @@ local walkSpeeds: {[Model]: number}=setmetatable({}, {__mode="k"})
 local function effectiveSpeed(model: Model,speed: number): number
  if model:GetAttribute("CombatDisabled")==true then return 0 end
  local gravity=model:GetAttribute("GravitySlowUntil");if typeof(gravity)=="number" and gravity>Workspace:GetServerTimeNow() then speed*=.6 end
+ local rinnegan=model:GetAttribute("RinneganSlowUntil");if typeof(rinnegan)=="number" and rinnegan>Workspace:GetServerTimeNow() then speed*=.6 end
  local poison=model:GetAttribute("SnakePoisonUntil");if typeof(poison)=="number" and poison>Workspace:GetServerTimeNow() then speed*=((model:GetAttribute("SnakePoisonMove") or 1) :: number) end
  local ends=model:GetAttribute("OilUntil"); local multiplier=model:GetAttribute("OilMoveMultiplier")
  return if typeof(ends)=="number" and ends>Workspace:GetServerTimeNow() and typeof(multiplier)=="number" then speed*math.clamp(multiplier,0,1) else speed
@@ -38,6 +40,7 @@ end
 
 local function restoreMovement(fighter: Fighter)
 	if fighter.sleep and fighter.sleep.active then return end
+	if fighter.castLockUntil and fighter.castLockUntil>Workspace:GetServerTimeNow() then return end
 	local saved = fighter.movement
 	if not saved then return end
 	fighter.movement = nil
@@ -134,7 +137,8 @@ function FighterStateService.Remove(character: Model)
 	if not fighter then return end
 	fighters[character] = nil
  releaseNetworkLease(fighter,Workspace:GetServerTimeNow(),true)
- fighter.sleep=nil; character:SetAttribute("SleepUntil",nil)
+ fighter.sleep=nil;fighter.castLockUntil=nil; character:SetAttribute("SleepUntil",nil)
+ character:SetAttribute("RinneganSlowUntil",nil);character:SetAttribute("SasukeGenjutsuUntil",nil)
 	State.Kill(fighter.logic)
 	for _, connection in fighter.connections do connection:Disconnect() end
 	restoreMovement(fighter)
@@ -220,6 +224,11 @@ local function lockMovement(fighter: Fighter)
 		root.AssemblyLinearVelocity = Vector3.new(0, math.clamp(vertical, -fighter.profile.MaxKnockbackSpeed, fighter.profile.MaxKnockbackSpeed), 0)
 	end
 end
+function FighterStateService.LockCast(fighter: Fighter, untilAt: number)
+ fighter.castLockUntil=untilAt
+ if untilAt>Workspace:GetServerTimeNow() then lockMovement(fighter)
+ elseif fighter.logic.mode~="Stunned" then restoreMovement(fighter) end
+end
 function FighterStateService.Sleep(fighter: Fighter, now: number)
  if fighter.humanoid.Health<=0 then return end
  fighter.sleep=Sleep.new(now)
@@ -231,6 +240,9 @@ end
 function FighterStateService.WakeSleep(fighter: Fighter)
  local status=fighter.sleep; if not status then return end
  Sleep.wake(status,true,0); fighter.sleep=nil
+ if status.wakeSlowDuration and fighter.humanoid.Health>0 then
+  fighter.character:SetAttribute("RinneganSlowUntil",Workspace:GetServerTimeNow()+status.wakeSlowDuration)
+ end
  fighter.character:SetAttribute("SleepUntil",nil);fighter.character:SetAttribute("SasukeGenjutsuUntil",nil)
  if fighter.logic.mode~="Stunned" then restoreMovement(fighter) end
  FighterStateService.Publish(fighter)
@@ -253,6 +265,16 @@ end
 
 function FighterStateService.Update(fighter: Fighter, now: number)
  releaseNetworkLease(fighter,now)
+ if fighter.castLockUntil then
+  if now>=fighter.castLockUntil or fighter.humanoid.Health<=0 then
+   fighter.castLockUntil=nil;if fighter.logic.mode~="Stunned" then restoreMovement(fighter) end
+  else lockMovement(fighter) end
+ end
+ local slow=fighter.character:GetAttribute("RinneganSlowUntil")
+ if typeof(slow)=="number" and (now>=slow or fighter.humanoid.Health<=0) then
+  fighter.character:SetAttribute("RinneganSlowUntil",nil)
+  FighterStateService.SetWalkSpeed(fighter.character,FighterStateService.GetWalkSpeed(fighter.character))
+ end
  if fighter.sleep and (fighter.humanoid.Health<=0 or Sleep.update(fighter.sleep,now)) then FighterStateService.WakeSleep(fighter) end
 	if fighter.humanoid.Health <= 0 then
 		if fighter.logic.mode ~= "Dead" then
